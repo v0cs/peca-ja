@@ -1,6 +1,6 @@
 # 🚗 OficinaWeb
 
-Sistema web para registro de veículos e chamados automotivos, conectando clientes e oficinas mecânicas por meio de uma interface moderna, segura e de facil entendimento.
+Sistema web para registro de veículos e chamados automotivos, conectando clientes e oficinas mecânicas por meio de uma interface moderna, segura e de fácil entendimento.
 
 ---
 
@@ -13,7 +13,7 @@ Sistema web para registro de veículos e chamados automotivos, conectando client
 
 ## 📌 Descrição do Projeto
 
-O **OficinaWeb** é uma aplicação desenvolvida como **Trabalho de Conclusão de Curso (TCC)** em Engenharia de Software. Seu objetivo é facilitar a comunicação entre clientes e oficinas mecânicas por meio da abertura de chamados com imagens e dados do veículo, permitindo que oficinas aceitem solicitações, enviem orçamentos e entrem em contato direto com o cliente via WhatsApp.
+O **OficinaWeb** é uma aplicação desenvolvida como **Trabalho de Conclusão de Curso (TCC)** em Engenharia de Software. Seu objetivo é facilitar a comunicação entre clientes e oficinas mecânicas por meio da abertura de chamados com imagens e dados do veículo, permitindo que oficinas aceitem solicitações, enviem orçamentos e mantenham contato direto com o cliente por meio de um sistema de chat integrado.
 
 ---
 
@@ -23,8 +23,9 @@ O **OficinaWeb** é uma aplicação desenvolvida como **Trabalho de Conclusão d
 - Registro de veículos por parte do cliente
 - Abertura de chamados com descrição e upload de imagens
 - Visualização de chamados por oficinas com possibilidade de aceitar/recusar
-- Contato via link direto para o WhatsApp do cliente
-- Acompanhamento dos chamados 
+- **Sistema de chat integrado** entre mecânico e cliente para envio de atualizações e respostas
+- Encerramento automático do chat ao finalizar o chamado, evitando o acúmulo de dados desnecessários
+- Acompanhamento dos chamados pelo painel do cliente
 
 ---
 
