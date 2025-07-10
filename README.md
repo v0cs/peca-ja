@@ -1,15 +1,10 @@
-# 🚗 OficinaWeb
+# OficinaWeb - Plataforma de Conexão entre Clientes e Oficinas Automotivas
 
-Sistema web para registro de veículos e chamados automotivos, conectando clientes e oficinas mecânicas por meio de uma interface moderna, segura e de fácil entendimento.
-
----
-
-## 📄 Documento RFC 
-
-📥 Acesse aqui o documento completo:  
-[📘 Documento RFC – OficinaWeb](https://link-para-o-documento-rfc.com)
-
----
+<p align="center">
+  <img src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow" alt="Status">
+  <img src="https://img.shields.io/badge/versão-1.0.0-blue" alt="Versão">
+  <img src="https://img.shields.io/github/license/seu-usuario/OficinaWeb" alt="Licença">
+</p>
 
 ## 📌 Descrição do Projeto
 
@@ -17,31 +12,39 @@ O **OficinaWeb** é uma aplicação desenvolvida como **Trabalho de Conclusão d
 
 ---
 
-## 🧩 Funcionalidades Principais
+## Funcionalidades
 
-- Cadastro e login para clientes e oficinas (com validação de CPF/CNPJ)
-- Registro de veículos por parte do cliente
-- Abertura de chamados com descrição e upload de imagens
-- Visualização de chamados por oficinas com possibilidade de aceitar/recusar
-- **Sistema de chat integrado** entre mecânico e cliente para envio de atualizações e respostas
-- Encerramento automático do chat ao finalizar o chamado, evitando o acúmulo de dados desnecessários
-- Acompanhamento dos chamados pelo painel do cliente
+### 👤 Área do Cliente
+- Cadastro e gerenciamento de perfil
+- Registro de veículos (marca, modelo, ano, km)
+- Abertura de chamados com fotos e descrição
+- Sistema de notificações
+- Chat com oficinas
+- Dashboard de acompanhamento
 
----
+### 🔧 Área da Oficina
+- Visualização de chamados por cidade
+- Aceite/recusa de solicitações
+- Atualização de status dos serviços
+- Sistema de notificações
+- Chat com cliente
+- Dashboard de acompanhamento
 
-## 🧱 Tecnologias e Arquitetura
+## 🛠️ Tecnologias Utilizadas
 
-- **Frontend**: React, Vite, Tailwind CSS
-- **Backend**: Node.js, Express.js
-- **Banco de Dados**: PostgreSQL (via Docker)
-- **Autenticação**: JWT + bcrypt
-- **Testes**: Jest (backend), React Testing Library (frontend)
-- **CI/CD**: GitHub Actions
-- **Documentação Técnica**: Modelo RFC + Wiki + Diagramas C4
+### Frontend
+- React.js: Biblioteca para interfaces modernas
 
----
+### Backend
+- Node.js: Ambiente de execução JavaScript 
+- Express:Framework para API REST 
+- JWT: Autenticação segura 
 
-## 📈 Tópicos Detalhados no RFC
+### Banco de Dados
+- PostgreSQL: Banco relacional robusto
+- Sequelize: ORM para Node.js
+
+## 📚 Tópicos Detalhados no RFC
 
 O documento RFC aborda:
 
@@ -54,5 +57,12 @@ O documento RFC aborda:
 - Cronograma de execução (Portfólio I e II)
 - Referências e apêndices
 - Espaço para avaliação de professores
+
+---
+
+## 📄 Documento RFC 
+
+Acesse aqui o documento completo:  
+[Documento RFC OficinaWeb](https://github.com/user-attachments/files/21170956/RFC__OficinaWeb.pdf)
 
 ---
