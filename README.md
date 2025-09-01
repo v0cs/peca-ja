@@ -1,68 +1,98 @@
-# OficinaWeb - Plataforma de Conexão entre Clientes e Oficinas Automotivas
+# PeçaJá - Plataforma de Solicitação de Peças Automotivas
 
-<p align="center">
-  <img src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow" alt="Status">
-  <img src="https://img.shields.io/badge/versão-1.0.0-blue" alt="Versão">
-  <img src="https://img.shields.io/github/license/seu-usuario/OficinaWeb" alt="Licença">
-</p>
+## 📋 Sobre o Projeto
 
-## 📌 Descrição do Projeto
+O **PeçaJá** é uma aplicação web desenvolvida como Produto Mínimo Viável (MVP) que atua como ponte entre clientes (proprietários de veículos e oficinas) e autopeças, otimizando o processo de solicitação de orçamentos para peças automotivas.
 
-O **OficinaWeb** é uma aplicação desenvolvida como **Trabalho de Conclusão de Curso (TCC)** em Engenharia de Software. Seu objetivo é facilitar a comunicação entre clientes e oficinas mecânicas por meio da abertura de chamados com imagens e dados do veículo, permitindo que oficinas aceitem solicitações, enviem orçamentos e mantenham contato direto com o cliente por meio de um sistema de chat integrado.
+### 🎯 Problema que Resolve
 
----
+- **Ineficiência na busca por peças**: Clientes precisam consultar múltiplas autopeças manualmente
+- **Falta de visibilidade das autopeças**: Dificuldade em alcançar novos clientes
+- **Processo manual de orçamentação**: Ausência de plataforma centralizada
+- **Dificuldade no preenchimento de dados veiculares**: Erros em informações técnicas
 
-## Funcionalidades
+## 🚀 Funcionalidades Principais
 
-### 👤 Área do Cliente
-- Cadastro e gerenciamento de perfil
-- Registro de veículos (marca, modelo, ano, km)
-- Abertura de chamados com fotos e descrição
-- Sistema de notificações
-- Chat com oficinas
-- Dashboard de acompanhamento
+### Para Clientes
+- ✅ Cadastro e autenticação via Google OAuth 2.0
+- ✅ Consulta automática de dados do veículo via placa
+- ✅ Criação de solicitações com descrição detalhada e imagens
+- ✅ Acompanhamento de solicitações ativas e histórico
 
-### 🔧 Área da Oficina
-- Visualização de chamados por cidade
-- Aceite/recusa de solicitações
-- Atualização de status dos serviços
-- Sistema de notificações
-- Chat com cliente
-- Dashboard de acompanhamento
+### Para Autopeças
+- ✅ Cadastro e autenticação com dados empresariais
+- ✅ Visualização de solicitações por cidade
+- ✅ Filtros por marca, modelo, ano, categoria e data
+- ✅ Sistema de busca por palavra-chave
+- ✅ Marcar solicitações como lidas
+- ✅ Notificações de novas solicitações
+- ✅ Contato direto via WhatsApp
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Stack Tecnológica
 
 ### Frontend
-- React.js: Biblioteca para interfaces modernas
+- **React.js** - Interface de usuário responsiva
+- **JavaScript** - Linguagem principal
 
 ### Backend
-- Node.js: Ambiente de execução JavaScript 
-- Express:Framework para API REST 
-- JWT: Autenticação segura 
+- **Node.js** - Ambiente de execução
+- **Express.js** - Framework web
+- **Passport.js** - Autenticação OAuth 2.0
 
 ### Banco de Dados
-- PostgreSQL: Banco relacional robusto
-- Sequelize: ORM para Node.js
+- **PostgreSQL** - Banco relacional
+- **Sequelize ORM** - Mapeamento objeto-relacional
 
-## 📚 Tópicos Detalhados no RFC
+### APIs Externas
+- **Google OAuth 2.0** - Autenticação social
+- **API de Consulta Veicular** - Dados automáticos do veículo
+- **WhatsApp Business** - Redirecionamento para chat
 
-O documento RFC aborda:
+### Ferramentas de Desenvolvimento
+- **Git & GitHub** - Controle de versão
+- **Docker** - Containerização
+- **GitHub Actions** - CI/CD
+- **Jest/Vitest** - Testes unitários
+- **ESLint + Prettier** - Padronização de código
 
-- Introdução, contexto e justificativa do projeto
-- Lista de requisitos (funcionais e não funcionais)
-- Diagrama de Casos de Uso (UML)
-- Design e arquitetura (incluindo padrões e C4)
-- Stack tecnológica com justificativas
-- Considerações de segurança
-- Cronograma de execução (Portfólio I e II)
-- Referências e apêndices
-- Espaço para avaliação de professores
+## 🏗️ Arquitetura
 
----
+A aplicação segue uma **arquitetura monolítica modular** com três camadas principais:
 
-## 📄 Documento RFC 
+1. **Frontend (React.js)** - Interface responsiva
+2. **Backend (Node.js/Express)** - API RESTful
+3. **Database (PostgreSQL)** - Persistência de dados
 
-Acesse aqui o documento completo:  
-[Documento RFC OficinaWeb](https://github.com/user-attachments/files/21170956/RFC__OficinaWeb.pdf)
+### Padrões Arquiteturais
+- **MVC (Model-View-Controller)**
+- **RESTful API**
+- **Modular Monolith**
 
----
+## 📋 Requisitos do Sistema
+
+### Funcionais
+- Sistema de cadastro e autenticação
+- Gestão de solicitações e uploads de imagens
+- Filtros e buscas avançadas
+- Integração com APIs externas
+- Sistema de notificações
+
+### Não Funcionais
+- Suporte a 1000 usuários simultâneos
+- Interface responsiva (desktop, tablet, mobile)
+- Tempo de resposta < 2 segundos
+- Cobertura de testes > 70%
+- Compatibilidade com principais navegadores
+  
+## 🔒 Segurança
+
+- **Autenticação JWT** com tokens seguros
+- **Criptografia bcrypt** para senhas
+- **Validação rigorosa** de entradas
+- **Rate limiting** para prevenção de ataques
+- **HTTPS obrigatório** em produção
+- **Conformidade LGPD** para dados sensíveis
+
+## 📝 Documento RFC 
+
+- **RFC Completo**: [Documentação técnica detalhada](./docs/RFC_PecaJa.pdf)
