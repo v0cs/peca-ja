@@ -1,265 +1,354 @@
-# PeçaJá - Especificação Técnica e Funcional Completa
+# PeçaJá - Guia de Desenvolvimento
 
-## CONCEITO CENTRAL
-Plataforma web que conecta clientes (donos de veículos/oficinas) com autopeças locais através de solicitações de orçamentos. O cliente descreve a peça necessária e as autopeças da mesma cidade podem visualizar e entrar em contato via WhatsApp.
+## Visão Geral do Projeto
 
----
+O **PeçaJá** é uma plataforma web (MVP) que conecta proprietários de veículos/oficinas (clientes) com autopeças, funcionando como um marketplace de solicitação de orçamentos. A aplicação permite que clientes criem solicitações detalhadas de peças automotivas e que autopeças visualizem essas solicitações, filtrem por critérios relevantes e entrem em contato diretamente via WhatsApp.
 
-## ATORES DO SISTEMA
+## Arquitetura e Stack Tecnológica
 
-### 1. CLIENTE
-**Dados de Cadastro:**
-- E-mail (obrigatório)
-- Cidade (obrigatório)  
-- Celular (obrigatório)
-- Senha (obrigatório)
+### Stack Principal
+- **Frontend**: React.js com Vite
+- **Backend**: Node.js com Express.js
+- **Banco de Dados**: PostgreSQL
+- **ORM**: Sequelize
+- **Autenticação**: JWT + Google OAuth 2.0
+- **Testes**: Jest/Vitest
+- **Containerização**: Docker
+- **CI/CD**: GitHub Actions
 
-**Funcionalidades:**
-- Cadastro e login (email/senha OU Google OAuth)
-- Criar solicitações de peças
-- Anexar até 3 fotos por solicitação (opcional)
-- Visualizar histórico de solicitações (ativas e concluídas)
-- Encerrar solicitações quando obtiver os orçamentos necessários
-
-**Fluxo de Solicitação:**
-1. Login na aplicação
-2. Criar nova solicitação:
-   - Inserir placa do veículo → API consulta dados automaticamente
-   - Se API falhar → preenchimento manual dos dados do veículo
-   - Descrever a peça necessária (campo texto livre)
-   - Anexar fotos (opcional, até 3 imagens)
-3. Submeter solicitação
-4. Sistema notifica autopeças da cidade automaticamente
-5. Receber contatos via WhatsApp
-6. Negociar via WhatsApp
-7. Retornar à aplicação e marcar como "Concluída"
-
-### 2. AUTOPEÇA  
-**Dados de Cadastro:**
-- CNPJ (obrigatório)
-- E-mail (obrigatório)
-- Cidade (obrigatório)
-- Endereço completo (obrigatório)
-- Celular (obrigatório)
-- Senha (obrigatório)
-
-**Funcionalidades Principais:**
-- Cadastro e login (email/senha OU Google OAuth)
-- Visualizar solicitações da mesma cidade
-- Filtrar solicitações por marca, modelo e ano do veículo
-- Entrar em contato com clientes via WhatsApp
-- Marcar solicitações como "Atendidas"
-- Visualizar histórico completo de solicitações atendidas
-
-**Gestão de Vendedores:**
-- Cadastrar vendedores (Nome, E-mail, Senha)
-- Editar dados de vendedores
-- Excluir vendedores
-- Sem dashboards ou métricas - apenas CRUD básico
-
-**Fluxo de Atendimento:**
-1. Login na aplicação
-2. Visualizar painel de solicitações da cidade
-3. Aplicar filtros por dados do veículo (opcional)
-4. Selecionar solicitação de interesse
-5. Clicar "Entrar em contato" → redirecionamento para WhatsApp
-6. Negociar via WhatsApp
-7. Retornar à aplicação e marcar como "Atendida"
-
-### 3. VENDEDOR
-**Dados de Cadastro (feito pela autopeça):**
-- Nome completo
-- E-mail
-- Senha
-
-**Funcionalidades:**
-- Login independente com email/senha
-- Visualizar mesmas solicitações da autopeça proprietária
-- Marcar solicitações como "Atendida" (sistema anti-conflito)
-- Entrar em contato via WhatsApp
-- Visualizar solicitações atendidas
-
-**Sistema Anti-Conflito:**
-- Quando vendedor marca solicitação como "Lida" → outros vendedores da mesma autopeça não veem mais
-- Vendedor pode "Desmarcar" para devolver ao pool comum
-- Autopeça proprietária sempre vê todas as solicitações
-- Histórico de atendimentos fica visível para autopeça e vendedores
-
----
-
-## REGRAS DE NEGÓCIO CRÍTICAS
-
-### Visibilidade Geográfica
-- Autopeças e vendedores só veem solicitações da mesma cidade do cliente
-- Sistema deve validar cidade no cadastro
-
-### Controle de Acesso de Vendedores  
-- Vendedores só acessam dados da autopeça que os cadastrou
-- Vendedores não podem cadastrar outros vendedores
-- Autopeça pode excluir vendedor a qualquer momento
-- Vendedor excluído perde acesso imediatamente
-
-### Fluxo de Solicitações
-- Solicitação sempre começa como "Nova"
-- Cliente pode encerrar a qualquer momento (status "Concluída")
-- Autopeça/Vendedor pode marcar como "Atendida" (uso interno para gerenciamento, sem impacto para o cliente) 
-- Solicitação encerrada pelo cliente não aceita mais interações
-
-### Histórico e Auditoria
-- Todas as solicitações ficam no **histórico** após conclusão pelo cliente (status "Concluída")  
-- A autopeça/vendedor pode marcar solicitações como **"Atendida"** para gerenciamento interno; essas marcações também ficam registradas no histórico  
-- O histórico deve incluir dados essenciais para uso do sistema e rastreabilidade:
-  - Status da solicitação (Nova, Atendida, Concluída)  
-  - Data e hora de criação, alteração e encerramento  
-  - Usuário responsável pela ação (cliente, autopeça ou vendedor)  
-  - Dados básicos de identificação do cliente e do veículo (nome, e-mail, telefone, placa, modelo, ano)  
-- **Auditoria:** logs técnicos devem registrar todas as ações importantes para segurança e conformidade, como:
-  - Login e autenticação (horário e usuário)  
-  - Criação, alteração e exclusão de solicitações  
-  - Cadastro, edição e remoção de vendedores  
-  - Consentimentos e aceite de termos de uso  
-- **Conformidade LGPD:**
-  - Apenas os dados necessários para a finalidade da plataforma devem ser mantidos  
-  - Dados sensíveis ou irrelevantes não devem ser armazenados  
-  - O cliente pode solicitar exclusão ou anonimização de seus dados pessoais  
-
----
-
-## ARQUITETURA TÉCNICA
-
-### Frontend (React.js)
-**Páginas Cliente:**
-- Login/Cadastro
-- Dashboard (solicitações ativas)
-- Criar solicitação
-- Histórico de solicitações
-- Perfil Pessoal
-
-**Páginas Autopeça:**
-- Login/Cadastro  
-- Dashboard (solicitações da cidade)
-- Filtros avançados
-- Gestão de vendedores (CRUD)
-- Histórico de atendimentos
-- Perfil Autopeca
-
-**Páginas Vendedor:**
-- Login
-- Dashboard (mesmas solicitações da autopeça)
-- Histórico de atendimentos
-- Perfil Vendedor
-
-**Middleware Obrigatórios:**
-- Autenticação JWT
-- Rate limiting
-- Validação de entrada
-- Logs de auditoria
-- Proteção LGPD
-
-### Integrações Externas
-- **Google OAuth 2.0**: Autenticação social
-- **API Veicular**: Consulta dados por placa (com fallback manual)
-- **WhatsApp Business API**: Redirecionamento para chat
-- **SMTP**: Notificações por e-mail
-
----
-
-## FLUXOS CRÍTICOS DO SISTEMA
-
-### Fluxo 1: Nova Solicitação
+### Estrutura de Pastas
 ```
-Cliente cria solicitação → Sistema consulta API veicular → Notifica autopeças da cidade por email → Autopeças/vendedores visualizam no painel → Interessados contatam via WhatsApp → Negociação externa → Cliente/autopeça marca como concluída/atendida
+pecaja/
+├── frontend/                 # React application
+│   ├── public/
+│   ├── src/
+│   │   ├── components/      # Componentes reutilizáveis
+│   │   ├── pages/          # Páginas da aplicação
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── services/       # API calls e integrações
+│   │   ├── utils/          # Funções utilitárias
+│   │   ├── contexts/       # Context API
+│   │   └── assets/         # Imagens e recursos
+│   ├── package.json
+│   └── vite.config.js
+├── backend/                  # Node.js API
+│   ├── src/
+│   │   ├── controllers/    # Controladores MVC
+│   │   ├── models/         # Modelos Sequelize
+│   │   ├── services/       # Lógica de negócio
+│   │   ├── routes/         # Rotas da API
+│   │   ├── middleware/     # Middlewares personalizados
+│   │   ├── utils/          # Utilitários
+│   │   ├── config/         # Configurações
+│   │   └── migrations/     # Migrações do banco
+│   ├── tests/              # Testes unitários
+│   ├── package.json
+│   └── server.js
+├── docs/                     # Documentação
+├── docker-compose.yml        # Docker containers
+└── README.md
 ```
 
-### Fluxo 2: Sistema Anti-Conflito
-```  
-Solicitação Nova → Visível para todos vendedores da autopeça → Vendedor A marca "Atendida" → Invisível para vendedores B, C, D → Vendedor A negocia → Se não fechar, pode "Desmarcar" → Volta a ser visível para todos
+## Modelagem de Dados 
+
+### Entidades Principais
+
+1. **usuarios** - Entidade base para todos os usuários
+2. **clientes** - Extends usuarios para proprietários de veículos/oficinas
+3. **autopecas** - Extends usuarios para estabelecimentos comerciais
+4. **vendedores** - Funcionários das autopeças
+5. **solicitacoes** - Pedidos de orçamento criados pelos clientes
+6. **imagens_solicitacao** - Imagens anexadas às solicitações
+7. **solicitacoes_atendimento** - Controle de atendimento pelas autopeças
+8. **notificacoes** - Sistema de notificações
+9. **historico_solicitacoes** - Auditoria das alterações
+
+### Relacionamentos Chave
+- Usuarios 1:1 Clientes/Autopeças
+- Autopeças 1:N Vendedores
+- Clientes 1:N Solicitações
+- Solicitações 1:N Imagens
+- Solicitações N:M Autopeças (através de solicitacoes_atendimento)
+
+## Funcionalidades por Módulo
+
+### 1. Módulo de Autenticação
+- **Cadastro de usuários** (clientes e autopeças)
+- **Login com email/senha** e **Google OAuth 2.0**
+- **Recuperação de senha** via email com token temporário
+- **Middleware de autenticação** JWT
+- **Controle de sessão** e logout
+
+### 2. Módulo de Usuários
+- **Perfis diferenciados**: cliente, autopeça, vendedor
+- **Edição de perfil** com validação de dados
+- **Exclusão de conta** com confirmação por email
+- **Gestão de vendedores** pelas autopeças
+- **Sistema de permissões** baseado em roles
+
+### 3. Módulo de Solicitações
+- **Criação de solicitações** com dados do veículo
+- **Upload de até 3 imagens** por solicitação
+- **Integração com API veicular** para preenchimento automático (www.consultarplaca.com.br)
+- **Edição e cancelamento** de solicitações ativas
+- **Filtros avançados** para autopeças
+- **Sistema de busca** por palavras-chave
+- **Controle de status** (ativa, concluída, cancelada)
+
+### 4. Módulo de Atendimento
+- **Visualização por localização** (mesma cidade)
+- **Marcação como "Atendida"** por autopeça/vendedor
+- **Controle de conflitos** entre vendedores da mesma autopeça
+- **Redirecionamento para WhatsApp**
+- **Histórico de atendimentos**
+
+### 5. Módulo de Notificações
+- **Notificações por email** para novas solicitações
+- **Notificações in-app** para ações importantes
+
+## Requisitos de Implementação
+
+### Frontend - React.js
+
+#### Páginas Principais
+1. **Landing Page** - Apresentação da plataforma
+2. **Cadastro/Login** - Autenticação com opção Google OAuth
+3. **Dashboard Cliente**:
+   - Criar nova solicitação
+   - Visualizar solicitações ativas
+   - Histórico de solicitações
+   - Perfil e configurações
+4. **Dashboard Autopeça**:
+   - Visualizar solicitações disponíveis
+   - Filtros e busca
+   - Gerenciar vendedores
+   - Histórico de atendimentos
+5. **Dashboard Vendedor**:
+   - Visualizar solicitações não atendidas
+   - Marcar como atendida
+   - Histórico pessoal
+
+#### Componentes Chave
+- **AuthGuard** - Proteção de rotas
+- **FileUpload** - Upload de imagens com validação
+- **VehicleForm** - Formulário com integração API veicular
+- **FilterBar** - Filtros para autopeças
+- **RequestCard** - Card de solicitação
+- **NotificationBell** - Notificações em tempo real
+
+#### Padrões de UI/UX
+- **Design responsivo** (MVP focado em WEB)
+- **Loading states** para todas as operações
+- **Error boundaries** para tratamento de erros
+- **Feedback visual** para ações do usuário
+
+### Backend - Node.js/Express
+
+#### Estrutura de Rotas
+```
+/api/auth          # Autenticação
+/api/users         # Gerenciamento de usuários
+/api/clients       # Operações específicas de clientes
+/api/autopecas     # Operações específicas de autopeças
+/api/sellers       # Gerenciamento de vendedores
+/api/requests      # Solicitações
+/api/images        # Upload e manipulação de imagens
+/api/notifications # Sistema de notificações
+/api/vehicle       # Integração API veicular
 ```
 
-### Fluxo 3: Gestão de Vendedores
-```
-Autopeça cadastra vendedor → Sistema gera credenciais → Vendedor faz login independente → Acessa solicitações da cidade → Marca como atendida 
-```
+#### Middlewares Essenciais
+- **Authentication** - Verificação JWT
+- **Authorization** - Controle de permissões por role
+- **Validation** - Validação de dados de entrada
+- **FileUpload** - Processamento de imagens
+- **RateLimit** - Proteção contra DDoS
+- **CORS** - Configuração de origens permitidas
+- **Logging** - Auditoria de operações
 
----
+#### Serviços Externos
+- **Google OAuth API** - Autenticação social
+- **API Veicular** - Consulta de dados por placa ( será utilizado o https://consultarplaca.com.br/)
+- **WhatsApp Business API** - Redirecionamento
+- **Email Service** - Envio de notificações
 
-## VALIDAÇÕES E RESTRIÇÕES
+### Banco de Dados - PostgreSQL
 
-### Cadastros
-- E-mail único por tipo de usuário
-- CNPJ válido e único para autopeças
-- Cidade obrigatória para filtros geográficos
-- Senhas com mínimo 8 caracteres
+#### Configuração Inicial
+- Implementar migrations com Sequelize
+- Configurar índices para performance
+- Estabelecer constraints de integridade
 
-### Solicitações  
-- Máximo 3 imagens por solicitação
-- Imagens até 5MB cada
-- Formatos permitidos: JPG, PNG, WEBP
-- Descrição obrigatoria
-- Dados do veiculo obrigatorio
+#### Otimizações
+- **Índices compostos** para consultas frequentes
+- **Views materializadas** para relatórios
+- **Particionamento** para tabelas grandes (futuro)
+- **Connection pooling** para performance
+
+## Padrões de Desenvolvimento
+
+### Código Limpo e Arquitetura
+- **Clean Code** - Nomes descritivos, funções pequenas
+- **SOLID Principles** - Especialmente SRP e DIP
+- **MVC Pattern** - Separação clara de responsabilidades
+- **Repository Pattern** - Abstração do acesso a dados
+- **Service Layer** - Lógica de negócio isolada
+
+### Testes
+- **TDD Approach** - Testes antes da implementação
+- **Cobertura mínima** de 70%
+- **Testes unitários** para serviços e utilitários
+- **Testes de integração** para APIs
+- **Testes E2E** para fluxos críticos
 
 ### Segurança
-- Rate limiting: 100 requests/hora por IP
-- JWT com expiração em 24h
-- Senhas hasheadas com bcrypt
-- Validação de todos inputs
-- Logs de auditoria completos
+- **Input Validation** - Sanitização de todas as entradas
+- **SQL Injection Prevention** - Prepared statements
+- **XSS Protection** - Escape de outputs
+- **CSRF Protection** - Tokens CSRF
+- **Rate Limiting** - Proteção contra ataques
+- **HTTPS Only** - SSL/TLS obrigatório
+- **Secure Headers** - Helmet.js
+- **Password Hashing** - bcrypt com salt
 
----
+### Performance
+- **Lazy Loading** - Carregamento sob demanda
+- **Image Optimization** - Compressão e redimensionamento
+- **Caching Strategy** - Cache de consultas frequentes
+- **Database Optimization** - Queries eficientes
+- **Bundle Optimization** - Code splitting no frontend
 
-## NOTIFICAÇÕES AUTOMÁTICAS
+## Fluxos Principais de Usuário
 
-### Para Autopeças
-- Nova solicitação na cidade (email imediato)
-- Recuperação de senha 
-- Confirmação de cadastro de vendedores
-- Notificações padrões 
+### Cliente
+1. **Cadastro/Login** → **Dashboard**
+2. **Nova Solicitação** → **Preencher dados veículo** → **Upload imagens** → **Confirmar**
+3. **Visualizar status** → **Receber atendimento no WhatsApp** → **Concluir solicitação**
 
-### Para Clientes  
-- Confirmação de solicitação criada
-- Recuperação de senha
-- Sem spam - comunicação mínima
-- Notificações padrões 
-
----
-
-## STATUS E ESTADOS
-
-### Solicitação Cliente
-- **Ativa**: Recém-criada, visível para autopeças
-- **Concluída**: Encerrada 
-
-### Solicitação Autopeca
-- **Atendida**: Marcada por autopeça/vendedor
+### Autopeça
+1. **Cadastro/Login** → **Dashboard**
+2. **Visualizar solicitações** → **Filtrar por critério** → **WhatsApp cliente**
+3. **Gerenciar vendedores** → **Cadastrar/editar/inativar**
 
 ### Vendedor
-- **Ativo**: Pode acessar sistema
-- **Inativo**: Cadastrado mas sem acesso
+1. **Receber credenciais** → **Login** → **Dashboard**
+2. **Visualizar solicitações não atendidas** → **WhatsApp client** → **Marca como atendida**
 
-### Visibilidade (por vendedor)
-- **Não Atendida**: Visível no feed principal
-- **Atendida**: Invisível para outros vendedores da mesma autopeça
 
----
+```mermaid
+flowchart TD
+    A[Cliente Acessa] --> B[Login/Cadastro]
+    B --> C[Dashboard Cliente]
+    C --> D[Nova Solicitação]
+    D --> E[Consulta API Veicular]
+    E --> F{API Responde?}
+    F -->|Sim| G[Preenche Automaticamente]
+    F -->|Não| H[Formulário Manual]
+    G --> I[Upload Imagens]
+    H --> I
+    I --> J[Publica Solicitação]
+    J --> K[Notifica Autopeças Locais]
 
-## DIFERENCIAIS COMPETITIVOS
+    L[Autopeça Loga] --> M[Dashboard Autopeça]
+    M --> N[Vê Solicitações Locais]
+    N --> O[Filtra por Critérios]
+    O --> P[Clica para WhatsApp]
+    P --> Q[Redirecionamento WhatsApp]
+    Q --> R[Negociação Externa]
+    R --> S[Volta e Marca como Atendida]
+```
 
-1. **Foco Geográfico**: Apenas conexões locais relevantes
-2. **Sistema Anti-Conflito**: Vendedores não competem internamente  
-3. **Integração WhatsApp**: Usa ferramenta já conhecida
-4. **Automação**: Dados veiculares preenchidos automaticamente
-5. **Simplicidade**: Sem over-engineering, foco no essencial
+## Integrações Externas
 
----
+### Google OAuth 2.0
+- **Client ID/Secret** configuráveis via env
+- **Scopes**: email, profile
+- **Callback URL** configurada
+- **Token refresh** automático
 
-## CONSIDERAÇÕES DE IMPLEMENTAÇÃO
+### API Veicular - Consultar Placa
+- **Documentação Oficial**: https://docs.consultarplaca.com.br/consultas/consultar-placa
+- **Tipo de API**: RESTful
+- **Autenticação**: API Key via header
+- **Fallback manual** em caso de erro
+- **Cache** de consultas por 24h
+- **Rate limiting** para evitar custos
 
-### Prioridade MVP
-1. Cadastros e autenticação básica
-2. CRUD de solicitações
-3. API para busca de iformações do veiculo
-4. Sistema de visibilidade por vendedor
-5. Redirecionamento WhatsApp
-6. Notificações por email
+### WhatsApp Business
+- **Deep linking** para WhatsApp Web
 
-Esta especificação deve servir como referência única e completa para desenvolvimento, garantindo que todas as funcionalidades estejam alinhadas com o conceito original do PeçaJá.
+### Docker Configuration
+- **Multi-stage builds** para otimização
+- **Health checks** para serviços
+- **Volume mapping** para persistência
+- **Network isolation** para segurança
+
+## Critérios de Aceite por Funcionalidade
+
+### RF01 - Cadastro de Clientes
+- [x] Formulário com campos obrigatórios
+- [x] Validação de email único
+- [x] Validação de formato celular
+- [x] Hash da senha com bcrypt
+- [x] Confirmação por email
+
+### RF08 - Criação de Solicitações
+- [x] Integração com API veicular
+- [x] Fallback manual para dados
+- [x] Upload de até 3 imagens
+- [x] Validação de tipos de arquivo
+- [x] Descrição obrigatória da peça
+
+### RF12 - Filtro por Localização
+- [x] Solicitações apenas da mesma cidade
+- [x] Filtro automático no backend
+- [x] Performance otimizada com índices
+
+## Entregas e Milestones
+
+### Sprint 1 - Fundação (Semanas 1-2)
+- Configuração do ambiente de desenvolvimento
+- Estrutura básica do projeto (frontend + backend)
+- Configuração do banco de dados
+- Sistema de autenticação básico
+
+### Sprint 2 - Usuários (Semanas 3-4)
+- Cadastro e login de clientes e autopeças
+- Integração Google OAuth
+- Perfis e edição de dados
+- Recuperação de senha
+
+### Sprint 3 - Solicitações (Semanas 5-6)
+- Criação de solicitações pelos clientes
+- Upload de imagens
+- Integração API veicular
+- Visualização por autopeças
+
+### Sprint 4 - Atendimento (Semanas 7-8)
+- Sistema de filtros para autopeças
+- Marcação como atendida
+- Redirecionamento WhatsApp
+- Gestão de vendedores
+
+### Sprint 5 - Notificações e Refinamentos (Semanas 9-10)
+- Sistema de notificações
+- Testes abrangentes
+- Otimizações de performance
+- Deploy e documentação final
+
+## Considerações de Deploy
+
+### Ambiente de Produção
+- **Cloud Provider**: Heroku, Vercel, ou AWS
+- **CDN**: Para assets estáticos
+- **SSL Certificate**: Obrigatório
+- **Monitoring**: Logs centralizados
+- **Scaling**: Horizontal para backend
+
+### CI/CD Pipeline
+- **GitHub Actions** para automação
+- **Build/Test/Deploy** automático
+- **Environment separation** (dev/staging/prod)
+- **Rollback strategy** em caso de problemas
+
+Este documento serve como referência completa para o desenvolvimento da plataforma PeçaJá, garantindo que todas as funcionalidades sejam implementadas seguindo as melhores práticas e atendendo aos requisitos acadêmicos estabelecidos.
