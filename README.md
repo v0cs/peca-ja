@@ -1,98 +1,67 @@
 # PeçaJá - Plataforma de Solicitação de Peças Automotivas
 
 ## 📋 Sobre o Projeto
-
-O **PeçaJá** é uma aplicação web desenvolvida como Produto Mínimo Viável (MVP) que atua como ponte entre clientes (proprietários de veículos e oficinas) e autopeças, otimizando o processo de solicitação de orçamentos para peças automotivas.
+O **PeçaJá** é uma aplicação web desenvolvida como **Produto Mínimo Viável (MVP)** que conecta clientes (proprietários de veículos e oficinas) e autopeças. Funciona como um marketplace de solicitações de orçamento, centralizando o processo e otimizando o contato entre as partes.
 
 ### 🎯 Problema que Resolve
-
-- **Ineficiência na busca por peças**: Clientes precisam consultar múltiplas autopeças manualmente
-- **Falta de visibilidade das autopeças**: Dificuldade em alcançar novos clientes
-- **Processo manual de orçamentação**: Ausência de plataforma centralizada
-- **Dificuldade no preenchimento de dados veiculares**: Erros em informações técnicas
+- **Ineficiência na busca por peças**: clientes precisam consultar múltiplas autopeças manualmente.  
+- **Falta de visibilidade das autopeças**: dificuldade em alcançar novos clientes.  
+- **Processo manual de orçamentação**: ausência de plataforma centralizada.  
+- **Erros em dados veiculares**: dificuldade no preenchimento manual.  
 
 ## 🚀 Funcionalidades Principais
 
-### Para Clientes
-- ✅ Cadastro e autenticação via Google OAuth 2.0
-- ✅ Consulta automática de dados do veículo via placa
-- ✅ Criação de solicitações com descrição detalhada e imagens
-- ✅ Acompanhamento de solicitações ativas e histórico
+### Clientes
+- ✅ Cadastro e login (email/senha e Google OAuth 2.0)  
+- ✅ Consulta automática de dados do veículo via API 
+- ✅ Criação de solicitações com descrição detalhada e imagens  
+- ✅ Acompanhamento de solicitações ativas e histórico  
 
-### Para Autopeças
-- ✅ Cadastro e autenticação com dados empresariais
-- ✅ Visualização de solicitações por cidade
-- ✅ Filtros por marca, modelo, ano, categoria e data
-- ✅ Sistema de busca por palavra-chave
-- ✅ Marcar solicitações como lidas
-- ✅ Notificações de novas solicitações
-- ✅ Contato direto via WhatsApp
+### Autopeças
+- ✅ Cadastro e autenticação com dados empresariais  
+- ✅ Gestão de vendedores e permissões  
+- ✅ Visualização de solicitações por localização  
+- ✅ Filtros avançados (marca, modelo, ano, categoria, data e palavra-chave)  
+- ✅ Notificações de novas solicitações (in-app e email)  
+- ✅ Contato direto via WhatsApp Business
 
 ## 🛠️ Stack Tecnológica
 
 ### Frontend
-- **React.js** - Interface de usuário responsiva
-- **JavaScript** - Linguagem principal
+- **React.js + Vite** - Interface de usuário responsiva  
+- **JavaScript** - Linguagem principal  
 
 ### Backend
-- **Node.js** - Ambiente de execução
-- **Express.js** - Framework web
-- **Passport.js** - Autenticação OAuth 2.0
+- **Node.js + Express.js** - API REST  
+- **Passport.js + JWT** - Autenticação segura  
 
 ### Banco de Dados
-- **PostgreSQL** - Banco relacional
-- **Sequelize ORM** - Mapeamento objeto-relacional
+- **PostgreSQL** - Banco relacional  
+- **Sequelize ORM** - Migrações e modelos  
 
 ### APIs Externas
-- **Google OAuth 2.0** - Autenticação social
-- **API de Consulta Veicular** - Dados automáticos do veículo
-- **WhatsApp Business** - Redirecionamento para chat
+- **Google OAuth 2.0** - Login social  
+- **Consultar Placa** - Dados automáticos do veículo  
+- **WhatsApp Business** - Redirecionamento  
 
 ### Ferramentas de Desenvolvimento
-- **Git & GitHub** - Controle de versão
-- **Docker** - Containerização
-- **GitHub Actions** - CI/CD
-- **Jest/Vitest** - Testes unitários
-- **ESLint + Prettier** - Padronização de código
+- **Docker & docker-compose** - Containerização  
+- **GitHub Actions** - CI/CD  
+- **Jest/Vitest** - Testes unitários e integração  
+- **ESLint + Prettier** - Padrões de código  
 
 ## 🏗️ Arquitetura
 
-A aplicação segue uma **arquitetura monolítica modular** com três camadas principais:
+A aplicação segue uma **arquitetura monolítica modular** baseada em **MVC**.  
 
-1. **Frontend (React.js)** - Interface responsiva
-2. **Backend (Node.js/Express)** - API RESTful
-3. **Database (PostgreSQL)** - Persistência de dados
-
-### Padrões Arquiteturais
-- **MVC (Model-View-Controller)**
-- **RESTful API**
-- **Modular Monolith**
-
-## 📋 Requisitos do Sistema
-
-### Funcionais
-- Sistema de cadastro e autenticação
-- Gestão de solicitações e uploads de imagens
-- Filtros e buscas avançadas
-- Integração com APIs externas
-- Sistema de notificações
-
-### Não Funcionais
-- Suporte a 1000 usuários simultâneos
-- Interface responsiva (desktop, tablet, mobile)
-- Tempo de resposta < 2 segundos
-- Cobertura de testes > 70%
-- Compatibilidade com principais navegadores
-  
 ## 🔒 Segurança
+- **JWT + Google OAuth**  
+- **Hash de senhas com bcrypt**  
+- **Input validation** + sanitização  
+- **Rate limiting** para proteção contra ataques  
+- **HTTPS obrigatório em produção**  
+- **Helmet.js** para headers seguros  
+- **Conformidade LGPD**
 
-- **Autenticação JWT** com tokens seguros
-- **Criptografia bcrypt** para senhas
-- **Validação rigorosa** de entradas
-- **Rate limiting** para prevenção de ataques
-- **HTTPS obrigatório** em produção
-- **Conformidade LGPD** para dados sensíveis
-
-## 📝 Documento RFC 
-
-- **RFC Completo**: [Documentação técnica detalhada](./docs/RFC_PecaJa.pdf)
+## 📝 Documento de RFC
+[📄 Documentação Técnica Completa](https://github.com/user-attachments/files/22353400/RFC__PecaJa.pdf)
