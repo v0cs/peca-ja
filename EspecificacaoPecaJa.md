@@ -33,17 +33,19 @@ pecaja/
 │   └── vite.config.js
 ├── backend/                  # Node.js API
 │   ├── src/
-│   │   ├── controllers/    # Controladores MVC
+│   │   ├── config/         # Configurações do DB, Cloud, Auth, etc.
 │   │   ├── models/         # Modelos Sequelize
-│   │   ├── services/       # Lógica de negócio
-│   │   ├── routes/         # Rotas da API
-│   │   ├── middleware/     # Middlewares personalizados
-│   │   ├── utils/          # Utilitários
-│   │   ├── config/         # Configurações
+│   │   ├── repositories/   # Camada de acesso a dados (Repository Pattern)
+│   │   ├── services/       # Lógica de negócio (Service Layer)
+│   │   ├── controllers/    # Manipulam req/res, chamam serviços
+│   │   ├── routes/         # Definição das rotas
+│   │   ├── middleware/     # Auth, upload, validation, error handling
+│   │   ├── utils/          # Funções auxiliares (API clients, helpers)
+│   │   ├── validators/     # Esquemas de validação (Joi ou Zod)
 │   │   └── migrations/     # Migrações do banco
-│   ├── tests/              # Testes unitários
+│   ├── tests/              # Testes de integração e unitários
 │   ├── package.json
-│   └── server.js
+│   └── server.js           # Ponto de entrada da aplicação
 ├── docs/                     # Documentação
 ├── docker-compose.yml        # Docker containers
 └── README.md
