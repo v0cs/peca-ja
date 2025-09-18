@@ -5,7 +5,8 @@ services:
     environment:
       POSTGRES_DB: pecaja
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_PASSWORD: banco123
+      POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "5432:5432"
     volumes:
@@ -13,6 +14,11 @@ services:
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - pecaja-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Backend API
   backend:
@@ -27,12 +33,14 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres123
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
     networks:
       - pecaja-network
+    restart: unless-stopped
 
   # Frontend React App
   frontend:
@@ -40,12 +48,18 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Para containers Docker, use o nome do serviço
       REACT_APP_API_URL: http://localhost:3001
+      # Alternativa para comunicação interna:
+      # REACT_APP_API_URL: http://backend:3001
     volumes:
       - ./frontend:/app
       - /app/node_modules
     networks:
       - pecaja-network
+    restart: unless-stopped
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

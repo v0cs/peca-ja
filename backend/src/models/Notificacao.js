@@ -90,3 +90,5 @@ module.exports = (sequelize, DataTypes) => {
 
   return Notificacao;
 };
+
+

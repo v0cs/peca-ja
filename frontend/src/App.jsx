@@ -1,23 +1,49 @@
-import logo from "./logo.svg";
-import "./App.css";
+import React, { useState } from "react";
 
 function App() {
+  const [count, setCount] = useState(0);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <div
+      style={{
+        padding: "50px",
+        textAlign: "center",
+        color: "white",
+        backgroundColor: "#1a1a1a",
+        minHeight: "100vh",
+      }}
+    >
+      <h1 style={{ color: "#646cff", fontSize: "3rem" }}>PeçaJá</h1>
+      <h2 style={{ color: "#888" }}>Marketplace de Autopeças</h2>
+      <p>Frontend React + Vite funcionando! 🚀</p>
+      <p>
+        Backend rodando em:{" "}
+        <code
+          style={{
+            backgroundColor: "#333",
+            padding: "2px 6px",
+            borderRadius: "4px",
+          }}
         >
-          Learn React
-        </a>
-      </header>
+          http://localhost:3001
+        </code>
+      </p>
+
+      <button
+        onClick={() => setCount((count) => count + 1)}
+        style={{
+          padding: "12px 24px",
+          backgroundColor: "#646cff",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontSize: "16px",
+          marginTop: "20px",
+        }}
+      >
+        Contador: {count}
+      </button>
     </div>
   );
 }

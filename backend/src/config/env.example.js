@@ -11,7 +11,7 @@ module.exports = {
   DB_PORT: 5432,
   DB_NAME: "pecaja",
   DB_USER: "postgres",
-  DB_PASSWORD: "postgres123",
+  DB_PASSWORD: "banco123",
 
   // JWT Configuration
   JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production",

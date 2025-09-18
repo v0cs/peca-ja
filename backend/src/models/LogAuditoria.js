@@ -76,3 +76,5 @@ module.exports = (sequelize, DataTypes) => {
 
   return LogAuditoria;
 };
+
+

@@ -4,6 +4,10 @@
 const express = require("express");
 const router = express.Router();
 
-// Routes will be defined here
+// Import route modules
+const authRoutes = require("./authRoutes");
+
+// Mount routes
+router.use("/auth", authRoutes);
 
 module.exports = router;

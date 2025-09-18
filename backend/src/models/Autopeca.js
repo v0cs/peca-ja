@@ -110,3 +110,5 @@ module.exports = (sequelize, DataTypes) => {
 
   return Autopeca;
 };
+
+
