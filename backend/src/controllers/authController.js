@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { Usuario, Cliente } = require("../models");
 
 /**
@@ -66,7 +67,7 @@ class AuthController {
       }
 
       // Validar celular (formato brasileiro)
-      const celularRegex = /^\([0-9]{2}\)[0-9]{8,9}$/;
+      const celularRegex = /^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/;
       if (!celularRegex.test(celular)) {
         errors.celular =
           "Formato de celular inválido. Use o formato: (11)999999999";
@@ -229,11 +230,131 @@ class AuthController {
    * @param {Object} res - Response object
    */
   static async login(req, res) {
-    // TODO: Implementar login
-    return res.status(501).json({
-      success: false,
-      message: "Funcionalidade de login ainda não implementada",
-    });
+    try {
+      // 1. Validar campos obrigatórios
+      const { email, senha } = req.body;
+
+      if (!email || !senha) {
+        return res.status(400).json({
+          success: false,
+          message: "Email e senha são obrigatórios",
+          errors: {
+            email: !email ? "Email é obrigatório" : undefined,
+            senha: !senha ? "Senha é obrigatória" : undefined,
+          },
+        });
+      }
+
+      // 2. Buscar usuário pelo email (incluindo relacionamento com Cliente)
+      const usuario = await Usuario.findOne({
+        where: { email: email.toLowerCase().trim() },
+        include: [
+          {
+            model: Cliente,
+            as: "cliente",
+            required: false, // LEFT JOIN para incluir mesmo se não for cliente
+          },
+        ],
+      });
+
+      // 3. Verificar se usuário existe
+      if (!usuario) {
+        return res.status(401).json({
+          success: false,
+          message: "Credenciais inválidas",
+          errors: {
+            email: "Email ou senha incorretos",
+          },
+        });
+      }
+
+      // 4. Verificar se a conta está ativa
+      if (!usuario.ativo) {
+        return res.status(403).json({
+          success: false,
+          message: "Conta inativa",
+          errors: {
+            conta: "Sua conta está inativa. Entre em contato com o suporte.",
+          },
+        });
+      }
+
+      // 5. Comparar a senha com bcryptjs.compare()
+      const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+
+      if (!senhaValida) {
+        return res.status(401).json({
+          success: false,
+          message: "Credenciais inválidas",
+          errors: {
+            email: "Email ou senha incorretos",
+          },
+        });
+      }
+
+      // 6. Gerar JWT token
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        console.error("JWT_SECRET não configurado");
+        return res.status(500).json({
+          success: false,
+          message: "Erro de configuração do servidor",
+          errors: {
+            message: "Configuração de segurança não encontrada",
+          },
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          userId: usuario.id,
+          tipo: usuario.tipo_usuario,
+        },
+        jwtSecret,
+        { expiresIn: "24h" }
+      );
+
+      // 7. Retornar token e informações básicas do usuário/cliente
+      const responseData = {
+        token,
+        usuario: {
+          id: usuario.id,
+          email: usuario.email,
+          tipo_usuario: usuario.tipo_usuario,
+          ativo: usuario.ativo,
+          termos_aceitos: usuario.termos_aceitos,
+          data_aceite_terms: usuario.data_aceite_terms,
+        },
+      };
+
+      // Adicionar dados específicos do cliente se existir
+      if (usuario.cliente) {
+        responseData.cliente = {
+          id: usuario.cliente.id,
+          nome_completo: usuario.cliente.nome_completo,
+          celular: usuario.cliente.celular,
+          cidade: usuario.cliente.cidade,
+          uf: usuario.cliente.uf,
+        };
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Login realizado com sucesso",
+        data: responseData,
+      });
+    } catch (error) {
+      console.error("Erro no login:", error);
+
+      // Erro interno do servidor (500)
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
   }
 
   /**

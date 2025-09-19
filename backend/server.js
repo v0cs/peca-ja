@@ -51,6 +51,7 @@ app.listen(PORT, async () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📋 Rotas disponíveis:`);
   console.log(`   POST /api/auth/register`);
+  console.log(`   POST /api/auth/login`);
   console.log(`   GET  /api/health`);
   console.log(`   GET  /health`);
 });

@@ -1,12 +1,20 @@
 const { Sequelize } = require("sequelize");
 
-// Tente esta connection string alternativa
+// Configuração usando variáveis de ambiente
 const sequelize = new Sequelize(
-  "postgres://postgres:banco123@localhost:5432/pecaja",
+  process.env.DB_NAME || "pecaja",
+  process.env.DB_USER || "postgres",
+  process.env.DB_PASSWORD || "banco123",
   {
-    logging: console.log,
+    host: process.env.DB_HOST || "localhost",
+    port: process.env.DB_PORT || 5432,
+    dialect: "postgres",
+    logging: process.env.NODE_ENV === "development" ? console.log : false,
     dialectOptions: {
-      ssl: false,
+      ssl:
+        process.env.NODE_ENV === "production"
+          ? { require: true, rejectUnauthorized: false }
+          : false,
     },
   }
 );
