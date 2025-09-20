@@ -293,7 +293,9 @@ class AuthController {
       }
 
       // 6. Gerar JWT token
-      const jwtSecret = process.env.JWT_SECRET;
+      const config = require('../config/env');
+      const jwtSecret = config.JWT_SECRET;
+      
       if (!jwtSecret) {
         console.error("JWT_SECRET não configurado");
         return res.status(500).json({
@@ -400,6 +402,99 @@ class AuthController {
       success: false,
       message: "Funcionalidade de reset de senha ainda não implementada",
     });
+  }
+
+  /**
+   * Retorna informações do usuário logado
+   * GET /api/auth/me
+   * Requer autenticação JWT
+   *
+   * @param {Object} req - Request object (deve conter req.user do middleware)
+   * @param {Object} res - Response object
+   */
+  static async me(req, res) {
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+
+      // Buscar dados completos do usuário
+      const usuario = await Usuario.findOne({
+        where: { id: userId },
+        include: [
+          {
+            model: Cliente,
+            as: "cliente",
+            required: false, // LEFT JOIN para incluir mesmo se não for cliente
+          },
+        ],
+      });
+
+      if (!usuario) {
+        return res.status(404).json({
+          success: false,
+          message: "Usuário não encontrado",
+          errors: {
+            user: "Usuário não existe no sistema",
+          },
+        });
+      }
+
+      // Verificar se a conta está ativa
+      if (!usuario.ativo) {
+        return res.status(403).json({
+          success: false,
+          message: "Conta inativa",
+          errors: {
+            conta: "Sua conta está inativa. Entre em contato com o suporte.",
+          },
+        });
+      }
+
+      // Preparar dados de resposta
+      const responseData = {
+        usuario: {
+          id: usuario.id,
+          email: usuario.email,
+          tipo_usuario: usuario.tipo_usuario,
+          ativo: usuario.ativo,
+          termos_aceitos: usuario.termos_aceitos,
+          data_aceite_terms: usuario.data_aceite_terms,
+          consentimento_marketing: usuario.consentimento_marketing,
+          created_at: usuario.created_at,
+          updated_at: usuario.updated_at,
+        },
+      };
+
+      // Adicionar dados específicos do cliente se existir
+      if (usuario.cliente) {
+        responseData.cliente = {
+          id: usuario.cliente.id,
+          nome_completo: usuario.cliente.nome_completo,
+          telefone: usuario.cliente.telefone,
+          celular: usuario.cliente.celular,
+          cidade: usuario.cliente.cidade,
+          uf: usuario.cliente.uf,
+          created_at: usuario.cliente.created_at,
+          updated_at: usuario.cliente.updated_at,
+        };
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Informações do usuário recuperadas com sucesso",
+        data: responseData,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar informações do usuário:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
   }
 }
 

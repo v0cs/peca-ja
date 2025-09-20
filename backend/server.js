@@ -1,16 +1,18 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-require("dotenv").config();
 
-// Importar configuração do banco de dados
+// Importar configuração centralizada
+const config = require("./src/config/env");
+
+// Importar conexão do banco de dados
 const { sequelize } = require("./src/config/database");
 
 // Importar rotas de autenticação
 const authRoutes = require("./src/routes/authRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = config.PORT;
 
 // Middlewares
 app.use(helmet());
@@ -40,6 +42,7 @@ app.use((req, res) => {
   res.status(404).json({ error: "Rota não encontrada" });
 });
 
+// Inicialização do servidor
 app.listen(PORT, async () => {
   try {
     await sequelize.authenticate();
@@ -54,4 +57,13 @@ app.listen(PORT, async () => {
   console.log(`   POST /api/auth/login`);
   console.log(`   GET  /api/health`);
   console.log(`   GET  /health`);
+
+  // Debug de configuração (opcional - pode remover depois)
+  console.log("=== CONFIGURAÇÃO CARREGADA ===");
+  console.log("NODE_ENV:", config.NODE_ENV);
+  console.log("DB_HOST:", config.DB_HOST);
+  console.log(
+    "JWT_SECRET:",
+    config.JWT_SECRET ? "✅ Configurado" : "❌ Não configurado"
+  );
 });

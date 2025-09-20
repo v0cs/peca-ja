@@ -1,8 +1,8 @@
 // Middleware index file
 // Export all middleware from here
 
+const authMiddleware = require("./authMiddleware");
+
 module.exports = {
-  // Middleware will be exported here
+  authMiddleware,
 };
-
-

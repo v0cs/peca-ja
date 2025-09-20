@@ -1,6 +1,3 @@
-// Environment Configuration Example
-// Copy this file to env.js and update the values
-
 module.exports = {
   // Server Configuration
   NODE_ENV: "development",
@@ -14,7 +11,7 @@ module.exports = {
   DB_PASSWORD: "banco123",
 
   // JWT Configuration
-  JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production",
+  JWT_SECRET: "pecaja-super-secret-jwt-key-change-this-in-production-2024",
   JWT_EXPIRES_IN: "24h",
 
   // Frontend URL
