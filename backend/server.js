@@ -8,8 +8,8 @@ const config = require("./src/config/env");
 // Importar conexão do banco de dados
 const { sequelize } = require("./src/config/database");
 
-// Importar rotas de autenticação
-const authRoutes = require("./src/routes/authRoutes");
+// Importar todas as rotas organizadas
+const routes = require("./src/routes");
 
 const app = express();
 const PORT = config.PORT;
@@ -17,16 +17,12 @@ const PORT = config.PORT;
 // Middlewares
 app.use(helmet());
 app.use(cors());
-app.use(express.json()); // ESSENCIAL para parsing de JSON
+app.use(express.json());
 
-// Configurar rotas
-app.use("/api/auth", authRoutes);
+// Configurar todas as rotas com prefixo /api
+app.use("/api", routes);
 
-// Rotas de health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "OK", message: "API do PeçaJá está funcionando!" });
-});
-
+// Health check básico
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Backend simplificado funcionando!" });
 });
@@ -53,17 +49,14 @@ app.listen(PORT, async () => {
 
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📋 Rotas disponíveis:`);
+  console.log(`   GET  /api/health`);
   console.log(`   POST /api/auth/register`);
   console.log(`   POST /api/auth/login`);
-  console.log(`   GET  /api/health`);
+  console.log(`   GET  /api/auth/me`);
+  console.log(`   POST /api/solicitacoes`);
+  console.log(`   GET  /api/solicitacoes`);
+  console.log(`   GET  /api/solicitacoes/:id`);
+  console.log(`   PUT  /api/solicitacoes/:id`);
+  console.log(`   DELETE /api/solicitacoes/:id`);
   console.log(`   GET  /health`);
-
-  // Debug de configuração (opcional - pode remover depois)
-  console.log("=== CONFIGURAÇÃO CARREGADA ===");
-  console.log("NODE_ENV:", config.NODE_ENV);
-  console.log("DB_HOST:", config.DB_HOST);
-  console.log(
-    "JWT_SECRET:",
-    config.JWT_SECRET ? "✅ Configurado" : "❌ Não configurado"
-  );
 });

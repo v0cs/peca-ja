@@ -293,9 +293,9 @@ class AuthController {
       }
 
       // 6. Gerar JWT token
-      const config = require('../config/env');
+      const config = require("../config/env");
       const jwtSecret = config.JWT_SECRET;
-      
+
       if (!jwtSecret) {
         console.error("JWT_SECRET não configurado");
         return res.status(500).json({
