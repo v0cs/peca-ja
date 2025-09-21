@@ -22,6 +22,9 @@ app.use(express.json());
 // Configurar todas as rotas com prefixo /api
 app.use("/api", routes);
 
+// Servir arquivos estáticos da pasta uploads
+app.use("/uploads", express.static("uploads"));
+
 // Health check básico
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Backend simplificado funcionando!" });

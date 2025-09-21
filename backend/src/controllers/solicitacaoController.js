@@ -1,4 +1,11 @@
-const { Solicitacao, Cliente, Usuario } = require("../models");
+const {
+  Solicitacao,
+  Cliente,
+  Usuario,
+  ImagemSolicitacao,
+} = require("../models");
+const { uploadMiddleware } = require("../middleware/uploadMiddleware");
+const path = require("path");
 
 /**
  * Controller de Solicitações
@@ -193,25 +200,50 @@ class SolicitacaoController {
         { transaction }
       );
 
+      // 9. Processar imagens se existirem
+      let imagensCriadas = [];
+      if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+        for (let i = 0; i < req.uploadedFiles.length; i++) {
+          const file = req.uploadedFiles[i];
+          const imagem = await ImagemSolicitacao.create(
+            {
+              solicitacao_id: novaSolicitacao.id,
+              nome_arquivo: file.originalname,
+              nome_arquivo_fisico: file.filename,
+              caminho_arquivo: file.path,
+              tamanho_arquivo: file.size,
+              tipo_mime: file.mimetype,
+              extensao: path.extname(file.originalname).slice(1),
+              ordem_exibicao: i + 1,
+            },
+            { transaction }
+          );
+          imagensCriadas.push(imagem);
+        }
+      }
+
       await transaction.commit();
 
+      // 10. Retornar resposta no formato correto
       return res.status(201).json({
         success: true,
-        message: "Solicitação criada com sucesso",
+        message: `Solicitação criada com ${imagensCriadas.length} imagem(ns)`,
         data: {
           solicitacao: novaSolicitacao,
+          imagens: imagensCriadas.map((img) => ({
+            id: img.id,
+            nome_arquivo: img.nome_arquivo,
+            url: `/uploads/${img.nome_arquivo_fisico}`,
+          })),
         },
       });
     } catch (error) {
       await transaction.rollback();
       console.error("Erro ao criar solicitação:", error);
-
       return res.status(500).json({
         success: false,
         message: "Erro interno do servidor",
-        errors: {
-          server: "Erro ao processar solicitação",
-        },
+        error: error.message,
       });
     }
   }
@@ -321,6 +353,18 @@ class SolicitacaoController {
           id,
           cliente_id: cliente.id,
         },
+        include: [
+          {
+            model: ImagemSolicitacao,
+            as: "imagens",
+            attributes: [
+              "id",
+              "nome_arquivo",
+              "nome_arquivo_fisico",
+              "ordem_exibicao",
+            ],
+          },
+        ],
       });
 
       if (!solicitacao) {
@@ -415,7 +459,7 @@ class SolicitacaoController {
         });
       }
 
-      // 4. Verificar se a solicitação pode ser editada (apenas ativas)
+      // 4. Verificar se a solicitação pode be edited (apenas ativas)
       if (solicitacao.status_cliente !== "ativa") {
         await transaction.rollback();
         return res.status(400).json({
@@ -648,6 +692,17 @@ class SolicitacaoController {
    * @param {Object} res - Response object
    */
   static async cancel(req, res) {
+    // ... código do método cancel ...
+  }
+
+  /**
+   * Adiciona imagens a uma solicitação existente
+   * POST /api/solicitacoes/:id/imagens
+   *
+   * @param {Object} req - Request object
+   * @param {Object} res - Response object
+   */
+  static async adicionarImagens(req, res) {
     const transaction = await Solicitacao.sequelize.transaction();
 
     try {
@@ -658,14 +713,11 @@ class SolicitacaoController {
         await transaction.rollback();
         return res.status(403).json({
           success: false,
-          message: "Apenas clientes podem cancelar solicitações",
-          errors: {
-            authorization: "Usuário deve ser do tipo 'cliente'",
-          },
+          message: "Apenas clientes podem adicionar imagens às solicitações",
         });
       }
 
-      // 2. Buscar cliente_id baseado no usuário autenticado
+      // 2. Buscar cliente
       const cliente = await Cliente.findOne({
         where: { usuario_id: req.user.userId },
         transaction,
@@ -676,9 +728,6 @@ class SolicitacaoController {
         return res.status(404).json({
           success: false,
           message: "Cliente não encontrado",
-          errors: {
-            cliente: "Usuário autenticado não possui perfil de cliente",
-          },
         });
       }
 
@@ -696,67 +745,80 @@ class SolicitacaoController {
         return res.status(404).json({
           success: false,
           message: "Solicitação não encontrada",
-          errors: {
-            solicitacao: "Solicitação não existe ou não pertence ao usuário",
-          },
         });
       }
 
-      // 4. Verificar se a solicitação pode ser cancelada
-      if (solicitacao.status_cliente === "cancelada") {
+      // 4. Verificar se a solicitação pode receber imagens (apenas ativas)
+      if (solicitacao.status_cliente !== "ativa") {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
-          message: "Solicitação já está cancelada",
+          message: "Não é possível adicionar imagens a esta solicitação",
           errors: {
-            status: "Solicitação já foi cancelada anteriormente",
+            status: "Apenas solicitações ativas podem receber imagens",
           },
         });
       }
 
-      if (solicitacao.status_cliente === "concluida") {
+      // 5. Processar imagens se existirem
+      let imagensAdicionadas = [];
+      if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+        // Buscar quantidade atual de imagens para definir ordem
+        const imagensExistentes = await ImagemSolicitacao.count({
+          where: { solicitacao_id: id },
+          transaction,
+        });
+
+        for (let i = 0; i < req.uploadedFiles.length; i++) {
+          const file = req.uploadedFiles[i];
+          const imagem = await ImagemSolicitacao.create(
+            {
+              solicitacao_id: id,
+              nome_arquivo: file.originalname || file.originalName,
+              nome_arquivo_fisico: file.filename || file.fileName,
+              caminho_arquivo:
+                file.path || `${uploadDir}/${file.filename || file.fileName}`,
+              tamanho_arquivo: file.size,
+              tipo_mime: file.mimetype,
+              extensao: path
+                .extname(file.originalname || file.originalName)
+                .slice(1),
+              ordem_exibicao: imagensExistentes + i + 1,
+            },
+            { transaction }
+          );
+          imagensAdicionadas.push(imagem);
+        }
+      } else {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
-          message: "Solicitação não pode ser cancelada",
-          errors: {
-            status: "Solicitações concluídas não podem ser canceladas",
-          },
+          message: "Nenhuma imagem foi enviada",
         });
       }
-
-      // 5. Cancelar solicitação (soft delete)
-      await solicitacao.update(
-        {
-          status_cliente: "cancelada",
-          data_conclusao: new Date(),
-        },
-        { transaction }
-      );
 
       await transaction.commit();
 
+      // 6. Retornar resposta
       return res.status(200).json({
         success: true,
-        message: "Solicitação cancelada com sucesso",
+        message: `${imagensAdicionadas.length} imagem(ns) adicionada(s) com sucesso`,
         data: {
-          solicitacao: {
-            id: solicitacao.id,
-            status_cliente: "cancelada",
-            data_conclusao: new Date(),
-          },
+          solicitacao_id: id,
+          imagens: imagensAdicionadas.map((img) => ({
+            id: img.id,
+            nome_arquivo: img.nome_arquivo,
+            url: `/uploads/${img.nome_arquivo_fisico}`,
+          })),
         },
       });
     } catch (error) {
       await transaction.rollback();
-      console.error("Erro ao cancelar solicitação:", error);
-
+      console.error("Erro ao adicionar imagens:", error);
       return res.status(500).json({
         success: false,
         message: "Erro interno do servidor",
-        errors: {
-          server: "Erro ao processar solicitação",
-        },
+        error: error.message,
       });
     }
   }
