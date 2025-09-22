@@ -52,4 +52,5 @@ A aplicação segue uma **arquitetura monolítica modular** baseada em **MVC**.
 - **Conformidade LGPD**
 
 ## Documentação
-[📄 Documento de RFC](https://github.com/user-attachments/files/22353400/RFC__PecaJa.pdf)
+[📄 Documento de RFC](https://github.com/user-attachments/files/22457398/RFC__PecaJa.pdf)
+
