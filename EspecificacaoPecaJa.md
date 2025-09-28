@@ -7,6 +7,7 @@ O **PeçaJá** é uma plataforma web (MVP) que conecta proprietários de veícul
 ## Arquitetura e Stack Tecnológica
 
 ### Stack Principal
+
 - **Frontend**: React.js com Vite
 - **Backend**: Node.js com Express.js
 - **Banco de Dados**: PostgreSQL
@@ -17,6 +18,7 @@ O **PeçaJá** é uma plataforma web (MVP) que conecta proprietários de veícul
 - **CI/CD**: GitHub Actions
 
 ### Estrutura de Pastas
+
 ```
 pecaja/
 ├── frontend/                 # React application
@@ -51,7 +53,7 @@ pecaja/
 └── README.md
 ```
 
-## Modelagem de Dados 
+## Modelagem de Dados
 
 ### Entidades Principais
 
@@ -66,6 +68,7 @@ pecaja/
 9. **historico_solicitacoes** - Auditoria das alterações
 
 ### Relacionamentos Chave
+
 - Usuarios 1:1 Clientes/Autopeças
 - Autopeças 1:N Vendedores
 - Clientes 1:N Solicitações
@@ -75,6 +78,7 @@ pecaja/
 ## Funcionalidades por Módulo
 
 ### 1. Módulo de Autenticação
+
 - **Cadastro de usuários** (clientes e autopeças)
 - **Login com email/senha** e **Google OAuth 2.0**
 - **Recuperação de senha** via email com token temporário
@@ -82,6 +86,7 @@ pecaja/
 - **Controle de sessão** e logout
 
 ### 2. Módulo de Usuários
+
 - **Perfis diferenciados**: cliente, autopeça, vendedor
 - **Edição de perfil** com validação de dados
 - **Exclusão de conta** com confirmação por email
@@ -89,6 +94,7 @@ pecaja/
 - **Sistema de permissões** baseado em roles
 
 ### 3. Módulo de Solicitações
+
 - **Criação de solicitações** com dados do veículo
 - **Upload de até 3 imagens** por solicitação
 - **Integração com API veicular** para preenchimento automático (www.consultarplaca.com.br)
@@ -98,6 +104,7 @@ pecaja/
 - **Controle de status** (ativa, concluída, cancelada)
 
 ### 4. Módulo de Atendimento
+
 - **Visualização por localização** (mesma cidade)
 - **Marcação como "Atendida"** por autopeça/vendedor
 - **Controle de conflitos** entre vendedores da mesma autopeça
@@ -105,6 +112,7 @@ pecaja/
 - **Histórico de atendimentos**
 
 ### 5. Módulo de Notificações
+
 - **Notificações por email** para novas solicitações
 - **Notificações in-app** para ações importantes
 
@@ -113,6 +121,7 @@ pecaja/
 ### Frontend - React.js
 
 #### Páginas Principais
+
 1. **Landing Page** - Apresentação da plataforma
 2. **Cadastro/Login** - Autenticação com opção Google OAuth
 3. **Dashboard Cliente**:
@@ -131,6 +140,7 @@ pecaja/
    - Histórico pessoal
 
 #### Componentes Chave
+
 - **AuthGuard** - Proteção de rotas
 - **FileUpload** - Upload de imagens com validação
 - **VehicleForm** - Formulário com integração API veicular
@@ -139,6 +149,7 @@ pecaja/
 - **NotificationBell** - Notificações em tempo real
 
 #### Padrões de UI/UX
+
 - **Design responsivo** (MVP focado em WEB)
 - **Loading states** para todas as operações
 - **Error boundaries** para tratamento de erros
@@ -147,6 +158,7 @@ pecaja/
 ### Backend - Node.js/Express
 
 #### Estrutura de Rotas
+
 ```
 /api/auth          # Autenticação
 /api/users         # Gerenciamento de usuários
@@ -160,6 +172,7 @@ pecaja/
 ```
 
 #### Middlewares Essenciais
+
 - **Authentication** - Verificação JWT
 - **Authorization** - Controle de permissões por role
 - **Validation** - Validação de dados de entrada
@@ -169,6 +182,7 @@ pecaja/
 - **Logging** - Auditoria de operações
 
 #### Serviços Externos
+
 - **Google OAuth API** - Autenticação social
 - **API Veicular** - Consulta de dados por placa ( será utilizado o https://consultarplaca.com.br/)
 - **WhatsApp Business API** - Redirecionamento
@@ -177,11 +191,13 @@ pecaja/
 ### Banco de Dados - PostgreSQL
 
 #### Configuração Inicial
+
 - Implementar migrations com Sequelize
 - Configurar índices para performance
 - Estabelecer constraints de integridade
 
 #### Otimizações
+
 - **Índices compostos** para consultas frequentes
 - **Views materializadas** para relatórios
 - **Particionamento** para tabelas grandes (futuro)
@@ -190,6 +206,7 @@ pecaja/
 ## Padrões de Desenvolvimento
 
 ### Código Limpo e Arquitetura
+
 - **Clean Code** - Nomes descritivos, funções pequenas
 - **SOLID Principles** - Especialmente SRP e DIP
 - **MVC Pattern** - Separação clara de responsabilidades
@@ -197,6 +214,7 @@ pecaja/
 - **Service Layer** - Lógica de negócio isolada
 
 ### Testes
+
 - **TDD Approach** - Testes antes da implementação
 - **Cobertura mínima** de 70%
 - **Testes unitários** para serviços e utilitários
@@ -204,6 +222,7 @@ pecaja/
 - **Testes E2E** para fluxos críticos
 
 ### Segurança
+
 - **Input Validation** - Sanitização de todas as entradas
 - **SQL Injection Prevention** - Prepared statements
 - **XSS Protection** - Escape de outputs
@@ -214,6 +233,7 @@ pecaja/
 - **Password Hashing** - bcrypt com salt
 
 ### Performance
+
 - **Lazy Loading** - Carregamento sob demanda
 - **Image Optimization** - Compressão e redimensionamento
 - **Caching Strategy** - Cache de consultas frequentes
@@ -223,19 +243,21 @@ pecaja/
 ## Fluxos Principais de Usuário
 
 ### Cliente
+
 1. **Cadastro/Login** → **Dashboard**
 2. **Nova Solicitação** → **Preencher dados veículo** → **Upload imagens** → **Confirmar**
 3. **Visualizar status** → **Receber atendimento no WhatsApp** → **Concluir solicitação**
 
 ### Autopeça
+
 1. **Cadastro/Login** → **Dashboard**
 2. **Visualizar solicitações** → **Filtrar por critério** → **WhatsApp cliente**
 3. **Gerenciar vendedores** → **Cadastrar/editar/inativar**
 
 ### Vendedor
+
 1. **Receber credenciais** → **Login** → **Dashboard**
 2. **Visualizar solicitações não atendidas** → **WhatsApp client** → **Marca como atendida**
-
 
 ```mermaid
 flowchart TD
@@ -263,12 +285,14 @@ flowchart TD
 ## Integrações Externas
 
 ### Google OAuth 2.0
+
 - **Client ID/Secret** configuráveis via env
 - **Scopes**: email, profile
 - **Callback URL** configurada
 - **Token refresh** automático
 
 ### API Veicular - Consultar Placa
+
 - **Documentação Oficial**: https://docs.consultarplaca.com.br/consultas/consultar-placa
 - **Tipo de API**: RESTful
 - **Autenticação**: API Key via header
@@ -277,9 +301,11 @@ flowchart TD
 - **Rate limiting** para evitar custos
 
 ### WhatsApp Business
+
 - **Deep linking** para WhatsApp Web
 
 ### Docker Configuration
+
 - **Multi-stage builds** para otimização
 - **Health checks** para serviços
 - **Volume mapping** para persistência
@@ -288,6 +314,7 @@ flowchart TD
 ## Critérios de Aceite por Funcionalidade
 
 ### RF01 - Cadastro de Clientes
+
 - [x] Formulário com campos obrigatórios
 - [x] Validação de email único
 - [x] Validação de formato celular
@@ -295,6 +322,7 @@ flowchart TD
 - [x] Confirmação por email
 
 ### RF08 - Criação de Solicitações
+
 - [x] Integração com API veicular
 - [x] Fallback manual para dados
 - [x] Upload de até 3 imagens
@@ -302,6 +330,7 @@ flowchart TD
 - [x] Descrição obrigatória da peça
 
 ### RF12 - Filtro por Localização
+
 - [x] Solicitações apenas da mesma cidade
 - [x] Filtro automático no backend
 - [x] Performance otimizada com índices
@@ -309,30 +338,35 @@ flowchart TD
 ## Entregas e Milestones
 
 ### Sprint 1 - Fundação (Semanas 1-2)
+
 - Configuração do ambiente de desenvolvimento
 - Estrutura básica do projeto (frontend + backend)
 - Configuração do banco de dados
 - Sistema de autenticação básico
 
 ### Sprint 2 - Usuários (Semanas 3-4)
+
 - Cadastro e login de clientes e autopeças
 - Integração Google OAuth
 - Perfis e edição de dados
 - Recuperação de senha
 
 ### Sprint 3 - Solicitações (Semanas 5-6)
+
 - Criação de solicitações pelos clientes
 - Upload de imagens
 - Integração API veicular
 - Visualização por autopeças
 
 ### Sprint 4 - Atendimento (Semanas 7-8)
+
 - Sistema de filtros para autopeças
 - Marcação como atendida
 - Redirecionamento WhatsApp
 - Gestão de vendedores
 
 ### Sprint 5 - Notificações e Refinamentos (Semanas 9-10)
+
 - Sistema de notificações
 - Testes abrangentes
 - Otimizações de performance
@@ -341,6 +375,7 @@ flowchart TD
 ## Considerações de Deploy
 
 ### Ambiente de Produção
+
 - **Cloud Provider**: Heroku, Vercel, ou AWS
 - **CDN**: Para assets estáticos
 - **SSL Certificate**: Obrigatório
@@ -348,6 +383,7 @@ flowchart TD
 - **Scaling**: Horizontal para backend
 
 ### CI/CD Pipeline
+
 - **GitHub Actions** para automação
 - **Build/Test/Deploy** automático
 - **Environment separation** (dev/staging/prod)

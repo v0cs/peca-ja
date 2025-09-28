@@ -35,7 +35,41 @@ class SolicitacaoController {
         });
       }
 
-      // 2. Validar campos obrigatórios
+      // 2. Log de tracking da origem dos dados
+      console.log(
+        "📋 Controller: Dados recebidos (processados pelo middleware):"
+      );
+      console.log("- Placa:", req.body.placa);
+      console.log("- Marca:", req.body.marca);
+      console.log("- Modelo:", req.body.modelo);
+      console.log("- Origem dos dados:", req.body.origem_dados_veiculo);
+      console.log("- Info da API:", req.apiVeicularInfo);
+
+      // 3. Buscar dados do cliente para usar cidade/estado como padrão
+      const cliente = await Cliente.findOne({
+        where: { usuario_id: req.user.userId },
+        include: [
+          {
+            model: Usuario,
+            as: "usuario",
+            attributes: ["id", "email", "tipo_usuario"],
+          },
+        ],
+        transaction,
+      });
+
+      if (!cliente) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Cliente não encontrado",
+          errors: {
+            cliente: "Perfil de cliente não encontrado",
+          },
+        });
+      }
+
+      // 4. Validar campos obrigatórios (dados já processados pelo middleware)
       const {
         descricao_peca,
         cidade_atendimento,
@@ -53,10 +87,20 @@ class SolicitacaoController {
         api_veicular_metadata,
       } = req.body;
 
+      // Usar cidade/estado do perfil do cliente como padrão se não informado
+      const cidadeFinal = cidade_atendimento || cliente.cidade;
+      const ufFinal = uf_atendimento || cliente.uf;
+
+      console.log("🏠 Controller: Localização da solicitação:");
+      console.log("- Cidade informada:", cidade_atendimento);
+      console.log("- UF informada:", uf_atendimento);
+      console.log("- Cidade do perfil:", cliente.cidade);
+      console.log("- UF do perfil:", cliente.uf);
+      console.log("- Cidade final:", cidadeFinal);
+      console.log("- UF final:", ufFinal);
+
       const camposObrigatorios = {
         descricao_peca,
-        cidade_atendimento,
-        uf_atendimento,
         placa,
         marca,
         modelo,
@@ -84,20 +128,6 @@ class SolicitacaoController {
             message: `Os seguintes campos são obrigatórios: ${camposFaltando.join(
               ", "
             )}`,
-          },
-        });
-      }
-
-      // 3. Validar formato da placa (Mercosul ou antigo)
-      const placaRegex = /^[A-Z]{3}[0-9][0-9A-Z][0-9]{2}$|^[A-Z]{3}-?[0-9]{4}$/;
-      if (!placaRegex.test(placa.replace(/-/g, ""))) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Formato de placa inválido",
-          errors: {
-            placa:
-              "Placa deve estar no formato Mercosul (ABC1D23) ou antigo (ABC-1234)",
           },
         });
       }
@@ -148,43 +178,32 @@ class SolicitacaoController {
         });
       }
 
-      // 6. Validar UF
-      if (uf_atendimento.length !== 2) {
+      // 5. Validar UF final
+      if (ufFinal.length !== 2) {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: "UF deve ter 2 caracteres",
           errors: {
             uf_atendimento: "UF deve ter exatamente 2 caracteres",
+            uf_final: ufFinal,
           },
         });
       }
 
-      // 7. Buscar cliente_id baseado no usuário autenticado
-      const cliente = await Cliente.findOne({
-        where: { usuario_id: req.user.userId },
-        transaction,
-      });
+      // 8. Criar solicitação com dados mesclados do middleware
+      console.log("💾 Controller: Criando solicitação com dados processados:");
+      console.log("- Origem dos dados:", origem_dados_veiculo);
+      console.log("- Dados da API disponíveis:", !!api_veicular_metadata);
 
-      if (!cliente) {
-        await transaction.rollback();
-        return res.status(404).json({
-          success: false,
-          message: "Cliente não encontrado",
-          errors: {
-            cliente: "Usuário autenticado não possui perfil de cliente",
-          },
-        });
-      }
-
-      // 8. Criar solicitação
       const novaSolicitacao = await Solicitacao.create(
         {
           cliente_id: cliente.id,
           descricao_peca: descricao_peca.trim(),
           status_cliente: "ativa",
-          cidade_atendimento: cidade_atendimento.trim(),
-          uf_atendimento: uf_atendimento.toUpperCase().trim(),
+          cidade_atendimento: cidadeFinal.trim(),
+          uf_atendimento: ufFinal.toUpperCase().trim(),
+          // Dados já processados pelo middleware (normalizados)
           placa: placa.replace(/-/g, "").toUpperCase(),
           marca: marca.trim(),
           modelo: modelo.trim(),
@@ -194,6 +213,7 @@ class SolicitacaoController {
           cor: cor.trim(),
           chassi: chassi ? chassi.trim() : "Não informado",
           renavam: renavam ? renavam.trim() : "Não informado",
+          // Metadados da API veicular (adicionados pelo middleware)
           origem_dados_veiculo: origem_dados_veiculo || "manual",
           api_veicular_metadata: api_veicular_metadata || null,
         },
@@ -204,7 +224,7 @@ class SolicitacaoController {
       let imagensCriadas = [];
       if (req.uploadedFiles && req.uploadedFiles.length > 0) {
         for (let i = 0; i < req.uploadedFiles.length; i++) {
-          const file = req.uploadedFiles[i];
+          const file = req.files[i];
           const imagem = await ImagemSolicitacao.create(
             {
               solicitacao_id: novaSolicitacao.id,
@@ -224,17 +244,56 @@ class SolicitacaoController {
 
       await transaction.commit();
 
-      // 10. Retornar resposta no formato correto
+      // 10. Log de sucesso com informações da origem dos dados
+      console.log("✅ Controller: Solicitação criada com sucesso:");
+      console.log("- ID:", novaSolicitacao.id);
+      console.log("- Placa:", novaSolicitacao.placa);
+      console.log("- Origem dos dados:", novaSolicitacao.origem_dados_veiculo);
+      console.log("- Imagens:", imagensCriadas.length);
+
+      // 11. Retornar resposta com informações da origem dos dados
       return res.status(201).json({
         success: true,
         message: `Solicitação criada com ${imagensCriadas.length} imagem(ns)`,
         data: {
-          solicitacao: novaSolicitacao,
+          solicitacao: {
+            id: novaSolicitacao.id,
+            placa: novaSolicitacao.placa,
+            marca: novaSolicitacao.marca,
+            modelo: novaSolicitacao.modelo,
+            ano_fabricacao: novaSolicitacao.ano_fabricacao,
+            ano_modelo: novaSolicitacao.ano_modelo,
+            categoria: novaSolicitacao.categoria,
+            cor: novaSolicitacao.cor,
+            origem_dados_veiculo: novaSolicitacao.origem_dados_veiculo,
+            status_cliente: novaSolicitacao.status_cliente,
+            cidade_atendimento: novaSolicitacao.cidade_atendimento,
+            uf_atendimento: novaSolicitacao.uf_atendimento,
+            created_at: novaSolicitacao.created_at,
+          },
           imagens: imagensCriadas.map((img) => ({
             id: img.id,
             nome_arquivo: img.nome_arquivo,
             url: `/uploads/${img.nome_arquivo_fisico}`,
           })),
+          api_veicular_info: {
+            consultado: req.apiVeicularInfo?.consultado || false,
+            origem: req.apiVeicularInfo?.origem || "manual",
+            motivo: req.apiVeicularInfo?.motivo || "nao_consultado",
+            timestamp:
+              req.apiVeicularInfo?.timestamp || new Date().toISOString(),
+          },
+          localizacao_info: {
+            cidade_informada: cidade_atendimento || null,
+            uf_informada: uf_atendimento || null,
+            cidade_perfil_cliente: cliente.cidade,
+            uf_perfil_cliente: cliente.uf,
+            cidade_final_usada: cidadeFinal,
+            uf_final_usada: ufFinal,
+            origem_localizacao: cidade_atendimento
+              ? "informada_pelo_cliente"
+              : "perfil_cliente",
+          },
         },
       });
     } catch (error) {

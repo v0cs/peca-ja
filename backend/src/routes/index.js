@@ -7,6 +7,7 @@ const router = express.Router();
 // Import route modules
 const authRoutes = require("./authRoutes");
 const solicitacaoRoutes = require("./solicitacaoRoutes");
+const vehicleRoutes = require("./vehicleRoutes");
 
 // Health check da API
 router.get("/health", (req, res) => {
@@ -16,5 +17,6 @@ router.get("/health", (req, res) => {
 // Mount routes
 router.use("/auth", authRoutes);
 router.use("/solicitacoes", solicitacaoRoutes);
+router.use("/vehicle", vehicleRoutes);
 
 module.exports = router;

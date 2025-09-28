@@ -24,4 +24,13 @@ module.exports = {
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: 900000, // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: 100,
+
+  // API Veicular Configuration
+  API_VEICULAR_KEY:
+    process.env.API_VEICULAR_KEY || "c68ed7cedc6d247491a1cd0561b30d16",
+  API_VEICULAR_EMAIL:
+    process.env.API_VEICULAR_EMAIL || "vitorcelestinosilva@gmail.com",
+  API_VEICULAR_BASE_URL: "https://api.consultarplaca.com.br/v2",
+  API_VEICULAR_TIMEOUT: 10000, // 10 seconds
+  API_VEICULAR_CACHE_TTL: 86400, // 24 hours
 };

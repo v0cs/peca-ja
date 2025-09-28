@@ -6,6 +6,9 @@ const { authMiddleware } = require("../middleware");
 // Rota para registro de usuários
 router.post("/register", authController.register);
 
+// Rota para registro de autopeças
+router.post("/register-autopeca", authController.registerAutopeca);
+
 // Rota para login de usuários
 router.post("/login", authController.login);
 

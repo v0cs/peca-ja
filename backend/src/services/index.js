@@ -1,8 +1,8 @@
 // Services index file
 // Export all services from here
 
+const apiVeicularService = require("./apiVeicularService");
+
 module.exports = {
-  // Services will be exported here
+  apiVeicularService,
 };
-
-

@@ -44,42 +44,67 @@ module.exports = (sequelize, DataTypes) => {
       razao_social: {
         type: DataTypes.STRING(255),
         allowNull: false,
+        comment: "Razão social da autopeça (nome oficial da empresa)",
+      },
+      nome_fantasia: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: "Nome fantasia da autopeça (nome comercial, opcional)",
       },
       cnpj: {
-        type: DataTypes.STRING(18),
+        type: DataTypes.STRING(14),
         allowNull: false,
         unique: true,
+        validate: {
+          len: [14, 14],
+          is: /^[0-9]{14}$/,
+        },
+        comment: "CNPJ da autopeça (14 dígitos numéricos, sem formatação)",
       },
       telefone: {
         type: DataTypes.STRING(20),
         allowNull: false,
         validate: {
-          is: /^\([0-9]{2}\)[0-9]{8,9}$/,
+          is: /^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/,
         },
+        comment: "Telefone da autopeça no formato brasileiro: (11)99999-9999",
       },
       endereco_rua: {
         type: DataTypes.STRING(255),
         allowNull: false,
+        comment: "Nome da rua/avenida do endereço da autopeça",
       },
       endereco_numero: {
         type: DataTypes.STRING(20),
         allowNull: false,
+        comment: "Número do endereço da autopeça",
       },
       endereco_bairro: {
         type: DataTypes.STRING(100),
         allowNull: false,
+        comment: "Bairro onde está localizada a autopeça",
       },
       endereco_cidade: {
         type: DataTypes.STRING(100),
         allowNull: false,
+        comment: "Cidade onde está localizada a autopeça",
       },
       endereco_uf: {
         type: DataTypes.STRING(2),
         allowNull: false,
+        validate: {
+          len: [2, 2],
+        },
+        comment: "Estado (UF) onde está localizada a autopeça (2 caracteres)",
       },
       endereco_cep: {
-        type: DataTypes.STRING(10),
+        type: DataTypes.STRING(8),
         allowNull: false,
+        validate: {
+          len: [8, 8],
+          is: /^[0-9]{8}$/,
+        },
+        comment: "CEP da autopeça (8 dígitos numéricos, sem formatação)",
       },
       data_exclusao_pedida: {
         type: DataTypes.DATE,
@@ -110,5 +135,3 @@ module.exports = (sequelize, DataTypes) => {
 
   return Autopeca;
 };
-
-
