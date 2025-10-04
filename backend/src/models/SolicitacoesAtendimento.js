@@ -41,7 +41,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       autopeca_id: {
         type: DataTypes.UUID,
-        allowNull: true,
+        allowNull: false,
         references: {
           model: "autopecas",
           key: "id",
@@ -80,15 +80,14 @@ module.exports = (sequelize, DataTypes) => {
         },
       ],
       validate: {
-        autopecaOrVendedorRequired() {
-          if (!this.autopeca_id && !this.vendedor_id) {
-            throw new Error(
-              "Either autopeca_id or vendedor_id must be provided"
-            );
+        validarAtendimento() {
+          // autopeca_id é OBRIGATÓRIO sempre
+          if (!this.autopeca_id) {
+            throw new Error("autopeca_id é obrigatório");
           }
-          if (this.autopeca_id && this.vendedor_id) {
-            throw new Error("Cannot have both autopeca_id and vendedor_id");
-          }
+
+          // vendedor_id é OPCIONAL, mas se existir deve pertencer à autopeça
+          // (essa verificação será feita no controller)
         },
       },
     }
@@ -96,5 +95,3 @@ module.exports = (sequelize, DataTypes) => {
 
   return SolicitacoesAtendimento;
 };
-
-

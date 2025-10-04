@@ -34,6 +34,12 @@ module.exports = (sequelize, DataTypes) => {
         as: "tokensResetSenha",
       });
 
+      // Usuario 1:N TokensRecuperacaoSenha
+      Usuario.hasMany(models.TokenRecuperacaoSenha, {
+        foreignKey: "usuario_id",
+        as: "tokensRecuperacaoSenha",
+      });
+
       // Usuario 1:N LogsAuditoria
       Usuario.hasMany(models.LogAuditoria, {
         foreignKey: "usuario_id",
@@ -110,5 +116,3 @@ module.exports = (sequelize, DataTypes) => {
 
   return Usuario;
 };
-
-

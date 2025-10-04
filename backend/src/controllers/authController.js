@@ -1,6 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { Usuario, Cliente, Autopeca } = require("../models");
+const crypto = require("crypto");
+const {
+  Usuario,
+  Cliente,
+  Autopeca,
+  TokenRecuperacaoSenha,
+} = require("../models");
 
 /**
  * Função auxiliar para validar CNPJ real
@@ -222,7 +228,19 @@ class AuthController {
       // 7. Commit da transação
       await transaction.commit();
 
-      // 8. Retornar sucesso (201)
+      // 8. Enviar email de boas-vindas (assíncrono - não bloqueia response)
+      try {
+        const { emailService } = require("../services");
+        emailService
+          .sendWelcomeEmail(novoUsuario, novoCliente, "cliente")
+          .catch((err) =>
+            console.log("Erro ao enviar email de boas-vindas:", err)
+          );
+      } catch (emailError) {
+        console.log("Erro no envio de email:", emailError);
+      }
+
+      // 9. Retornar sucesso (201)
       return res.status(201).json({
         success: true,
         message: "Cliente registrado com sucesso",
@@ -584,7 +602,19 @@ class AuthController {
         console.log("Transação commitada com sucesso");
       }
 
-      // 9. Retornar sucesso (201)
+      // 9. Enviar email de boas-vindas (assíncrono - não bloqueia response)
+      try {
+        const { emailService } = require("../services");
+        emailService
+          .sendWelcomeEmail(novoUsuario, novaAutopeca, "autopeca")
+          .catch((err) =>
+            console.log("Erro ao enviar email de boas-vindas:", err)
+          );
+      } catch (emailError) {
+        console.log("Erro no envio de email:", emailError);
+      }
+
+      // 10. Retornar sucesso (201)
       return res.status(201).json({
         success: true,
         message: "Autopeça registrada com sucesso",
@@ -891,11 +921,89 @@ class AuthController {
    * @param {Object} res - Response object
    */
   static async forgotPassword(req, res) {
-    // TODO: Implementar recuperação de senha
-    return res.status(501).json({
-      success: false,
-      message: "Funcionalidade de recuperação de senha ainda não implementada",
-    });
+    try {
+      // 1. Validar email
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email é obrigatório",
+          errors: {
+            email: "Email é obrigatório",
+          },
+        });
+      }
+
+      // Validar formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de email inválido",
+          errors: {
+            email: "Formato de email inválido",
+          },
+        });
+      }
+
+      // 2. Buscar usuário por email
+      const usuario = await Usuario.findOne({
+        where: { email: email.toLowerCase().trim() },
+      });
+
+      // 3. Se usuário não existe, retornar sucesso (não revelar se email existe)
+      if (!usuario) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "Se o email estiver cadastrado, você receberá instruções para redefinir sua senha",
+        });
+      }
+
+      // 4. Gerar token único
+      const resetToken = crypto.randomBytes(32).toString("hex");
+
+      // 5. Criar TokenRecuperacaoSenha (expira em 1h)
+      const dataExpiracao = new Date();
+      dataExpiracao.setHours(dataExpiracao.getHours() + 1); // 1 hora
+
+      await TokenRecuperacaoSenha.create({
+        usuario_id: usuario.id,
+        token: resetToken,
+        data_expiracao: dataExpiracao,
+        utilizado: false,
+      });
+
+      // 6. Enviar email com link (assíncrono - não bloqueia response)
+      try {
+        const { emailService } = require("../services");
+        emailService
+          .sendPasswordResetEmail(usuario, resetToken)
+          .catch((err) =>
+            console.log("Erro ao enviar email de recuperação:", err)
+          );
+      } catch (emailError) {
+        console.log("Erro no envio de email:", emailError);
+      }
+
+      // 7. Retornar sucesso (não revelar se email existe)
+      return res.status(200).json({
+        success: true,
+        message:
+          "Se o email estiver cadastrado, você receberá instruções para redefinir sua senha",
+      });
+    } catch (error) {
+      console.error("Erro na recuperação de senha:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
   }
 
   /**
@@ -906,11 +1014,160 @@ class AuthController {
    * @param {Object} res - Response object
    */
   static async resetPassword(req, res) {
-    // TODO: Implementar reset de senha
-    return res.status(501).json({
-      success: false,
-      message: "Funcionalidade de reset de senha ainda não implementada",
-    });
+    const transaction = await Usuario.sequelize.transaction();
+
+    try {
+      // 1. Validar token e nova senha
+      const { token, nova_senha } = req.body;
+
+      if (!token || !nova_senha) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Token e nova senha são obrigatórios",
+          errors: {
+            token: !token ? "Token é obrigatório" : undefined,
+            nova_senha: !nova_senha ? "Nova senha é obrigatória" : undefined,
+          },
+        });
+      }
+
+      // Validar nova senha (mínimo 6 caracteres)
+      if (nova_senha.length < 6) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "A nova senha deve ter pelo menos 6 caracteres",
+          errors: {
+            nova_senha: "A senha deve ter pelo menos 6 caracteres",
+          },
+        });
+      }
+
+      // 2. Buscar token não expirado e não utilizado
+      const tokenRecuperacao = await TokenRecuperacaoSenha.findOne({
+        where: {
+          token: token,
+          utilizado: false,
+        },
+        include: [
+          {
+            model: Usuario,
+            as: "usuario",
+          },
+        ],
+        transaction,
+      });
+
+      if (!tokenRecuperacao) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Token inválido ou expirado",
+          errors: {
+            token: "Token inválido ou já utilizado",
+          },
+        });
+      }
+
+      // 3. Verificar se token não expirou
+      if (new Date() > tokenRecuperacao.data_expiracao) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Token expirado",
+          errors: {
+            token: "Token expirado. Solicite um novo link de recuperação",
+          },
+        });
+      }
+
+      // 4. Buscar usuário relacionado
+      const usuario = tokenRecuperacao.usuario;
+      if (!usuario) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Usuário não encontrado",
+          errors: {
+            usuario: "Usuário associado ao token não encontrado",
+          },
+        });
+      }
+
+      // 5. Hash nova senha
+      const saltRounds = 12;
+      const novaSenhaHash = await bcrypt.hash(nova_senha, saltRounds);
+
+      // 6. Atualizar senha do usuário
+      await usuario.update(
+        {
+          senha_hash: novaSenhaHash,
+        },
+        { transaction }
+      );
+
+      // 7. Marcar token como utilizado
+      await tokenRecuperacao.update(
+        {
+          utilizado: true,
+          data_utilizacao: new Date(),
+        },
+        { transaction }
+      );
+
+      // 8. Commit da transação
+      await transaction.commit();
+
+      // 9. Enviar email de confirmação (assíncrono - não bloqueia response)
+      try {
+        const { emailService } = require("../services");
+        // Criar objeto temporário para o email
+        const usuarioParaEmail = {
+          email: usuario.email,
+          nome: usuario.email, // Fallback para nome
+        };
+
+        // Enviar email de confirmação (usando sendWelcomeEmail como base)
+        emailService
+          .sendWelcomeEmail(
+            usuarioParaEmail,
+            { nome_completo: usuario.email },
+            "usuario"
+          )
+          .catch((err) =>
+            console.log("Erro ao enviar email de confirmação:", err)
+          );
+      } catch (emailError) {
+        console.log("Erro no envio de email de confirmação:", emailError);
+      }
+
+      // 10. Retornar sucesso
+      return res.status(200).json({
+        success: true,
+        message: "Senha redefinida com sucesso",
+        data: {
+          usuario: {
+            id: usuario.id,
+            email: usuario.email,
+            tipo_usuario: usuario.tipo_usuario,
+          },
+        },
+      });
+    } catch (error) {
+      // Rollback da transação em caso de erro
+      await transaction.rollback();
+
+      console.error("Erro no reset de senha:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
   }
 
   /**

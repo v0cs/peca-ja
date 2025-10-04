@@ -8,6 +8,9 @@ const router = express.Router();
 const authRoutes = require("./authRoutes");
 const solicitacaoRoutes = require("./solicitacaoRoutes");
 const vehicleRoutes = require("./vehicleRoutes");
+const autopecaRoutes = require("./autopecaRoutes");
+const vendedorRoutes = require("./vendedorRoutes");
+const vendedorOperacoesRoutes = require("./vendedorOperacoesRoutes");
 
 // Health check da API
 router.get("/health", (req, res) => {
@@ -18,5 +21,8 @@ router.get("/health", (req, res) => {
 router.use("/auth", authRoutes);
 router.use("/solicitacoes", solicitacaoRoutes);
 router.use("/vehicle", vehicleRoutes);
+router.use("/autopecas", autopecaRoutes);
+router.use("/vendedores", vendedorRoutes);
+router.use("/vendedor", vendedorOperacoesRoutes);
 
 module.exports = router;

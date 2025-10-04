@@ -33,4 +33,9 @@ module.exports = {
   API_VEICULAR_BASE_URL: "https://api.consultarplaca.com.br/v2",
   API_VEICULAR_TIMEOUT: 10000, // 10 seconds
   API_VEICULAR_CACHE_TTL: 86400, // 24 hours
+
+  // Email Configuration (Resend)
+  RESEND_API_KEY:
+    process.env.RESEND_API_KEY || "re_mU2nKnP6_ESPokZgH4y3FB7XJSvAPwu1r",
+  APP_URL: process.env.APP_URL || "http://localhost:3000",
 };

@@ -244,14 +244,49 @@ class SolicitacaoController {
 
       await transaction.commit();
 
-      // 10. Log de sucesso com informações da origem dos dados
+      // 10. Enviar notificações para autopeças da mesma cidade (assíncrono)
+      try {
+        const { emailService } = require("../services");
+        const { Autopeca } = require("../models");
+
+        // Buscar autopeças da mesma cidade
+        const autopecasDaCidade = await Autopeca.findAll({
+          where: {
+            endereco_cidade: novaSolicitacao.cidade_atendimento,
+            endereco_uf: novaSolicitacao.uf_atendimento,
+          },
+          include: [{ association: "usuario" }],
+        });
+
+        // Enviar notificação para cada autopeça
+        autopecasDaCidade.forEach((autopeca) => {
+          if (autopeca.usuario && autopeca.usuario.email) {
+            emailService
+              .sendNewRequestNotification(
+                autopeca.usuario.email,
+                novaSolicitacao,
+                cliente, // já disponível no contexto
+                autopeca.razao_social
+              )
+              .catch((err) => console.log("Erro ao notificar autopeça:", err));
+          }
+        });
+
+        console.log(
+          `📧 Notificações enviadas para ${autopecasDaCidade.length} autopeças`
+        );
+      } catch (emailError) {
+        console.log("Erro no sistema de notificações:", emailError);
+      }
+
+      // 11. Log de sucesso com informações da origem dos dados
       console.log("✅ Controller: Solicitação criada com sucesso:");
       console.log("- ID:", novaSolicitacao.id);
       console.log("- Placa:", novaSolicitacao.placa);
       console.log("- Origem dos dados:", novaSolicitacao.origem_dados_veiculo);
       console.log("- Imagens:", imagensCriadas.length);
 
-      // 11. Retornar resposta com informações da origem dos dados
+      // 12. Retornar resposta com informações da origem dos dados
       return res.status(201).json({
         success: true,
         message: `Solicitação criada com ${imagensCriadas.length} imagem(ns)`,
