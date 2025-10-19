@@ -367,7 +367,11 @@ class VendedorController {
     try {
       // req.user é adicionado pelo middleware de autenticação
       const { userId, tipo } = req.user;
-      const { vendedorId } = req.params;
+      let { vendedorId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      vendedorId = vendedorId.startsWith(":")
+        ? vendedorId.slice(1)
+        : vendedorId;
 
       // Verificar se o usuário é do tipo autopeca
       if (tipo !== "autopeca") {
@@ -569,7 +573,11 @@ class VendedorController {
     try {
       // req.user é adicionado pelo middleware de autenticação
       const { userId, tipo } = req.user;
-      const { vendedorId } = req.params;
+      let { vendedorId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      vendedorId = vendedorId.startsWith(":")
+        ? vendedorId.slice(1)
+        : vendedorId;
 
       // Verificar se o usuário é do tipo autopeca
       if (tipo !== "autopeca") {

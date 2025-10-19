@@ -28,12 +28,6 @@ module.exports = (sequelize, DataTypes) => {
         as: "notificacoes",
       });
 
-      // Usuario 1:N TokensResetSenha
-      Usuario.hasMany(models.TokenResetSenha, {
-        foreignKey: "usuario_id",
-        as: "tokensResetSenha",
-      });
-
       // Usuario 1:N TokensRecuperacaoSenha
       Usuario.hasMany(models.TokenRecuperacaoSenha, {
         foreignKey: "usuario_id",

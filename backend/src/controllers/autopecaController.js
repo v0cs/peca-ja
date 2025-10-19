@@ -528,7 +528,11 @@ class AutopecaController {
     try {
       // req.user é adicionado pelo middleware de autenticação
       const { userId, tipo } = req.user;
-      const { solicitacaoId } = req.params;
+      let { solicitacaoId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      solicitacaoId = solicitacaoId.startsWith(":")
+        ? solicitacaoId.slice(1)
+        : solicitacaoId;
 
       // Verificar se o usuário é do tipo autopeca
       if (tipo !== "autopeca") {
@@ -646,6 +650,15 @@ class AutopecaController {
           status_atendimento: "nao_lida",
         },
         { transaction }
+      );
+
+      // 5.1. Criar notificação IN-APP para o cliente
+      const NotificationService = require("../services/notificationService");
+      await NotificationService.notificarClienteSolicitacaoAtendida(
+        solicitacao,
+        solicitacao.cliente,
+        autopeca,
+        null // sem vendedor
       );
 
       // 6. Gerar link do WhatsApp com dados do cliente

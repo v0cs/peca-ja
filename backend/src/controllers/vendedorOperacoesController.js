@@ -327,7 +327,11 @@ class VendedorOperacoesController {
     try {
       // req.user é adicionado pelo middleware de autenticação
       const { userId, tipo } = req.user;
-      const { solicitacaoId } = req.params;
+      let { solicitacaoId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      solicitacaoId = solicitacaoId.startsWith(":")
+        ? solicitacaoId.slice(1)
+        : solicitacaoId;
 
       // Verificar se o usuário é do tipo vendedor
       if (tipo !== "vendedor") {
@@ -443,6 +447,31 @@ class VendedorOperacoesController {
           status_atendimento: "nao_lida",
         },
         { transaction }
+      );
+
+      // 5.1. Criar notificações IN-APP
+      const NotificationService = require("../services/notificationService");
+
+      // Notificar cliente
+      await NotificationService.notificarClienteSolicitacaoAtendida(
+        solicitacao,
+        solicitacao.cliente,
+        vendedor.autopeca,
+        vendedor
+      );
+
+      // Notificar admin da autopeça
+      await NotificationService.notificarAutopecaVendedorAtendeu(
+        solicitacao,
+        vendedor,
+        vendedor.autopeca
+      );
+
+      // Notificar outros vendedores da mesma autopeça
+      await NotificationService.notificarOutrosVendedoresPerderam(
+        solicitacao,
+        vendedor.autopeca_id,
+        vendedor.id
       );
 
       // 6. Gerar link do WhatsApp com dados do cliente

@@ -38,7 +38,12 @@ module.exports = (sequelize, DataTypes) => {
           "autopeca_cadastrada",
           "vendedor_inativado",
           "termos_atualizados",
-          "marketing_comunicacao"
+          "marketing_comunicacao",
+          "solicitacao_atendida",
+          "solicitacao_cancelada",
+          "vendedor_atendeu",
+          "conflito_atendimento",
+          "perdeu_solicitacao"
         ),
         allowNull: false,
       },

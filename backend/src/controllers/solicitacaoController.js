@@ -3,6 +3,7 @@ const {
   Cliente,
   Usuario,
   ImagemSolicitacao,
+  SolicitacoesAtendimento,
 } = require("../models");
 const { uploadMiddleware } = require("../middleware/uploadMiddleware");
 const path = require("path");
@@ -247,6 +248,7 @@ class SolicitacaoController {
       // 10. Enviar notificações para autopeças da mesma cidade (assíncrono)
       try {
         const { emailService } = require("../services");
+        const NotificationService = require("../services/notificationService");
         const { Autopeca } = require("../models");
 
         // Buscar autopeças da mesma cidade
@@ -258,7 +260,7 @@ class SolicitacaoController {
           include: [{ association: "usuario" }],
         });
 
-        // Enviar notificação para cada autopeça
+        // Enviar notificação EMAIL para cada autopeça
         autopecasDaCidade.forEach((autopeca) => {
           if (autopeca.usuario && autopeca.usuario.email) {
             emailService
@@ -271,6 +273,12 @@ class SolicitacaoController {
               .catch((err) => console.log("Erro ao notificar autopeça:", err));
           }
         });
+
+        // Criar notificações IN-APP para autopeças
+        await NotificationService.notificarAutopecasNovaSolicitacao(
+          novaSolicitacao,
+          autopecasDaCidade
+        );
 
         console.log(
           `📧 Notificações enviadas para ${autopecasDaCidade.length} autopeças`
@@ -413,7 +421,9 @@ class SolicitacaoController {
    */
   static async getById(req, res) {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      id = id.startsWith(":") ? id.slice(1) : id;
 
       // 1. Verificar se o usuário é um cliente
       if (req.user.tipo !== "cliente") {
@@ -502,7 +512,9 @@ class SolicitacaoController {
     const transaction = await Solicitacao.sequelize.transaction();
 
     try {
-      const { id } = req.params;
+      let { id } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      id = id.startsWith(":") ? id.slice(1) : id;
 
       // 1. Verificar se o usuário é um cliente
       if (req.user.tipo !== "cliente") {
@@ -786,7 +798,145 @@ class SolicitacaoController {
    * @param {Object} res - Response object
    */
   static async cancel(req, res) {
-    // ... código do método cancel ...
+    const transaction = await Solicitacao.sequelize.transaction();
+
+    try {
+      let { id } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      id = id.startsWith(":") ? id.slice(1) : id;
+
+      // 1. Verificar se o usuário é um cliente
+      if (req.user.tipo !== "cliente") {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Apenas clientes podem cancelar solicitações",
+          errors: {
+            authorization: "Usuário deve ser do tipo 'cliente'",
+          },
+        });
+      }
+
+      // 2. Buscar cliente_id baseado no usuário autenticado
+      const cliente = await Cliente.findOne({
+        where: { usuario_id: req.user.userId },
+        transaction,
+      });
+
+      if (!cliente) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Cliente não encontrado",
+          errors: {
+            cliente: "Usuário autenticado não possui perfil de cliente",
+          },
+        });
+      }
+
+      // 3. Buscar solicitação específica
+      const solicitacao = await Solicitacao.findOne({
+        where: {
+          id,
+          cliente_id: cliente.id,
+        },
+        transaction,
+      });
+
+      if (!solicitacao) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Solicitação não encontrada",
+          errors: {
+            solicitacao: "Solicitação não existe ou não pertence ao usuário",
+          },
+        });
+      }
+
+      // 4. Verificar se a solicitação pode ser cancelada (apenas ativas)
+      if (solicitacao.status_cliente !== "ativa") {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Solicitação não pode ser cancelada",
+          errors: {
+            status: "Apenas solicitações ativas podem ser canceladas",
+            status_atual: solicitacao.status_cliente,
+          },
+        });
+      }
+
+      // 5. Buscar atendimentos existentes da solicitação
+      const atendimentos = await SolicitacoesAtendimento.findAll({
+        where: {
+          solicitacao_id: id,
+        },
+        transaction,
+      });
+
+      // 6. Atualizar status da solicitação para cancelada
+      await solicitacao.update(
+        {
+          status_cliente: "cancelada",
+        },
+        { transaction }
+      );
+
+      // 7. Commit da transação
+      await transaction.commit();
+
+      // 8. Criar notificações IN-APP (assíncrono)
+      try {
+        const NotificationService = require("../services/notificationService");
+
+        // Notificar cliente sobre o cancelamento
+        await NotificationService.notificarClienteSolicitacaoCancelada(
+          solicitacao,
+          cliente
+        );
+
+        // Notificar autopeças que atenderam sobre o cancelamento
+        if (atendimentos.length > 0) {
+          await NotificationService.notificarAutopecasSolicitacaoCancelada(
+            solicitacao,
+            atendimentos
+          );
+          console.log(
+            `🔔 ${atendimentos.length} autopeça(s)/vendedor(es) notificados sobre cancelamento`
+          );
+        }
+      } catch (notificationError) {
+        console.error("Erro ao enviar notificações:", notificationError);
+      }
+
+      // 9. Retornar sucesso
+      return res.status(200).json({
+        success: true,
+        message: "Solicitação cancelada com sucesso",
+        data: {
+          solicitacao: {
+            id: solicitacao.id,
+            status_cliente: solicitacao.status_cliente,
+            descricao_peca: solicitacao.descricao_peca,
+            marca: solicitacao.marca,
+            modelo: solicitacao.modelo,
+          },
+          atendimentos_afetados: atendimentos.length,
+        },
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.error("Erro ao cancelar solicitação:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          server: "Erro ao processar solicitação",
+        },
+      });
+    }
   }
 
   /**
@@ -800,7 +950,9 @@ class SolicitacaoController {
     const transaction = await Solicitacao.sequelize.transaction();
 
     try {
-      const { id } = req.params;
+      let { id } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      id = id.startsWith(":") ? id.slice(1) : id;
 
       // 1. Verificar se o usuário é um cliente
       if (req.user.tipo !== "cliente") {

@@ -21,4 +21,7 @@ router.post("/reset-password", authController.resetPassword);
 // Rota protegida para obter informações do usuário logado
 router.get("/me", authMiddleware, authController.me);
 
+// Rota protegida para logout de usuário
+router.post("/logout", authMiddleware, authController.logout);
+
 module.exports = router;

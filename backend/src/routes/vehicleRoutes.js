@@ -40,15 +40,11 @@ const vehicleRateLimit = rateLimit({
 
 /**
  * Rate Limiting mais restritivo para operações administrativas
- * Limita a 5 operações por minuto por usuário
+ * Limita a 5 operações por minuto por IP
  */
 const adminRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 5, // máximo 5 operações por minuto por usuário
-  keyGenerator: (req) => {
-    // Usar userId como chave para rate limiting por usuário
-    return req.user?.userId || req.ip;
-  },
+  max: 5, // máximo 5 operações por minuto por IP
   message: {
     success: false,
     message: "Muitas operações administrativas. Tente novamente em 1 minuto.",
@@ -57,9 +53,11 @@ const adminRateLimit = rateLimit({
       retry_after: "60 segundos",
     },
   },
+  standardHeaders: true, // Retorna rate limit info nos headers
+  legacyHeaders: false, // Desabilita headers X-RateLimit-*
   handler: (req, res) => {
     console.warn(
-      `⚠️ Admin Rate Limit: Usuário ${req.user?.userId} excedeu limite de operações administrativas`
+      `⚠️ Admin Rate Limit: IP ${req.ip} excedeu limite de operações administrativas`
     );
     res.status(429).json({
       success: false,
@@ -67,7 +65,7 @@ const adminRateLimit = rateLimit({
       errors: {
         rate_limit: "Limite de 5 operações por minuto excedido",
         retry_after: "60 segundos",
-        usuario_id: req.user?.userId,
+        ip: req.ip,
         timestamp: new Date().toISOString(),
       },
     });

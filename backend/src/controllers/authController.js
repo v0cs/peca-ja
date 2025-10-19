@@ -906,11 +906,40 @@ class AuthController {
    * @param {Object} res - Response object
    */
   static async logout(req, res) {
-    // TODO: Implementar logout
-    return res.status(501).json({
-      success: false,
-      message: "Funcionalidade de logout ainda não implementada",
-    });
+    try {
+      // Como o sistema usa JWT stateless, o logout é feito no cliente
+      // removendo o token. Aqui apenas registramos o evento para auditoria.
+      const { userId, tipo } = req.user;
+
+      console.log(`✅ Logout realizado: Usuário ${userId} (${tipo})`);
+
+      // Opcional: Registrar em log de auditoria
+      // await LogAuditoria.create({
+      //   usuario_id: userId,
+      //   acao: 'logout',
+      //   timestamp: new Date()
+      // });
+
+      return res.status(200).json({
+        success: true,
+        message: "Logout realizado com sucesso",
+        data: {
+          usuario_id: userId,
+          tipo: tipo,
+          logout_timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro ao fazer logout",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
   }
 
   /**

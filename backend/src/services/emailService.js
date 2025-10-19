@@ -23,12 +23,29 @@ class EmailService {
         text: text || this.htmlToText(html),
       });
 
-      console.log("✅ Email enviado via Resend. ID:", result.data?.id);
+      // Debug: Log da resposta completa
+      console.log(
+        "📦 Resposta Resend (estrutura completa):",
+        JSON.stringify(result, null, 2)
+      );
+
+      // Tentar diferentes caminhos para o ID
+      const emailId =
+        result.id || result.data?.id || result.data || "ID não disponível";
+
+      console.log("✅ Email enviado via Resend. ID:", emailId);
+
       return result;
     } catch (error) {
       console.error("❌ Erro ao enviar email via Resend:", error);
+      console.error("📋 Detalhes do erro:", {
+        message: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+      });
+
       // Não throw error para não quebrar o fluxo principal
-      return { error: error.message };
+      return { error: error.message, details: error };
     }
   }
 

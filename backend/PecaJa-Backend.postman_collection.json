@@ -1,0 +1,1611 @@
+{
+  "info": {
+    "_postman_id": "pecaja-backend-2025",
+    "name": "PeçaJá Backend - Testes Completos",
+    "description": "Coleção completa de testes para o backend do PeçaJá MVP.\n\n**Versão:** 1.0.0\n**Data:** 19 de Outubro de 2025\n\n## Como Usar:\n1. Importar no Postman\n2. Configurar environment (arquivo separado)\n3. Rodar os testes em ordem\n4. Verificar os testes automáticos em cada request\n\n## Fluxo Recomendado:\n1. Health Check\n2. Registro (Cliente + Autopeça)\n3. Login\n4. Operações autenticadas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Health Check",
+      "item": [
+        {
+          "name": "API Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has status OK\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('OK');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Verifica se a API está funcionando"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Autenticação",
+      "item": [
+        {
+          "name": "Registrar Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"User data is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.usuario).to.exist;",
+                  "    pm.expect(jsonData.data.cliente).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cliente_email}}\",\n  \"senha\": \"{{cliente_senha}}\",\n  \"nome_completo\": \"João Silva\",\n  \"telefone\": \"(11)98765-4321\",\n  \"celular\": \"(11)98765-4321\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"termos_aceitos\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Cadastro de novo cliente"
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar Autopeça",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Autopeca data is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.autopeca).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{autopeca_email}}\",\n  \"senha\": \"{{autopeca_senha}}\",\n  \"razao_social\": \"AutoPeças São Paulo LTDA\",\n  \"nome_fantasia\": \"AutoPeças SP\",\n  \"cnpj\": \"12345678000195\",\n  \"telefone\": \"(11)3333-4444\",\n  \"endereco_rua\": \"Av. Paulista\",\n  \"endereco_numero\": \"1000\",\n  \"endereco_bairro\": \"Bela Vista\",\n  \"endereco_cidade\": \"São Paulo\",\n  \"endereco_uf\": \"SP\",\n  \"endereco_cep\": \"01310100\",\n  \"termos_aceitos\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register-autopeca",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register-autopeca"]
+            },
+            "description": "Cadastro de nova autopeça"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Token is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.token).to.exist;",
+                  "    pm.environment.set(\"cliente_token\", jsonData.data.token);",
+                  "});",
+                  "",
+                  "pm.test(\"User type is cliente\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.usuario.tipo_usuario).to.eql('cliente');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cliente_email}}\",\n  \"senha\": \"{{cliente_senha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login de cliente e obtenção do token JWT"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Autopeça",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Token is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.token).to.exist;",
+                  "    pm.environment.set(\"autopeca_token\", jsonData.data.token);",
+                  "});",
+                  "",
+                  "pm.test(\"User type is autopeca\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.usuario.tipo_usuario).to.eql('autopeca');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{autopeca_email}}\",\n  \"senha\": \"{{autopeca_senha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login de autopeça e obtenção do token JWT"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Info (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User data is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.usuario).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Obtém informações do usuário logado"
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cliente_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "forgot-password"]
+            },
+            "description": "Solicita token de recuperação de senha (enviado por email)"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout do usuário (JWT stateless - token deve ser removido no cliente)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Clientes",
+      "item": [
+        {
+          "name": "Get Profile Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile data is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.cliente).to.exist;",
+                  "    pm.expect(jsonData.data.usuario).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clientes", "profile"]
+            },
+            "description": "Busca perfil completo do cliente logado"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile updated successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome_completo\": \"João Silva Atualizado\",\n  \"telefone\": \"(11)98888-9999\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "clientes", "profile"]
+            },
+            "description": "Atualiza perfil do cliente (nome, telefone, cidade, uf)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Autopeças",
+      "item": [
+        {
+          "name": "Get Profile Autopeça",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Autopeca profile is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.autopeca).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/autopecas/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "autopecas", "profile"]
+            },
+            "description": "Busca perfil completo da autopeça logada"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile Autopeça",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome_fantasia\": \"AutoPeças SP Atualizado\",\n  \"telefone\": \"(11)3333-5555\",\n  \"endereco_numero\": \"1500\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/autopecas/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "autopecas", "profile"]
+            },
+            "description": "Atualiza perfil da autopeça"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Solicitações Disponíveis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Solicitacoes array is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.solicitacoes).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/autopecas/solicitacoes-disponiveis",
+              "host": ["{{base_url}}"],
+              "path": ["api", "autopecas", "solicitacoes-disponiveis"]
+            },
+            "description": "Lista solicitações ativas na mesma cidade da autopeça"
+          },
+          "response": []
+        },
+        {
+          "name": "Marcar Solicitação como Atendida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"WhatsApp link is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.link_whatsapp).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/autopecas/solicitacoes/:solicitacaoId/atender",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "autopecas",
+                "solicitacoes",
+                ":solicitacaoId",
+                "atender"
+              ],
+              "variable": [
+                {
+                  "key": "solicitacaoId",
+                  "value": "{{solicitacao_id}}"
+                }
+              ]
+            },
+            "description": "Marca solicitação como atendida e retorna link do WhatsApp"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Solicitações",
+      "item": [
+        {
+          "name": "Criar Solicitação (sem imagens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Solicitacao ID is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.solicitacao.id).to.exist;",
+                  "    pm.environment.set(\"solicitacao_id\", jsonData.data.solicitacao.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao_peca\": \"Parachoque dianteiro\",\n  \"placa\": \"ABC1234\",\n  \"marca\": \"Volkswagen\",\n  \"modelo\": \"Gol\",\n  \"ano_fabricacao\": 2020,\n  \"ano_modelo\": 2020,\n  \"categoria\": \"carro\",\n  \"cor\": \"Branco\",\n  \"cidade_atendimento\": \"São Paulo\",\n  \"uf_atendimento\": \"SP\",\n  \"origem_dados_veiculo\": \"manual\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/solicitacoes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "solicitacoes"]
+            },
+            "description": "Cria nova solicitação sem imagens"
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Solicitação (com imagens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Solicitacao with images is created\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.solicitacao).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "descricao_peca",
+                  "value": "Parachoque traseiro com detalhe",
+                  "type": "text"
+                },
+                {
+                  "key": "placa",
+                  "value": "XYZ5678",
+                  "type": "text"
+                },
+                {
+                  "key": "marca",
+                  "value": "Fiat",
+                  "type": "text"
+                },
+                {
+                  "key": "modelo",
+                  "value": "Uno",
+                  "type": "text"
+                },
+                {
+                  "key": "ano_fabricacao",
+                  "value": "2018",
+                  "type": "text"
+                },
+                {
+                  "key": "ano_modelo",
+                  "value": "2019",
+                  "type": "text"
+                },
+                {
+                  "key": "categoria",
+                  "value": "carro",
+                  "type": "text"
+                },
+                {
+                  "key": "cor",
+                  "value": "Vermelho",
+                  "type": "text"
+                },
+                {
+                  "key": "cidade_atendimento",
+                  "value": "São Paulo",
+                  "type": "text"
+                },
+                {
+                  "key": "uf_atendimento",
+                  "value": "SP",
+                  "type": "text"
+                },
+                {
+                  "key": "origem_dados_veiculo",
+                  "value": "manual",
+                  "type": "text"
+                },
+                {
+                  "key": "imagens",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true,
+                  "description": "Adicione até 3 arquivos de imagem"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/solicitacoes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "solicitacoes"]
+            },
+            "description": "Cria solicitação com upload de até 3 imagens"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Solicitações do Cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Solicitacoes array is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/solicitacoes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "solicitacoes"]
+            },
+            "description": "Lista todas as solicitações do cliente logado"
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Solicitação por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Solicitacao is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.solicitacao).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/solicitacoes/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "solicitacoes", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{solicitacao_id}}"
+                }
+              ]
+            },
+            "description": "Busca solicitação específica por ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Solicitação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao_peca\": \"Parachoque dianteiro - ATUALIZADO\",\n  \"cor\": \"Preto\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/solicitacoes/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "solicitacoes", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{solicitacao_id}}"
+                }
+              ]
+            },
+            "description": "Atualiza dados da solicitação (apenas se ativa)"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancelar Solicitação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/solicitacoes/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "solicitacoes", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{solicitacao_id}}"
+                }
+              ]
+            },
+            "description": "Cancela solicitação (soft delete - muda status para 'cancelada')"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Consulta Veicular",
+      "item": [
+        {
+          "name": "Consultar Placa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Vehicle data is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.veiculo).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehicle/consulta/ABC1234",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vehicle", "consulta", "ABC1234"]
+            },
+            "description": "Consulta dados do veículo pela placa (API externa + cache)"
+          },
+          "response": []
+        },
+        {
+          "name": "Vehicle Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehicle/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vehicle", "health"]
+            },
+            "description": "Verifica status da API veicular"
+          },
+          "response": []
+        },
+        {
+          "name": "Vehicle Stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehicle/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vehicle", "stats"]
+            },
+            "description": "Estatísticas do cache da API veicular"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Notificações",
+      "item": [
+        {
+          "name": "Listar Notificações",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Notificacoes array is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.notificacoes).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notificacoes?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificacoes"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "tipo",
+                  "value": "nova_solicitacao",
+                  "disabled": true
+                },
+                {
+                  "key": "lida",
+                  "value": "false",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Lista notificações com paginação e filtros opcionais"
+          },
+          "response": []
+        },
+        {
+          "name": "Contar Não Lidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Count is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.total_nao_lidas).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notificacoes/nao-lidas/contagem",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificacoes", "nao-lidas", "contagem"]
+            },
+            "description": "Retorna contagem de notificações não lidas"
+          },
+          "response": []
+        },
+        {
+          "name": "Marcar Como Lida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notificacoes/:id/ler",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificacoes", ":id", "ler"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{notificacao_id}}"
+                }
+              ]
+            },
+            "description": "Marca notificação específica como lida"
+          },
+          "response": []
+        },
+        {
+          "name": "Marcar Todas Como Lidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notificacoes/ler-todas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificacoes", "ler-todas"]
+            },
+            "description": "Marca todas as notificações do usuário como lidas"
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Notificação",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notificacoes/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notificacoes", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{notificacao_id}}"
+                }
+              ]
+            },
+            "description": "Deleta notificação específica"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Vendedores",
+      "item": [
+        {
+          "name": "Criar Vendedor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Vendedor created\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.vendedor).to.exist;",
+                  "    pm.environment.set(\"vendedor_id\", jsonData.data.vendedor.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome_completo\": \"Carlos Vendedor\",\n  \"email\": \"carlos@autopecassp.com\",\n  \"senha\": \"senha123\",\n  \"telefone\": \"(11)99999-8888\",\n  \"cargo\": \"Vendedor\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendedores",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendedores"]
+            },
+            "description": "Cria novo vendedor (apenas autopeça pode criar)"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Vendedores",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Vendedores array is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.vendedores).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vendedores",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendedores"]
+            },
+            "description": "Lista todos os vendedores da autopeça"
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Vendedor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome_completo\": \"Carlos Vendedor Senior\",\n  \"cargo\": \"Vendedor Sênior\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendedores/:vendedorId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendedores", ":vendedorId"],
+              "variable": [
+                {
+                  "key": "vendedorId",
+                  "value": "{{vendedor_id}}"
+                }
+              ]
+            },
+            "description": "Atualiza dados do vendedor"
+          },
+          "response": []
+        },
+        {
+          "name": "Inativar Vendedor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{autopeca_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vendedores/:vendedorId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendedores", ":vendedorId"],
+              "variable": [
+                {
+                  "key": "vendedorId",
+                  "value": "{{vendedor_id}}"
+                }
+              ]
+            },
+            "description": "Inativa vendedor (soft delete)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Usuários",
+      "item": [
+        {
+          "name": "Update Profile (Email/Senha)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senha_atual\": \"{{cliente_senha}}\",\n  \"nova_senha\": \"novaSenha123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "profile"]
+            },
+            "description": "Atualiza email e/ou senha do usuário"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{cliente_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmacao\": \"EXCLUIR\",\n  \"senha\": \"{{cliente_senha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "profile"]
+            },
+            "description": "Exclui conta do usuário (soft delete - requer confirmação)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ]
+}
