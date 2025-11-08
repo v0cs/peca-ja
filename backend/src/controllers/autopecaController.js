@@ -4,6 +4,7 @@ const {
   Solicitacao,
   Cliente,
   SolicitacoesAtendimento,
+  ImagemSolicitacao,
 } = require("../models");
 
 /**
@@ -436,18 +437,8 @@ class AutopecaController {
           uf_atendimento: autopeca.endereco_uf,
         },
         include: [
-          {
-            model: Cliente,
-            as: "cliente",
-            attributes: ["id", "nome_completo", "celular", "cidade", "uf"],
-            include: [
-              {
-                model: Usuario,
-                as: "usuario",
-                attributes: ["email"],
-              },
-            ],
-          },
+          // NÃO incluir dados do cliente - autopeças não devem ter acesso
+          // Apenas dados da solicitação e do veículo
           {
             model: SolicitacoesAtendimento,
             as: "atendimentos",
@@ -456,14 +447,33 @@ class AutopecaController {
             },
             required: false, // LEFT JOIN para incluir mesmo se não houver atendimento
           },
+          {
+            model: ImagemSolicitacao,
+            as: "imagens",
+            attributes: [
+              "id",
+              "nome_arquivo",
+              "nome_arquivo_fisico",
+              "ordem_exibicao",
+            ],
+            required: false,
+          },
         ],
         order: [["data_criacao", "DESC"]],
       });
 
-      // 3. Filtrar apenas solicitações não atendidas por esta autopeça
-      const solicitacoesDisponiveis = solicitacoes.filter(
-        (solicitacao) => solicitacao.atendimentos.length === 0
-      );
+      // 3. Filtrar apenas solicitações não atendidas e não marcadas como lidas por esta autopeça
+      // Excluir solicitações que tenham status "lida" ou "atendida"
+      const solicitacoesDisponiveis = solicitacoes.filter((solicitacao) => {
+        if (solicitacao.atendimentos.length === 0) {
+          return true; // Não tem registro de atendimento, está disponível
+        }
+        
+        // Se tem atendimento, verificar se não está como "lida" ou "atendida"
+        const atendimento = solicitacao.atendimentos[0];
+        return atendimento.status_atendimento !== "lida" && 
+               atendimento.status_atendimento !== "atendida";
+      });
 
       // 4. Preparar dados de resposta com informações básicas
       const responseData = solicitacoesDisponiveis.map((solicitacao) => ({
@@ -480,13 +490,17 @@ class AutopecaController {
         uf_atendimento: solicitacao.uf_atendimento,
         origem_dados_veiculo: solicitacao.origem_dados_veiculo,
         data_criacao: solicitacao.data_criacao,
-        cliente: {
-          id: solicitacao.cliente.id,
-          nome_completo: solicitacao.cliente.nome_completo,
-          celular: solicitacao.cliente.celular,
-          cidade: solicitacao.cliente.cidade,
-          uf: solicitacao.cliente.uf,
-        },
+        status_cliente: solicitacao.status_cliente,
+        imagens: solicitacao.imagens
+          ? solicitacao.imagens.map((img) => ({
+              id: img.id,
+              nome_arquivo: img.nome_arquivo,
+              nome_arquivo_fisico: img.nome_arquivo_fisico,
+              url: `/uploads/${img.nome_arquivo_fisico}`,
+              ordem_exibicao: img.ordem_exibicao,
+            }))
+          : [],
+        // NÃO incluir dados do cliente - autopeças não devem ter acesso
       }));
 
       return res.status(200).json({
@@ -504,6 +518,284 @@ class AutopecaController {
       });
     } catch (error) {
       console.error("Erro ao buscar solicitações disponíveis:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
+  }
+
+  /**
+   * Buscar solicitações atendidas pela autopeça
+   * GET /api/autopecas/solicitacoes-atendidas
+   *
+   * @param {Object} req - Request object
+   * @param {Object} res - Response object
+   */
+  static async getSolicitacoesAtendidas(req, res) {
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+
+      // Verificar se o usuário é do tipo autopeca
+      if (tipo !== "autopeca") {
+        return res.status(403).json({
+          success: false,
+          message: "Acesso negado",
+          errors: {
+            tipo_usuario: "Esta operação é exclusiva para autopeças",
+          },
+        });
+      }
+
+      // 1. Buscar autopeça logada
+      const autopeca = await Autopeca.findOne({
+        where: { usuario_id: userId },
+        attributes: ["id", "endereco_cidade", "endereco_uf"],
+      });
+
+      if (!autopeca) {
+        return res.status(404).json({
+          success: false,
+          message: "Autopeça não encontrada",
+          errors: {
+            autopeca: "Perfil de autopeça não encontrado para este usuário",
+          },
+        });
+      }
+
+      // 2. Buscar solicitações atendidas por esta autopeça
+      // Apenas status "atendida", não incluir "lida" (vistas)
+      const atendimentos = await SolicitacoesAtendimento.findAll({
+        where: {
+          autopeca_id: autopeca.id,
+          status_atendimento: "atendida", // Apenas atendidas, não vistas
+        },
+        include: [
+          {
+            model: Solicitacao,
+            as: "solicitacao",
+            attributes: [
+              "id",
+              "descricao_peca",
+              "placa",
+              "marca",
+              "modelo",
+              "ano_fabricacao",
+              "ano_modelo",
+              "categoria",
+              "cor",
+              "cidade_atendimento",
+              "uf_atendimento",
+              "origem_dados_veiculo",
+              "data_criacao",
+              "status_cliente",
+            ],
+            include: [
+              {
+                model: ImagemSolicitacao,
+                as: "imagens",
+                attributes: [
+                  "id",
+                  "nome_arquivo",
+                  "nome_arquivo_fisico",
+                  "ordem_exibicao",
+                ],
+                required: false,
+              },
+            ],
+          },
+        ],
+        order: [["data_marcacao", "DESC"]],
+      });
+
+      // 3. Preparar dados de resposta
+      const responseData = atendimentos
+        .filter((atendimento) => atendimento.solicitacao) // Filtrar solicitações que ainda existem
+        .map((atendimento) => {
+          const solicitacao = atendimento.solicitacao;
+          return {
+            id: solicitacao.id,
+            descricao_peca: solicitacao.descricao_peca,
+            placa: solicitacao.placa,
+            marca: solicitacao.marca,
+            modelo: solicitacao.modelo,
+            ano_fabricacao: solicitacao.ano_fabricacao,
+            ano_modelo: solicitacao.ano_modelo,
+            categoria: solicitacao.categoria,
+            cor: solicitacao.cor,
+            cidade_atendimento: solicitacao.cidade_atendimento,
+            uf_atendimento: solicitacao.uf_atendimento,
+            origem_dados_veiculo: solicitacao.origem_dados_veiculo,
+            data_criacao: solicitacao.data_criacao,
+            status_cliente: solicitacao.status_cliente,
+            data_atendimento: atendimento.data_marcacao,
+            imagens: solicitacao.imagens
+              ? solicitacao.imagens.map((img) => ({
+                  id: img.id,
+                  nome_arquivo: img.nome_arquivo,
+                  nome_arquivo_fisico: img.nome_arquivo_fisico,
+                  url: `/uploads/${img.nome_arquivo_fisico}`,
+                  ordem_exibicao: img.ordem_exibicao,
+                }))
+              : [],
+            // NÃO incluir dados do cliente - autopeças não devem ter acesso
+          };
+        });
+
+      return res.status(200).json({
+        success: true,
+        message: "Solicitações atendidas recuperadas com sucesso",
+        data: {
+          solicitacoes: responseData,
+          total: responseData.length,
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao buscar solicitações atendidas:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
+  }
+
+  /**
+   * Buscar solicitações marcadas como vistas pela autopeça
+   * GET /api/autopecas/solicitacoes-vistas
+   *
+   * @param {Object} req - Request object
+   * @param {Object} res - Response object
+   */
+  static async getSolicitacoesVistas(req, res) {
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+
+      // Verificar se o usuário é do tipo autopeca
+      if (tipo !== "autopeca") {
+        return res.status(403).json({
+          success: false,
+          message: "Acesso negado",
+          errors: {
+            tipo_usuario: "Esta operação é exclusiva para autopeças",
+          },
+        });
+      }
+
+      // 1. Buscar autopeça logada
+      const autopeca = await Autopeca.findOne({
+        where: { usuario_id: userId },
+        attributes: ["id", "endereco_cidade", "endereco_uf"],
+      });
+
+      if (!autopeca) {
+        return res.status(404).json({
+          success: false,
+          message: "Autopeça não encontrada",
+          errors: {
+            autopeca: "Perfil de autopeça não encontrado para este usuário",
+          },
+        });
+      }
+
+      // 2. Buscar solicitações marcadas como "lida" por esta autopeça
+      // Apenas status "lida", não incluir "atendida"
+      const atendimentos = await SolicitacoesAtendimento.findAll({
+        where: {
+          autopeca_id: autopeca.id,
+          status_atendimento: "lida", // Apenas vistas, não atendidas
+        },
+        include: [
+          {
+            model: Solicitacao,
+            as: "solicitacao",
+            attributes: [
+              "id",
+              "descricao_peca",
+              "placa",
+              "marca",
+              "modelo",
+              "ano_fabricacao",
+              "ano_modelo",
+              "categoria",
+              "cor",
+              "cidade_atendimento",
+              "uf_atendimento",
+              "origem_dados_veiculo",
+              "data_criacao",
+              "status_cliente",
+            ],
+            include: [
+              {
+                model: ImagemSolicitacao,
+                as: "imagens",
+                attributes: [
+                  "id",
+                  "nome_arquivo",
+                  "nome_arquivo_fisico",
+                  "ordem_exibicao",
+                ],
+                required: false,
+              },
+            ],
+          },
+        ],
+        order: [["data_marcacao", "DESC"]],
+      });
+
+      // 3. Preparar dados de resposta
+      const responseData = atendimentos
+        .filter((atendimento) => atendimento.solicitacao) // Filtrar solicitações que ainda existem
+        .map((atendimento) => {
+          const solicitacao = atendimento.solicitacao;
+          return {
+            id: solicitacao.id,
+            descricao_peca: solicitacao.descricao_peca,
+            placa: solicitacao.placa,
+            marca: solicitacao.marca,
+            modelo: solicitacao.modelo,
+            ano_fabricacao: solicitacao.ano_fabricacao,
+            ano_modelo: solicitacao.ano_modelo,
+            categoria: solicitacao.categoria,
+            cor: solicitacao.cor,
+            cidade_atendimento: solicitacao.cidade_atendimento,
+            uf_atendimento: solicitacao.uf_atendimento,
+            origem_dados_veiculo: solicitacao.origem_dados_veiculo,
+            data_criacao: solicitacao.data_criacao,
+            status_cliente: solicitacao.status_cliente,
+            data_marcacao: atendimento.data_marcacao,
+            imagens: solicitacao.imagens
+              ? solicitacao.imagens.map((img) => ({
+                  id: img.id,
+                  nome_arquivo: img.nome_arquivo,
+                  nome_arquivo_fisico: img.nome_arquivo_fisico,
+                  url: `/uploads/${img.nome_arquivo_fisico}`,
+                  ordem_exibicao: img.ordem_exibicao,
+                }))
+              : [],
+            // NÃO incluir dados do cliente - autopeças não devem ter acesso
+          };
+        });
+
+      return res.status(200).json({
+        success: true,
+        message: "Solicitações vistas recuperadas com sucesso",
+        data: {
+          solicitacoes: responseData,
+          total: responseData.length,
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao buscar solicitações vistas:", error);
 
       return res.status(500).json({
         success: false,
@@ -591,8 +883,8 @@ class AutopecaController {
         });
       }
 
-      // 3. Verificar se autopeça já atendeu esta solicitação
-      const atendimentoExistente = await SolicitacoesAtendimento.findOne({
+      // 3. Verificar se autopeça já tem registro para esta solicitação
+      let atendimentoExistente = await SolicitacoesAtendimento.findOne({
         where: {
           solicitacao_id: solicitacaoId,
           autopeca_id: autopeca.id,
@@ -600,59 +892,40 @@ class AutopecaController {
         transaction,
       });
 
-      if (atendimentoExistente) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          message: "Solicitação já atendida",
-          errors: {
-            atendimento: "Esta autopeça já atendeu esta solicitação",
-          },
-        });
-      }
+      let novoAtendimento;
 
-      // 4. Verificar se outro vendedor da MESMA autopeça já atendeu
-      const vendedorAtendimentoExistente =
-        await SolicitacoesAtendimento.findOne({
-          where: {
+      if (atendimentoExistente) {
+        // Se já existe registro
+        if (atendimentoExistente.status_atendimento === "atendida") {
+          // Já atendida
+          await transaction.rollback();
+          return res.status(409).json({
+            success: false,
+            message: "Solicitação já atendida",
+            errors: {
+              atendimento: "Esta autopeça já atendeu esta solicitação",
+            },
+          });
+        } else if (atendimentoExistente.status_atendimento === "lida") {
+          // Estava marcada como vista, atualizar para atendida
+          atendimentoExistente.status_atendimento = "atendida";
+          await atendimentoExistente.save({ transaction });
+          novoAtendimento = atendimentoExistente;
+        }
+      } else {
+        // Não existe registro, criar novo
+        novoAtendimento = await SolicitacoesAtendimento.create(
+          {
             solicitacao_id: solicitacaoId,
             autopeca_id: autopeca.id,
+            vendedor_id: null, // Atendimento direto pela autopeça
+            status_atendimento: "atendida", // Marcar diretamente como atendida
           },
-          include: [
-            {
-              model: Autopeca,
-              as: "autopeca",
-              where: { id: autopeca.id },
-              required: true,
-            },
-          ],
-          transaction,
-        });
-
-      if (vendedorAtendimentoExistente) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          message: "Conflito de atendimento",
-          errors: {
-            conflito:
-              "Outro vendedor desta autopeça já atendeu esta solicitação",
-          },
-        });
+          { transaction }
+        );
       }
 
-      // 5. Criar registro em SolicitacoesAtendimento
-      const novoAtendimento = await SolicitacoesAtendimento.create(
-        {
-          solicitacao_id: solicitacaoId,
-          autopeca_id: autopeca.id,
-          vendedor_id: null, // Atendimento direto pela autopeça
-          status_atendimento: "nao_lida",
-        },
-        { transaction }
-      );
-
-      // 5.1. Criar notificação IN-APP para o cliente
+      // 4. Criar notificação IN-APP para o cliente
       const NotificationService = require("../services/notificationService");
       await NotificationService.notificarClienteSolicitacaoAtendida(
         solicitacao,
@@ -661,7 +934,7 @@ class AutopecaController {
         null // sem vendedor
       );
 
-      // 6. Gerar link do WhatsApp com dados do cliente
+      // 5. Gerar link do WhatsApp com dados do cliente
       const nomeAutopeca = autopeca.nome_fantasia || autopeca.razao_social;
       const nomeCliente = solicitacao.cliente.nome_completo;
       const celularCliente = solicitacao.cliente.celular.replace(/\D/g, ""); // Remove formatação
@@ -686,10 +959,11 @@ Equipe ${nomeAutopeca}`;
       // Gerar link do WhatsApp
       const linkWhatsApp = `https://wa.me/55${celularCliente}?text=${mensagemCodificada}`;
 
-      // 7. Commit da transação
+      // 6. Commit da transação
       await transaction.commit();
 
-      // 8. Retornar sucesso com link do WhatsApp
+      // 7. Retornar sucesso com link do WhatsApp
+      // NÃO retornar dados do cliente - apenas o link do WhatsApp
       return res.status(200).json({
         success: true,
         message: "Solicitação marcada como atendida com sucesso",
@@ -700,11 +974,6 @@ Equipe ${nomeAutopeca}`;
             autopeca_id: autopeca.id,
             status_atendimento: novoAtendimento.status_atendimento,
             data_marcacao: novoAtendimento.data_marcacao,
-          },
-          cliente: {
-            id: solicitacao.cliente.id,
-            nome_completo: solicitacao.cliente.nome_completo,
-            celular: solicitacao.cliente.celular,
           },
           veiculo: {
             marca: solicitacao.marca,
@@ -752,6 +1021,379 @@ Equipe ${nomeAutopeca}`;
         message: "Erro interno do servidor",
         errors: {
           message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
+  }
+
+  /**
+   * Desmarcar solicitação como vista (retornar ao dashboard)
+   * DELETE /api/autopecas/solicitacoes/:solicitacaoId/marcar-como-lida
+   *
+   * @param {Object} req - Request object (deve conter req.user do middleware)
+   * @param {Object} res - Response object
+   */
+  static async desmarcarComoVista(req, res) {
+    const transaction = await Autopeca.sequelize.transaction();
+
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+      let { solicitacaoId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      solicitacaoId = solicitacaoId.startsWith(":")
+        ? solicitacaoId.slice(1)
+        : solicitacaoId;
+
+      // Verificar se o usuário é do tipo autopeca
+      if (tipo !== "autopeca") {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Acesso negado",
+          errors: {
+            tipo_usuario: "Esta operação é exclusiva para autopeças",
+          },
+        });
+      }
+
+      // 1. Buscar autopeça logada
+      const autopeca = await Autopeca.findOne({
+        where: { usuario_id: userId },
+        attributes: ["id"],
+        transaction,
+      });
+
+      if (!autopeca) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Autopeça não encontrada",
+          errors: {
+            autopeca: "Perfil de autopeça não encontrado para este usuário",
+          },
+        });
+      }
+
+      // 2. Buscar registro de atendimento com status "lida"
+      const atendimento = await SolicitacoesAtendimento.findOne({
+        where: {
+          solicitacao_id: solicitacaoId,
+          autopeca_id: autopeca.id,
+          status_atendimento: "lida",
+        },
+        transaction,
+      });
+
+      if (!atendimento) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Atendimento não encontrado",
+          errors: {
+            atendimento: "Esta solicitação não foi marcada como vista por esta autopeça",
+          },
+        });
+      }
+
+      // 3. Verificar se a solicitação ainda existe
+      const solicitacao = await Solicitacao.findOne({
+        where: { id: solicitacaoId },
+        transaction,
+      });
+
+      if (!solicitacao) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Solicitação não encontrada",
+          errors: {
+            solicitacao: "Solicitação não existe",
+          },
+        });
+      }
+
+      // 4. Deletar registro de atendimento (retorna ao dashboard)
+      await atendimento.destroy({ transaction });
+
+      // 5. Commit da transação
+      await transaction.commit();
+
+      // 6. Retornar sucesso
+      return res.status(200).json({
+        success: true,
+        message: "Solicitação retornada ao dashboard com sucesso",
+        data: {
+          solicitacao_id: solicitacaoId,
+        },
+      });
+    } catch (error) {
+      // Rollback da transação em caso de erro
+      await transaction.rollback();
+
+      console.error("Erro ao desmarcar solicitação como vista:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro ao retornar a solicitação ao dashboard",
+        },
+      });
+    }
+  }
+
+  /**
+   * Desmarcar solicitação como atendida pela autopeça
+   * DELETE /api/autopecas/solicitacoes/:solicitacaoId/atender
+   *
+   * @param {Object} req - Request object (deve conter req.user do middleware)
+   * @param {Object} res - Response object
+   */
+  static async desmarcarComoAtendida(req, res) {
+    const transaction = await Autopeca.sequelize.transaction();
+
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+      let { solicitacaoId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      solicitacaoId = solicitacaoId.startsWith(":")
+        ? solicitacaoId.slice(1)
+        : solicitacaoId;
+
+      // Verificar se o usuário é do tipo autopeca
+      if (tipo !== "autopeca") {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Acesso negado",
+          errors: {
+            tipo_usuario: "Esta operação é exclusiva para autopeças",
+          },
+        });
+      }
+
+      // 1. Buscar autopeça logada
+      const autopeca = await Autopeca.findOne({
+        where: { usuario_id: userId },
+        attributes: ["id"],
+        transaction,
+      });
+
+      if (!autopeca) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Autopeça não encontrada",
+          errors: {
+            autopeca: "Perfil de autopeça não encontrado para este usuário",
+          },
+        });
+      }
+
+      // 2. Buscar registro de atendimento
+      const atendimento = await SolicitacoesAtendimento.findOne({
+        where: {
+          solicitacao_id: solicitacaoId,
+          autopeca_id: autopeca.id,
+        },
+        transaction,
+      });
+
+      if (!atendimento) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Atendimento não encontrado",
+          errors: {
+            atendimento: "Esta solicitação não foi atendida por esta autopeça",
+          },
+        });
+      }
+
+      // 3. Verificar se a solicitação ainda existe
+      const solicitacao = await Solicitacao.findOne({
+        where: { id: solicitacaoId },
+        transaction,
+      });
+
+      if (!solicitacao) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Solicitação não encontrada",
+          errors: {
+            solicitacao: "Solicitação não existe",
+          },
+        });
+      }
+
+      // 4. Deletar registro de atendimento
+      await atendimento.destroy({ transaction });
+
+      // 5. Commit da transação
+      await transaction.commit();
+
+      // 6. Retornar sucesso
+      return res.status(200).json({
+        success: true,
+        message: "Solicitação desmarcada como atendida com sucesso",
+        data: {
+          solicitacao_id: solicitacaoId,
+        },
+      });
+    } catch (error) {
+      // Rollback da transação em caso de erro
+      await transaction.rollback();
+
+      console.error("Erro ao desmarcar solicitação como atendida:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro ao desmarcar a solicitação como atendida",
+        },
+      });
+    }
+  }
+
+  /**
+   * Marcar solicitação como vista/lida (sem atender)
+   * POST /api/autopecas/solicitacoes/:solicitacaoId/marcar-como-lida
+   *
+   * @param {Object} req - Request object (deve conter req.user do middleware)
+   * @param {Object} res - Response object
+   */
+  static async marcarComoLida(req, res) {
+    const transaction = await Autopeca.sequelize.transaction();
+
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+      let { solicitacaoId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      solicitacaoId = solicitacaoId.startsWith(":")
+        ? solicitacaoId.slice(1)
+        : solicitacaoId;
+
+      // Verificar se o usuário é do tipo autopeca
+      if (tipo !== "autopeca") {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Acesso negado",
+          errors: {
+            tipo_usuario: "Esta operação é exclusiva para autopeças",
+          },
+        });
+      }
+
+      // 1. Buscar autopeça logada
+      const autopeca = await Autopeca.findOne({
+        where: { usuario_id: userId },
+        attributes: ["id", "endereco_cidade", "endereco_uf"],
+        transaction,
+      });
+
+      if (!autopeca) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Autopeça não encontrada",
+          errors: {
+            autopeca: "Perfil de autopeça não encontrado para este usuário",
+          },
+        });
+      }
+
+      // 2. Buscar solicitação e verificar se existe e está ativa
+      const solicitacao = await Solicitacao.findOne({
+        where: {
+          id: solicitacaoId,
+          status_cliente: "ativa",
+          cidade_atendimento: autopeca.endereco_cidade,
+          uf_atendimento: autopeca.endereco_uf,
+        },
+        transaction,
+      });
+
+      if (!solicitacao) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Solicitação não encontrada ou inativa",
+          errors: {
+            solicitacao: "Solicitação não existe ou não está mais ativa na sua cidade",
+          },
+        });
+      }
+
+      // 3. Verificar se já existe um registro de atendimento
+      let atendimento = await SolicitacoesAtendimento.findOne({
+        where: {
+          solicitacao_id: solicitacaoId,
+          autopeca_id: autopeca.id,
+        },
+        transaction,
+      });
+
+      if (atendimento) {
+        // Se já existe e está como "atendida", não permitir mudar para "lida"
+        if (atendimento.status_atendimento === "atendida") {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Solicitação já foi marcada como atendida",
+            errors: {
+              status: "Não é possível marcar como vista uma solicitação já atendida",
+            },
+          });
+        }
+        // Atualizar status para "lida"
+        atendimento.status_atendimento = "lida";
+        await atendimento.save({ transaction });
+      } else {
+        // Criar novo registro com status "lida"
+        atendimento = await SolicitacoesAtendimento.create(
+          {
+            solicitacao_id: solicitacaoId,
+            autopeca_id: autopeca.id,
+            vendedor_id: null,
+            status_atendimento: "lida",
+          },
+          { transaction }
+        );
+      }
+
+      // 4. Commit da transação
+      await transaction.commit();
+
+      // 5. Retornar sucesso
+      return res.status(200).json({
+        success: true,
+        message: "Solicitação marcada como vista com sucesso",
+        data: {
+          atendimento: {
+            id: atendimento.id,
+            solicitacao_id: solicitacaoId,
+            autopeca_id: autopeca.id,
+            status_atendimento: atendimento.status_atendimento,
+          },
+        },
+      });
+    } catch (error) {
+      // Rollback da transação em caso de erro
+      await transaction.rollback();
+
+      console.error("Erro ao marcar solicitação como vista:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro ao marcar a solicitação como vista",
         },
       });
     }

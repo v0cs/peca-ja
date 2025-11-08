@@ -1,5 +1,2 @@
-// Services index file
 // Export all services from here
-
-export // Services will be exported here
- {};
+export { default as api } from "./api";

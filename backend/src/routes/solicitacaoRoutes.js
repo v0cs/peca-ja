@@ -27,8 +27,8 @@ router.get("/", solicitacaoController.list);
 // GET /api/solicitacoes/:id - Buscar solicitação específica
 router.get("/:id", solicitacaoController.getById);
 
-// PUT /api/solicitacoes/:id - Atualizar solicitação
-router.put("/:id", solicitacaoController.update);
+// PUT /api/solicitacoes/:id - Atualizar solicitação (com suporte a upload de imagens)
+router.put("/:id", uploadMiddleware, solicitacaoController.update);
 
 // DELETE /api/solicitacoes/:id - Cancelar solicitação
 router.delete("/:id", solicitacaoController.cancel);

@@ -1,0 +1,61 @@
+name: Build and SonarQube Analysis
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonarqube:
+    name: SonarQube Scan
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Clones superficiais devem ser desativados para uma melhor relevância da análise
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # Instalar dependências do Backend
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      # Instalar dependências do Frontend
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      # Executar testes do Backend com coverage
+      - name: Run Backend Tests
+        working-directory: ./backend
+        run: npm test -- --coverage --coverageReporters=lcov
+        continue-on-error: true
+
+      # Executar testes do Frontend com coverage
+      - name: Run Frontend Tests
+        working-directory: ./frontend
+        run: npm test -- --coverage --reporter=lcov
+        continue-on-error: true
+
+      # Executar análise do SonarQube
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+
+

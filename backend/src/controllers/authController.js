@@ -6,6 +6,7 @@ const {
   Cliente,
   Autopeca,
   TokenRecuperacaoSenha,
+  Vendedor,
 } = require("../models");
 
 /**
@@ -180,16 +181,125 @@ class AuthController {
       // 3. Verificar se email já existe
       const emailExistente = await Usuario.findOne({
         where: { email: email.toLowerCase().trim() },
+        include: [
+          {
+            model: Cliente,
+            as: "cliente",
+            required: false,
+          },
+        ],
         transaction,
       });
 
       if (emailExistente) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          message: "Email já cadastrado",
-          errors: {
-            email: "Este email já está sendo usado por outro usuário",
+        // Se o email existe e a conta está ativa, bloquear registro
+        if (emailExistente.ativo) {
+          await transaction.rollback();
+          return res.status(409).json({
+            success: false,
+            message: "Email já cadastrado",
+            errors: {
+              email: "Este email já está sendo usado por outro usuário",
+            },
+          });
+        }
+
+        // Se o email existe mas a conta está inativa, reativar e atualizar dados
+        // Isso preserva histórico (solicitações, notificações, etc.) e permite reuso seguro
+        const saltRounds = 12;
+        const senhaHash = await bcrypt.hash(senha, saltRounds);
+
+        // Reativar usuário e atualizar senha
+        await emailExistente.update(
+          {
+            ativo: true,
+            senha_hash: senhaHash,
+            termos_aceitos: true,
+            data_aceite_terms: new Date(),
+          },
+          { transaction }
+        );
+
+        // Atualizar dados do cliente
+        if (emailExistente.cliente) {
+          await emailExistente.cliente.update(
+            {
+              nome_completo: nome_completo.trim(),
+              telefone: celular,
+              celular: celular.trim(),
+              cidade: cidade.trim(),
+              uf: uf.toUpperCase().trim(),
+              data_exclusao_pedida: null, // Limpar data de exclusão se existir
+            },
+            { transaction }
+          );
+        } else {
+          // Se não tem cliente, criar (caso raro, mas pode acontecer)
+          await Cliente.create(
+            {
+              usuario_id: emailExistente.id,
+              nome_completo: nome_completo.trim(),
+              telefone: celular,
+              celular: celular.trim(),
+              cidade: cidade.trim(),
+              uf: uf.toUpperCase().trim(),
+            },
+            { transaction }
+          );
+        }
+
+        // Commit da transação
+        await transaction.commit();
+
+        // Buscar dados atualizados
+        const usuarioReativado = await Usuario.findByPk(emailExistente.id, {
+          include: [
+            {
+              model: Cliente,
+              as: "cliente",
+              required: false,
+            },
+          ],
+        });
+
+        // Enviar email de boas-vindas
+        try {
+          const { emailService } = require("../services");
+          emailService
+            .sendWelcomeEmail(
+              usuarioReativado,
+              usuarioReativado.cliente,
+              "cliente"
+            )
+            .catch((err) =>
+              console.log("Erro ao enviar email de boas-vindas:", err)
+            );
+        } catch (emailError) {
+          console.log("Erro no envio de email:", emailError);
+        }
+
+        // Retornar sucesso com dados do usuário reativado
+        return res.status(200).json({
+          success: true,
+          message: "Conta reativada com sucesso",
+          data: {
+            usuario: {
+              id: usuarioReativado.id,
+              email: usuarioReativado.email,
+              tipo_usuario: usuarioReativado.tipo_usuario,
+              ativo: usuarioReativado.ativo,
+              termos_aceitos: usuarioReativado.termos_aceitos,
+              data_aceite_terms: usuarioReativado.data_aceite_terms,
+            },
+            cliente: usuarioReativado.cliente
+              ? {
+                  id: usuarioReativado.cliente.id,
+                  nome_completo: usuarioReativado.cliente.nome_completo,
+                  celular: usuarioReativado.cliente.celular,
+                  cidade: usuarioReativado.cliente.cidade,
+                  uf: usuarioReativado.cliente.uf,
+                }
+              : null,
           },
         });
       }
@@ -484,19 +594,155 @@ class AuthController {
       }
       const emailExistente = await Usuario.findOne({
         where: { email: email.toLowerCase().trim() },
+        include: [
+          {
+            model: Autopeca,
+            as: "autopeca",
+            required: false,
+          },
+        ],
         transaction,
       });
 
       if (emailExistente) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("Email já existe:", emailExistente.email);
+        // Se o email existe e a conta está ativa, bloquear registro
+        if (emailExistente.ativo) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("Email já existe e está ativo:", emailExistente.email);
+          }
+          await transaction.rollback();
+          return res.status(409).json({
+            success: false,
+            message: "Email já cadastrado",
+            errors: {
+              email: "Este email já está sendo usado por outro usuário",
+            },
+          });
         }
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          message: "Email já cadastrado",
-          errors: {
-            email: "Este email já está sendo usado por outro usuário",
+
+        // Se o email existe mas a conta está inativa, reativar e atualizar dados
+        // Isso preserva histórico (solicitações atendidas, vendedores, etc.) e permite reuso seguro
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "Email existe mas está inativo, reativando:",
+            emailExistente.email
+          );
+        }
+
+        const saltRounds = 12;
+        const senhaHash = await bcrypt.hash(senha, saltRounds);
+
+        // Reativar usuário e atualizar senha
+        await emailExistente.update(
+          {
+            ativo: true,
+            senha_hash: senhaHash,
+            termos_aceitos: true,
+            data_aceite_terms: new Date(),
+          },
+          { transaction }
+        );
+
+        // Atualizar dados da autopeça
+        if (emailExistente.autopeca) {
+          await emailExistente.autopeca.update(
+            {
+              razao_social: razao_social.trim(),
+              nome_fantasia: nome_fantasia ? nome_fantasia.trim() : null,
+              cnpj: cnpj.trim(),
+              telefone: telefone.trim(),
+              endereco_rua: endereco_rua.trim(),
+              endereco_numero: endereco_numero.trim(),
+              endereco_bairro: endereco_bairro.trim(),
+              endereco_cidade: endereco_cidade.trim(),
+              endereco_uf: endereco_uf.toUpperCase().trim(),
+              endereco_cep: endereco_cep.trim(),
+              data_exclusao_pedida: null, // Limpar data de exclusão se existir
+            },
+            { transaction }
+          );
+        } else {
+          // Se não tem autopeça, criar (caso raro, mas pode acontecer)
+          await Autopeca.create(
+            {
+              usuario_id: emailExistente.id,
+              razao_social: razao_social.trim(),
+              nome_fantasia: nome_fantasia ? nome_fantasia.trim() : null,
+              cnpj: cnpj.trim(),
+              telefone: telefone.trim(),
+              endereco_rua: endereco_rua.trim(),
+              endereco_numero: endereco_numero.trim(),
+              endereco_bairro: endereco_bairro.trim(),
+              endereco_cidade: endereco_cidade.trim(),
+              endereco_uf: endereco_uf.toUpperCase().trim(),
+              endereco_cep: endereco_cep.trim(),
+            },
+            { transaction }
+          );
+        }
+
+        // Commit da transação
+        await transaction.commit();
+
+        // Buscar dados atualizados
+        const usuarioReativado = await Usuario.findByPk(emailExistente.id, {
+          include: [
+            {
+              model: Autopeca,
+              as: "autopeca",
+              required: false,
+            },
+          ],
+        });
+
+        // Enviar email de boas-vindas
+        try {
+          const { emailService } = require("../services");
+          emailService
+            .sendWelcomeEmail(
+              usuarioReativado,
+              usuarioReativado.autopeca,
+              "autopeca"
+            )
+            .catch((err) =>
+              console.log("Erro ao enviar email de boas-vindas:", err)
+            );
+        } catch (emailError) {
+          console.log("Erro no envio de email:", emailError);
+        }
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("Conta reativada com sucesso");
+        }
+
+        // Retornar sucesso com dados da autopeça reativada
+        return res.status(200).json({
+          success: true,
+          message: "Conta reativada com sucesso",
+          data: {
+            usuario: {
+              id: usuarioReativado.id,
+              email: usuarioReativado.email,
+              tipo_usuario: usuarioReativado.tipo_usuario,
+              ativo: usuarioReativado.ativo,
+              termos_aceitos: usuarioReativado.termos_aceitos,
+              data_aceite_terms: usuarioReativado.data_aceite_terms,
+            },
+            autopeca: usuarioReativado.autopeca
+              ? {
+                  id: usuarioReativado.autopeca.id,
+                  razao_social: usuarioReativado.autopeca.razao_social,
+                  nome_fantasia: usuarioReativado.autopeca.nome_fantasia,
+                  cnpj: usuarioReativado.autopeca.cnpj,
+                  telefone: usuarioReativado.autopeca.telefone,
+                  endereco_rua: usuarioReativado.autopeca.endereco_rua,
+                  endereco_numero: usuarioReativado.autopeca.endereco_numero,
+                  endereco_bairro: usuarioReativado.autopeca.endereco_bairro,
+                  endereco_cidade: usuarioReativado.autopeca.endereco_cidade,
+                  endereco_uf: usuarioReativado.autopeca.endereco_uf,
+                  endereco_cep: usuarioReativado.autopeca.endereco_cep,
+                }
+              : null,
           },
         });
       }

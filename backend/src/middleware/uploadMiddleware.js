@@ -26,17 +26,48 @@ const storage = multer.diskStorage({
 // Filtro para validar tipos de arquivo
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
+  // Validar extensão do arquivo
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+  if (!allowedExtensions.includes(fileExtension)) {
+    return cb(
+      new Error(
+        `Extensão de arquivo não permitida: ${fileExtension}. Apenas .jpg, .jpeg, .png e .webp são aceitos.`
+      ),
+      false
+    );
+  }
+
+  // Validar MIME type
+  if (!allowedTypes.includes(file.mimetype)) {
+    return cb(
       new Error(
         "Tipo de arquivo não permitido. Apenas JPEG, PNG e WebP são aceitos."
       ),
       false
     );
   }
+
+  // Verificar se a extensão corresponde ao MIME type (validação adicional de segurança)
+  const extensionToMime = {
+    ".jpg": ["image/jpeg", "image/jpg"],
+    ".jpeg": ["image/jpeg", "image/jpg"],
+    ".png": ["image/png"],
+    ".webp": ["image/webp"],
+  };
+
+  const expectedMimes = extensionToMime[fileExtension] || [];
+  if (expectedMimes.length > 0 && !expectedMimes.includes(file.mimetype)) {
+    return cb(
+      new Error(
+        `Extensão do arquivo (${fileExtension}) não corresponde ao tipo MIME (${file.mimetype}). Arquivo pode estar corrompido ou malicioso.`
+      ),
+      false
+    );
+  }
+
+  cb(null, true);
 };
 
 // Configuração do multer

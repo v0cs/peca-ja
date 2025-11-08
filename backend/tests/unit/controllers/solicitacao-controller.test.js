@@ -370,6 +370,13 @@ describe("SolicitacaoController", () => {
         descricao_peca: "Freio dianteiro",
         status_cliente: "ativa",
         imagens: [],
+        toJSON: jest.fn().mockReturnValue({
+          id: 1,
+          cliente_id: 1,
+          descricao_peca: "Freio dianteiro",
+          status_cliente: "ativa",
+          imagens: [],
+        }),
       };
 
       Cliente.findOne.mockResolvedValue(mockCliente);
@@ -384,7 +391,13 @@ describe("SolicitacaoController", () => {
         success: true,
         message: "Solicitação encontrada com sucesso",
         data: {
-          solicitacao: mockSolicitacao,
+          solicitacao: expect.objectContaining({
+            id: 1,
+            cliente_id: 1,
+            descricao_peca: "Freio dianteiro",
+            status_cliente: "ativa",
+            imagens: [],
+          }),
         },
       });
     });
@@ -423,15 +436,27 @@ describe("SolicitacaoController", () => {
         id: 1,
         cliente_id: 1,
         status_cliente: "ativa",
-        update: jest.fn(),
+        update: jest.fn().mockResolvedValue(true),
+      };
+
+      const mockSolicitacaoAtualizada = {
+        id: 1,
+        cliente_id: 1,
+        descricao_peca: "Freio traseiro atualizado",
+        status_cliente: "ativa",
+        imagens: [],
+        toJSON: jest.fn().mockReturnValue({
+          id: 1,
+          cliente_id: 1,
+          descricao_peca: "Freio traseiro atualizado",
+          status_cliente: "ativa",
+          imagens: [],
+        }),
       };
 
       Cliente.findOne.mockResolvedValue(mockCliente);
       Solicitacao.findOne.mockResolvedValue(mockSolicitacao);
-      Solicitacao.findByPk.mockResolvedValue({
-        ...mockSolicitacao,
-        descricao_peca: "Freio traseiro atualizado",
-      });
+      Solicitacao.findByPk.mockResolvedValue(mockSolicitacaoAtualizada);
 
       // Act
       await SolicitacaoController.update(req, res);

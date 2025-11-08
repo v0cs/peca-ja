@@ -1,5 +1,7 @@
-// Hooks index file
+// Custom hooks index file
 // Export all custom hooks from here
-
-export // Custom hooks will be exported here
- {};
+export { useAuth } from "../contexts/AuthContext";
+export { useSolicitacoes } from "./useSolicitacoes";
+export { useSolicitacoesDisponiveis } from "./useSolicitacoesDisponiveis";
+export { default as useSolicitacao } from "./useSolicitacao";
+export { useVendedores } from "./useVendedores";

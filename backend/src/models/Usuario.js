@@ -86,6 +86,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      senha_temporaria: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+        comment: "Indica se o usuário está usando uma senha temporária e deve trocá-la no primeiro acesso",
+      },
     },
     {
       sequelize,

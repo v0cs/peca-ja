@@ -1,5 +1,12 @@
-// Pages index file
-// Export all pages from here
-
-export // Pages will be exported here
- {};
+export { default as LandingPage } from "./LandingPage";
+export { default as Login } from "./Login";
+export { default as Registro } from "./Registro";
+export { default as RegistroCliente } from "./RegistroCliente";
+export { default as RegistroAutopeca } from "./RegistroAutopeca";
+export { default as DashboardCliente } from "./DashboardCliente";
+export { default as DashboardAutopeca } from "./DashboardAutopeca";
+export { default as DashboardVendedor } from "./DashboardVendedor";
+export { default as NovaSolicitacao } from "./NovaSolicitacao";
+export { default as DetalheSolicitacao } from "./DetalheSolicitacao";
+export { default as EditarSolicitacao } from "./EditarSolicitacao";
+export { default as GerenciarVendedores } from "./GerenciarVendedores";

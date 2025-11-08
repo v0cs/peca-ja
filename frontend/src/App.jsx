@@ -1,50 +1,101 @@
-import React, { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import PrivateRoute from "./components/PrivateRoute";
+import {
+  LandingPage,
+  Login,
+  Registro,
+  RegistroCliente,
+  RegistroAutopeca,
+  DashboardCliente,
+  DashboardAutopeca,
+  DashboardVendedor,
+  NovaSolicitacao,
+  DetalheSolicitacao,
+  EditarSolicitacao,
+  GerenciarVendedores,
+} from "./pages";
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <div
-      style={{
-        padding: "50px",
-        textAlign: "center",
-        color: "white",
-        backgroundColor: "#1a1a1a",
-        minHeight: "100vh",
-      }}
-    >
-      <h1 style={{ color: "#646cff", fontSize: "3rem" }}>PeçaJá</h1>
-      <h2 style={{ color: "#888" }}>Marketplace de Autopeças</h2>
-      <p>Frontend React + Vite funcionando! 🚀</p>
-      <p>
-        Backend rodando em:{" "}
-        <code
-          style={{
-            backgroundColor: "#333",
-            padding: "2px 6px",
-            borderRadius: "4px",
-          }}
-        >
-          http://localhost:3001
-        </code>
-      </p>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Rotas públicas */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastrar" element={<Registro />} />
+          {/* Rotas antigas mantidas para compatibilidade */}
+          <Route path="/cadastrar/cliente" element={<RegistroCliente />} />
+          <Route path="/cadastrar/autopeca-old" element={<RegistroAutopeca />} />
 
-      <button
-        onClick={() => setCount((count) => count + 1)}
-        style={{
-          padding: "12px 24px",
-          backgroundColor: "#646cff",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontSize: "16px",
-          marginTop: "20px",
-        }}
-      >
-        Contador: {count}
-      </button>
-    </div>
+          {/* Rotas protegidas - Dashboards */}
+          <Route
+            path="/dashboard/cliente"
+            element={
+              <PrivateRoute tipoUsuario="cliente">
+                <DashboardCliente />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/autopeca"
+            element={
+              <PrivateRoute tipoUsuario="autopeca">
+                <DashboardAutopeca />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard/vendedor"
+            element={
+              <PrivateRoute tipoUsuario="vendedor">
+                <DashboardVendedor />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Rotas protegidas - Cliente */}
+          <Route
+            path="/solicitacoes/nova"
+            element={
+              <PrivateRoute tipoUsuario="cliente">
+                <NovaSolicitacao />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/solicitacoes/:id"
+            element={
+              <PrivateRoute tipoUsuario={["cliente", "autopeca"]}>
+                <DetalheSolicitacao />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/solicitacoes/:id/editar"
+            element={
+              <PrivateRoute tipoUsuario="cliente">
+                <EditarSolicitacao />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Rotas protegidas - Autopeça */}
+          <Route
+            path="/vendedores"
+            element={
+              <PrivateRoute tipoUsuario="autopeca">
+                <GerenciarVendedores />
+              </PrivateRoute>
+            }
+          />
+          
+          {/* Rota padrão - redireciona para home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

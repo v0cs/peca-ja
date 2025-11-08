@@ -232,18 +232,8 @@ class VendedorOperacoesController {
           uf_atendimento: vendedor.autopeca.endereco_uf,
         },
         include: [
-          {
-            model: Cliente,
-            as: "cliente",
-            attributes: ["id", "nome_completo", "celular", "cidade", "uf"],
-            include: [
-              {
-                model: Usuario,
-                as: "usuario",
-                attributes: ["email"],
-              },
-            ],
-          },
+          // NÃO incluir dados do cliente - vendedores não devem ter acesso
+          // Apenas dados da solicitação e do veículo
           {
             model: SolicitacoesAtendimento,
             as: "atendimentos",
@@ -279,13 +269,7 @@ class VendedorOperacoesController {
         uf_atendimento: solicitacao.uf_atendimento,
         origem_dados_veiculo: solicitacao.origem_dados_veiculo,
         data_criacao: solicitacao.data_criacao,
-        cliente: {
-          id: solicitacao.cliente.id,
-          nome_completo: solicitacao.cliente.nome_completo,
-          celular: solicitacao.cliente.celular,
-          cidade: solicitacao.cliente.cidade,
-          uf: solicitacao.cliente.uf,
-        },
+        // NÃO incluir dados do cliente - vendedores não devem ter acesso
       }));
 
       return res.status(200).json({
@@ -444,7 +428,7 @@ class VendedorOperacoesController {
           solicitacao_id: solicitacaoId,
           autopeca_id: vendedor.autopeca_id,
           vendedor_id: vendedor.id, // Incluir vendedor_id no registro
-          status_atendimento: "nao_lida",
+          status_atendimento: "atendida", // Marcar diretamente como atendida
         },
         { transaction }
       );
@@ -522,11 +506,7 @@ ${nomeAutopeca}`;
             id: vendedor.id,
             nome_completo: vendedor.nome_completo,
           },
-          cliente: {
-            id: solicitacao.cliente.id,
-            nome_completo: solicitacao.cliente.nome_completo,
-            celular: solicitacao.cliente.celular,
-          },
+          // NÃO retornar dados do cliente - apenas o link do WhatsApp
           veiculo: {
             marca: solicitacao.marca,
             modelo: solicitacao.modelo,

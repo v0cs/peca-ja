@@ -43,4 +43,7 @@ router.put("/:vendedorId", vendedorController.atualizarVendedor);
 // Rota para inativar vendedor
 router.delete("/:vendedorId", vendedorController.inativarVendedor);
 
+// Rota para reativar vendedor
+router.patch("/:vendedorId/reativar", vendedorController.reativarVendedor);
+
 module.exports = router;

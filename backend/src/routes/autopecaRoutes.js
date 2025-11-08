@@ -43,10 +43,40 @@ router.get(
   autopecaController.getSolicitacoesDisponiveis
 );
 
+// Rota para listar solicitações atendidas pela autopeça
+router.get(
+  "/solicitacoes-atendidas",
+  autopecaController.getSolicitacoesAtendidas
+);
+
+// Rota para listar solicitações vistas pela autopeça
+router.get(
+  "/solicitacoes-vistas",
+  autopecaController.getSolicitacoesVistas
+);
+
 // Rota para marcar solicitação como atendida
 router.post(
   "/solicitacoes/:solicitacaoId/atender",
   autopecaController.marcarComoAtendida
+);
+
+// Rota para desmarcar solicitação como atendida
+router.delete(
+  "/solicitacoes/:solicitacaoId/atender",
+  autopecaController.desmarcarComoAtendida
+);
+
+// Rota para marcar solicitação como vista/lida
+router.post(
+  "/solicitacoes/:solicitacaoId/marcar-como-lida",
+  autopecaController.marcarComoLida
+);
+
+// Rota para desmarcar solicitação como vista (retornar ao dashboard)
+router.delete(
+  "/solicitacoes/:solicitacaoId/marcar-como-lida",
+  autopecaController.desmarcarComoVista
 );
 
 module.exports = router;

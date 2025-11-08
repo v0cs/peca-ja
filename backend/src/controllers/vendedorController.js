@@ -125,7 +125,7 @@ class VendedorController {
         });
       }
 
-      // 5. Gerar senha temporária
+      // 5. Gerar senha temporária (sempre gerada automaticamente)
       const senhaTemporaria = Math.random().toString(36).slice(-8); // 8 caracteres aleatórios
       const saltRounds = 12;
       const senhaHash = await bcrypt.hash(senhaTemporaria, saltRounds);
@@ -140,6 +140,7 @@ class VendedorController {
           data_aceite_terms: new Date(),
           ativo: true,
           consentimento_marketing: false,
+          senha_temporaria: true, // Marcar que precisa trocar senha no primeiro acesso
         },
         { transaction }
       );
@@ -677,6 +678,135 @@ class VendedorController {
       await transaction.rollback();
 
       console.error("Erro ao inativar vendedor:", error);
+
+      // Erro interno do servidor (500)
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    }
+  }
+
+  /**
+   * Reativar vendedor
+   * PATCH /api/vendedores/:vendedorId/reativar
+   *
+   * @param {Object} req - Request object (deve conter req.user do middleware)
+   * @param {Object} res - Response object
+   */
+  static async reativarVendedor(req, res) {
+    const transaction = await Usuario.sequelize.transaction();
+
+    try {
+      // req.user é adicionado pelo middleware de autenticação
+      const { userId, tipo } = req.user;
+      let { vendedorId } = req.params;
+      // Remover ":" se existir no início (validação defensiva)
+      vendedorId = vendedorId.startsWith(":")
+        ? vendedorId.slice(1)
+        : vendedorId;
+
+      // Verificar se o usuário é do tipo autopeca
+      if (tipo !== "autopeca") {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Acesso negado",
+          errors: {
+            tipo_usuario: "Esta operação é exclusiva para autopeças",
+          },
+        });
+      }
+
+      // Buscar autopeça logada
+      const autopeca = await Autopeca.findOne({
+        where: { usuario_id: userId },
+        attributes: ["id"],
+        transaction,
+      });
+
+      if (!autopeca) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Autopeça não encontrada",
+          errors: {
+            autopeca: "Perfil de autopeça não encontrado para este usuário",
+          },
+        });
+      }
+
+      // Buscar vendedor e verificar se pertence à autopeça
+      const vendedor = await Vendedor.findOne({
+        where: {
+          id: vendedorId,
+          autopeca_id: autopeca.id,
+        },
+        include: [
+          {
+            model: Usuario,
+            as: "usuario",
+            attributes: ["id", "email", "ativo"],
+          },
+        ],
+        transaction,
+      });
+
+      if (!vendedor) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Vendedor não encontrado",
+          errors: {
+            vendedor: "Vendedor não encontrado ou não pertence a esta autopeça",
+          },
+        });
+      }
+
+      // Verificar se vendedor já está ativo
+      if (vendedor.ativo && vendedor.usuario.ativo) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Vendedor já está ativo",
+          errors: {
+            status: "Este vendedor já está ativo",
+          },
+        });
+      }
+
+      // Reativar vendedor e usuário
+      await vendedor.update({ ativo: true }, { transaction });
+      await vendedor.usuario.update({ ativo: true }, { transaction });
+
+      // Commit da transação
+      await transaction.commit();
+
+      return res.status(200).json({
+        success: true,
+        message: "Vendedor reativado com sucesso",
+        data: {
+          vendedor: {
+            id: vendedor.id,
+            nome_completo: vendedor.nome_completo,
+            ativo: true,
+            reativado_em: new Date(),
+          },
+          usuario: {
+            id: vendedor.usuario.id,
+            email: vendedor.usuario.email,
+            ativo: true,
+          },
+        },
+      });
+    } catch (error) {
+      // Rollback da transação em caso de erro
+      await transaction.rollback();
+
+      console.error("Erro ao reativar vendedor:", error);
 
       // Erro interno do servidor (500)
       return res.status(500).json({

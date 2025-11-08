@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const path = require("path");
 
 // Importar configuração centralizada
 const config = require("./src/config/env");
@@ -15,15 +16,23 @@ const app = express();
 const PORT = config.PORT;
 
 // Middlewares
-app.use(helmet());
+// Configurar helmet para permitir imagens de uploads
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 app.use(cors());
 app.use(express.json());
 
 // Configurar todas as rotas com prefixo /api
 app.use("/api", routes);
 
-// Servir arquivos estáticos da pasta uploads
-app.use("/uploads", express.static("uploads"));
+// Servir arquivos estáticos da pasta uploads (caminho absoluto)
+const uploadsDir = path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsDir));
+console.log(`📁 Servindo arquivos estáticos de: ${uploadsDir}`);
 
 // Health check básico
 app.get("/health", (req, res) => {

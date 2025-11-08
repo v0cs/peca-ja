@@ -111,7 +111,7 @@ describe("AuthController", () => {
 
     it("deve retornar erro quando email já existe", async () => {
       // Arrange
-      Usuario.findOne.mockResolvedValue({ id: 1, email: "joao@teste.com" });
+      Usuario.findOne.mockResolvedValue({ id: 1, email: "joao@teste.com", ativo: true });
 
       // Act
       await AuthController.register(req, res);

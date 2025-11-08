@@ -4,8 +4,11 @@ const {
   Usuario,
   ImagemSolicitacao,
   SolicitacoesAtendimento,
+  Autopeca,
 } = require("../models");
 const { uploadMiddleware } = require("../middleware/uploadMiddleware");
+const { emailService } = require("../services");
+const NotificationService = require("../services/notificationService");
 const path = require("path");
 
 /**
@@ -78,8 +81,8 @@ class SolicitacaoController {
         placa,
         marca,
         modelo,
-        ano_fabricacao,
-        ano_modelo,
+        ano_fabricacao: anoFabricacaoRaw,
+        ano_modelo: anoModeloRaw,
         categoria,
         cor,
         chassi,
@@ -87,6 +90,10 @@ class SolicitacaoController {
         origem_dados_veiculo,
         api_veicular_metadata,
       } = req.body;
+
+      // Converter anos para números (FormData envia como string)
+      const ano_fabricacao = parseInt(anoFabricacaoRaw, 10);
+      const ano_modelo = parseInt(anoModeloRaw, 10);
 
       // Usar cidade/estado do perfil do cliente como padrão se não informado
       const cidadeFinal = cidade_atendimento || cliente.cidade;
@@ -105,8 +112,8 @@ class SolicitacaoController {
         placa,
         marca,
         modelo,
-        ano_fabricacao,
-        ano_modelo,
+        ano_fabricacao: anoFabricacaoRaw, // Usar valor raw para validação de presença
+        ano_modelo: anoModeloRaw, // Usar valor raw para validação de presença
         categoria,
         cor,
       };
@@ -129,6 +136,29 @@ class SolicitacaoController {
             message: `Os seguintes campos são obrigatórios: ${camposFaltando.join(
               ", "
             )}`,
+          },
+        });
+      }
+
+      // Validar se anos são números válidos
+      if (isNaN(ano_fabricacao)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Ano de fabricação inválido",
+          errors: {
+            ano_fabricacao: "Ano de fabricação deve ser um número válido",
+          },
+        });
+      }
+
+      if (isNaN(ano_modelo)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Ano do modelo inválido",
+          errors: {
+            ano_modelo: "Ano do modelo deve ser um número válido",
           },
         });
       }
@@ -247,10 +277,6 @@ class SolicitacaoController {
 
       // 10. Enviar notificações para autopeças da mesma cidade (assíncrono)
       try {
-        const { emailService } = require("../services");
-        const NotificationService = require("../services/notificationService");
-        const { Autopeca } = require("../models");
-
         // Buscar autopeças da mesma cidade
         const autopecasDaCidade = await Autopeca.findAll({
           where: {
@@ -314,11 +340,19 @@ class SolicitacaoController {
             uf_atendimento: novaSolicitacao.uf_atendimento,
             created_at: novaSolicitacao.created_at,
           },
-          imagens: imagensCriadas.map((img) => ({
-            id: img.id,
-            nome_arquivo: img.nome_arquivo,
-            url: `/uploads/${img.nome_arquivo_fisico}`,
-          })),
+          imagens: imagensCriadas.map((img) => {
+            const imageUrl = `/uploads/${img.nome_arquivo_fisico}`;
+            console.log(`🖼️ [create] Imagem criada ${img.id}:`, {
+              nome_arquivo_fisico: img.nome_arquivo_fisico,
+              url: imageUrl,
+              caminho_arquivo: img.caminho_arquivo,
+            });
+            return {
+              id: img.id,
+              nome_arquivo: img.nome_arquivo,
+              url: imageUrl,
+            };
+          }),
           api_veicular_info: {
             consultado: req.apiVeicularInfo?.consultado || false,
             origem: req.apiVeicularInfo?.origem || "manual",
@@ -425,50 +459,93 @@ class SolicitacaoController {
       // Remover ":" se existir no início (validação defensiva)
       id = id.startsWith(":") ? id.slice(1) : id;
 
-      // 1. Verificar se o usuário é um cliente
-      if (req.user.tipo !== "cliente") {
+      // 1. Determinar tipo de acesso (cliente ou autopeça)
+      const { tipo } = req.user;
+      let whereClause = { id };
+
+      if (tipo === "cliente") {
+        // Clientes só podem ver suas próprias solicitações
+        const cliente = await Cliente.findOne({
+          where: { usuario_id: req.user.userId },
+        });
+
+        if (!cliente) {
+          return res.status(404).json({
+            success: false,
+            message: "Cliente não encontrado",
+            errors: {
+              cliente: "Usuário autenticado não possui perfil de cliente",
+            },
+          });
+        }
+
+        whereClause.cliente_id = cliente.id;
+      } else if (tipo === "autopeca") {
+        // Autopeças podem ver solicitações ativas da mesma cidade
+        // Também podem ver solicitações que foram atendidas por elas (mesmo que canceladas/concluídas)
+        const autopeca = await Autopeca.findOne({
+          where: { usuario_id: req.user.userId },
+          attributes: ["id", "endereco_cidade", "endereco_uf"],
+        });
+
+        if (!autopeca) {
+          return res.status(404).json({
+            success: false,
+            message: "Autopeça não encontrada",
+            errors: {
+              autopeca: "Usuário autenticado não possui perfil de autopeça",
+            },
+          });
+        }
+
+        // Verificar se a autopeça atendeu ou marcou como vista esta solicitação
+        const atendimento = await SolicitacoesAtendimento.findOne({
+          where: {
+            solicitacao_id: id,
+            autopeca_id: autopeca.id,
+          },
+        });
+
+        if (atendimento) {
+          // Se a autopeça tem registro (atendida ou vista), pode ver independente do status_cliente
+          // Apenas garantir que é da mesma cidade (para segurança)
+          whereClause.cidade_atendimento = autopeca.endereco_cidade;
+          whereClause.uf_atendimento = autopeca.endereco_uf;
+        } else {
+          // Se não tem registro, só pode ver se estiver ativa e na mesma cidade
+          whereClause.status_cliente = "ativa";
+          whereClause.cidade_atendimento = autopeca.endereco_cidade;
+          whereClause.uf_atendimento = autopeca.endereco_uf;
+        }
+      } else {
         return res.status(403).json({
           success: false,
-          message: "Apenas clientes podem visualizar solicitações",
+          message: "Acesso negado",
           errors: {
-            authorization: "Usuário deve ser do tipo 'cliente'",
+            authorization: "Apenas clientes e autopeças podem visualizar solicitações",
           },
         });
       }
 
-      // 2. Buscar cliente_id baseado no usuário autenticado
-      const cliente = await Cliente.findOne({
-        where: { usuario_id: req.user.userId },
-      });
-
-      if (!cliente) {
-        return res.status(404).json({
-          success: false,
-          message: "Cliente não encontrado",
-          errors: {
-            cliente: "Usuário autenticado não possui perfil de cliente",
-          },
-        });
-      }
-
-      // 3. Buscar solicitação específica
-      const solicitacao = await Solicitacao.findOne({
-        where: {
-          id,
-          cliente_id: cliente.id,
+      // 2. Buscar solicitação específica
+      // Autopeças NÃO devem ter acesso às informações do cliente
+      // Elas apenas podem ver os dados da solicitação e do veículo
+      const includes = [
+        {
+          model: ImagemSolicitacao,
+          as: "imagens",
+          attributes: [
+            "id",
+            "nome_arquivo",
+            "nome_arquivo_fisico",
+            "ordem_exibicao",
+          ],
         },
-        include: [
-          {
-            model: ImagemSolicitacao,
-            as: "imagens",
-            attributes: [
-              "id",
-              "nome_arquivo",
-              "nome_arquivo_fisico",
-              "ordem_exibicao",
-            ],
-          },
-        ],
+      ];
+
+      const solicitacao = await Solicitacao.findOne({
+        where: whereClause,
+        include: includes,
       });
 
       if (!solicitacao) {
@@ -481,11 +558,33 @@ class SolicitacaoController {
         });
       }
 
+      // Formatar imagens com URL para o frontend
+      const solicitacaoFormatada = {
+        ...solicitacao.toJSON(),
+        imagens: solicitacao.imagens
+          ? solicitacao.imagens.map((img) => {
+              const imageUrl = `/uploads/${img.nome_arquivo_fisico}`;
+              console.log(`🖼️ [getById] Imagem ${img.id}:`, {
+                nome_arquivo_fisico: img.nome_arquivo_fisico,
+                url: imageUrl,
+                caminho_arquivo: img.caminho_arquivo,
+              });
+              return {
+                id: img.id,
+                nome_arquivo: img.nome_arquivo,
+                nome_arquivo_fisico: img.nome_arquivo_fisico,
+                url: imageUrl,
+                ordem_exibicao: img.ordem_exibicao,
+              };
+            })
+          : [],
+      };
+
       return res.status(200).json({
         success: true,
         message: "Solicitação encontrada com sucesso",
         data: {
-          solicitacao,
+          solicitacao: solicitacaoFormatada,
         },
       });
     } catch (error) {
@@ -565,8 +664,19 @@ class SolicitacaoController {
         });
       }
 
-      // 4. Verificar se a solicitação pode be edited (apenas ativas)
-      if (solicitacao.status_cliente !== "ativa") {
+      // 4. Verificar se a solicitação pode ser editada
+      // Permite editar apenas se:
+      // - A solicitação está ativa (pode editar qualquer campo)
+      // - OU se está apenas atualizando o status para concluída (permitir sempre)
+      const isOnlyStatusUpdate = 
+        req.body.status_cliente && 
+        Object.keys(req.body).filter(key => 
+          key !== "status_cliente" && 
+          key !== "imagens_para_deletar" && 
+          !req.files
+        ).length === 0;
+
+      if (solicitacao.status_cliente !== "ativa" && !isOnlyStatusUpdate) {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
@@ -591,6 +701,7 @@ class SolicitacaoController {
         cor,
         chassi,
         renavam,
+        status_cliente,
       } = req.body;
 
       const dadosAtualizacao = {};
@@ -759,21 +870,201 @@ class SolicitacaoController {
         dadosAtualizacao.renavam = renavam ? renavam.trim() : "Não informado";
       }
 
-      // 6. Atualizar solicitação se houver dados
+      // Validar e atualizar status_cliente se fornecido
+      if (status_cliente !== undefined) {
+        const statusValidos = ["ativa", "concluida", "cancelada"];
+        if (!statusValidos.includes(status_cliente)) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Status inválido",
+            errors: {
+              status_cliente: `Status deve ser um dos seguintes: ${statusValidos.join(", ")}`,
+            },
+          });
+        }
+
+        // Validações específicas por status
+        if (status_cliente === "concluida" && solicitacao.status_cliente === "cancelada") {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Não é possível marcar uma solicitação cancelada como concluída",
+            errors: {
+              status_cliente: "Solicitações canceladas não podem ser concluídas",
+            },
+          });
+        }
+
+        if (status_cliente === "cancelada" && solicitacao.status_cliente === "concluida") {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Não é possível cancelar uma solicitação já concluída",
+            errors: {
+              status_cliente: "Solicitações concluídas não podem ser canceladas",
+            },
+          });
+        }
+
+        dadosAtualizacao.status_cliente = status_cliente;
+
+        // Se marcando como concluída, registrar data de conclusão
+        if (status_cliente === "concluida") {
+          dadosAtualizacao.data_conclusao = new Date();
+        }
+      }
+
+      // 6. Processar exclusão de imagens se houver
+      let imagensParaDeletar = [];
+      if (req.body.imagens_para_deletar) {
+        try {
+          // Se for string JSON, fazer parse
+          if (typeof req.body.imagens_para_deletar === "string") {
+            imagensParaDeletar = JSON.parse(req.body.imagens_para_deletar);
+          } else {
+            imagensParaDeletar = req.body.imagens_para_deletar;
+          }
+        } catch (parseError) {
+          console.warn("Erro ao fazer parse de imagens_para_deletar:", parseError);
+        }
+
+        if (Array.isArray(imagensParaDeletar) && imagensParaDeletar.length > 0) {
+          // Verificar se as imagens pertencem à solicitação
+          const imagensExistentes = await ImagemSolicitacao.findAll({
+            where: {
+              id: imagensParaDeletar,
+              solicitacao_id: solicitacao.id,
+            },
+            transaction,
+          });
+
+          const idsValidos = imagensExistentes.map((img) => img.id);
+
+          if (idsValidos.length !== imagensParaDeletar.length) {
+            await transaction.rollback();
+            return res.status(400).json({
+              success: false,
+              message: "Algumas imagens não foram encontradas ou não pertencem a esta solicitação",
+              errors: {
+                imagens: "Imagens inválidas para exclusão",
+              },
+            });
+          }
+
+          // Deletar arquivos físicos do servidor
+          const fs = require("fs");
+          const uploadDir = path.join(__dirname, "../../uploads");
+
+          for (const imagem of imagensExistentes) {
+            if (imagem.nome_arquivo_fisico) {
+              const filePath = path.join(uploadDir, imagem.nome_arquivo_fisico);
+              try {
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                  console.log(`Arquivo deletado: ${filePath}`);
+                }
+              } catch (fileError) {
+                console.warn(`Erro ao deletar arquivo ${filePath}:`, fileError);
+                // Continuar mesmo se houver erro ao deletar arquivo
+              }
+            }
+          }
+
+          // Deletar registros do banco
+          await ImagemSolicitacao.destroy({
+            where: {
+              id: idsValidos,
+              solicitacao_id: solicitacao.id,
+            },
+            transaction,
+          });
+
+          console.log(`${idsValidos.length} imagem(ns) excluída(s) da solicitação ${id}`);
+        }
+      }
+
+      // 7. Processar novas imagens se houver
+      if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+        // Contar imagens existentes após exclusões
+        const imagensRestantes = await ImagemSolicitacao.count({
+          where: {
+            solicitacao_id: solicitacao.id,
+          },
+          transaction,
+        });
+
+        const slotsDisponiveis = 3 - imagensRestantes;
+
+        if (req.uploadedFiles.length > slotsDisponiveis) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: `Limite de 3 imagens excedido. Você pode adicionar apenas ${slotsDisponiveis} imagem(ns) mais`,
+            errors: {
+              imagens: `Máximo de 3 imagens permitidas. Você tentou adicionar ${req.uploadedFiles.length} mas só há ${slotsDisponiveis} slot(s) disponível(is)`,
+            },
+          });
+        }
+
+        // Adicionar novas imagens
+        for (let i = 0; i < req.uploadedFiles.length; i++) {
+          const file = req.files[i];
+          await ImagemSolicitacao.create(
+            {
+              solicitacao_id: solicitacao.id,
+              nome_arquivo: file.originalname,
+              nome_arquivo_fisico: file.filename,
+              caminho_arquivo: file.path,
+              tamanho_arquivo: file.size,
+              tipo_mime: file.mimetype,
+              extensao: path.extname(file.originalname).slice(1),
+              ordem_exibicao: imagensRestantes + i + 1,
+            },
+            { transaction }
+          );
+        }
+
+        console.log(`${req.uploadedFiles.length} nova(s) imagem(ns) adicionada(s) à solicitação ${id}`);
+      }
+
+      // 8. Atualizar solicitação se houver dados
       if (Object.keys(dadosAtualizacao).length > 0) {
         await solicitacao.update(dadosAtualizacao, { transaction });
       }
 
       await transaction.commit();
 
-      // 7. Buscar solicitação atualizada
-      const solicitacaoAtualizada = await Solicitacao.findByPk(id);
+      // 9. Buscar solicitação atualizada com imagens
+      const solicitacaoAtualizada = await Solicitacao.findByPk(id, {
+        include: [
+          {
+            model: ImagemSolicitacao,
+            as: "imagens",
+            required: false,
+          },
+        ],
+      });
+
+      // Formatar imagens com URL
+      const solicitacaoFormatada = {
+        ...solicitacaoAtualizada.toJSON(),
+        imagens: solicitacaoAtualizada.imagens
+          ? solicitacaoAtualizada.imagens.map((img) => ({
+              id: img.id,
+              nome_arquivo: img.nome_arquivo,
+              nome_arquivo_fisico: img.nome_arquivo_fisico,
+              url: `/uploads/${img.nome_arquivo_fisico}`,
+              ordem_exibicao: img.ordem_exibicao,
+            }))
+          : [],
+      };
 
       return res.status(200).json({
         success: true,
         message: "Solicitação atualizada com sucesso",
         data: {
-          solicitacao: solicitacaoAtualizada,
+          solicitacao: solicitacaoFormatada,
         },
       });
     } catch (error) {
