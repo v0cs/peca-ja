@@ -16,7 +16,7 @@ class EmailService {
       console.log(`📝 Assunto: ${subject}`);
 
       const result = await this.resend.emails.send({
-        from: "PeçaJá <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM || "PeçaJá <onboarding@resend.dev>",
         to: to,
         subject: subject,
         html: html,
@@ -42,6 +42,7 @@ class EmailService {
         message: error.message,
         code: error.code,
         statusCode: error.statusCode,
+        response: error?.response?.data,
       });
 
       // Não throw error para não quebrar o fluxo principal
@@ -98,6 +99,97 @@ class EmailService {
     `;
 
     return this.sendEmail(usuario.email, subject, html);
+  }
+
+  /**
+   * Notificação de segurança para alterações de perfil (email/senha)
+   */
+  async sendSecurityNotification(usuario, { tipo, metadados = {} }) {
+    const primeiroNome = (usuario.nome || usuario.email || "")
+      .split(" ")[0]
+      .trim();
+    const nomeApresentacao = primeiroNome || "Usuário";
+
+    if (tipo === "senha") {
+      const subject = "🔐 Sua senha foi alterada com sucesso - PeçaJá";
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h1 style="color: #2563eb; margin: 0;">PeçaJá</h1>
+            <p style="color: #6b7280; margin: 5px 0;">Marketplace de Peças Automotivas</p>
+          </div>
+
+          <h2 style="color: #2563eb;">Olá, ${nomeApresentacao}! 👋</h2>
+          <p>Confirmamos que sua senha foi atualizada recentemente.</p>
+
+          <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <p style="margin: 0; color: #1e40af;">
+              Se você realizou esta alteração, nenhuma ação adicional é necessária.
+            </p>
+          </div>
+
+          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+            <p style="margin: 0; color: #991b1b;">
+              Caso não tenha sido você, recomendamos redefinir sua senha imediatamente e entrar em contato com nosso suporte.
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.APP_URL || "http://localhost:3000"}/login"
+               style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+              Acessar minha conta
+            </a>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+            Se precisar de ajuda, entre em contato conosco: suporte@pecaja.com
+          </p>
+        </div>
+      `;
+
+      return this.sendEmail(usuario.email, subject, html);
+    }
+
+    if (tipo === "email") {
+      const novoEmail = metadados.novoEmail || usuario.email;
+      const antigoEmail = metadados.antigoEmail;
+
+      const subject = "✉️ Email da sua conta foi atualizado - PeçaJá";
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h1 style="color: #2563eb; margin: 0;">PeçaJá</h1>
+            <p style="color: #6b7280; margin: 5px 0;">Marketplace de Peças Automotivas</p>
+          </div>
+
+          <h2 style="color: #2563eb;">Olá, ${nomeApresentacao}! 👋</h2>
+          <p>Este email confirma que o endereço associado à sua conta foi alterado.</p>
+
+          <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <p style="margin: 0; color: #1e3a8a;">
+              <strong>Antigo email:</strong> ${
+                antigoEmail || "Não informado"
+              }<br/>
+              <strong>Novo email:</strong> ${novoEmail}
+            </p>
+          </div>
+
+          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+            <p style="margin: 0; color: #991b1b;">
+              Se você não solicitou essa alteração, entre em contato com nossa equipe imediatamente.
+            </p>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+            Dúvidas? suporte@pecaja.com
+          </p>
+        </div>
+      `;
+
+      return this.sendEmail(novoEmail, subject, html);
+    }
+
+    return null;
   }
 
   /**
@@ -226,6 +318,62 @@ class EmailService {
     `;
 
     return this.sendEmail(vendedorEmail, subject, html);
+  }
+
+  /**
+   * Email de confirmação de exclusão de conta
+   */
+  async sendAccountDeletionEmail(usuario, perfilData, tipoUsuario) {
+    const nome =
+      perfilData?.nome_completo || perfilData?.razao_social || usuario.email || "Usuário";
+
+    const subject = `👋 Sua conta foi excluída - PeçaJá`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <div style="text-align: center; padding: 20px 0;">
+          <h1 style="color: #2563eb; margin: 0;">PeçaJá</h1>
+          <p style="color: #6b7280; margin: 5px 0;">Marketplace de Peças Automotivas</p>
+        </div>
+
+        <h2 style="color: #2563eb;">Olá, ${nome.split(" ")[0]}! 👋</h2>
+        
+        <p>Confirmamos que sua conta foi <strong>excluída com sucesso</strong> do PeçaJá em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}.</p>
+
+        <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <h3 style="color: #dc2626; margin-top: 0;">📋 O que foi removido:</h3>
+          <ul style="color: #991b1b; margin: 10px 0;">
+            <li>Todas as suas solicitações foram canceladas</li>
+            <li>Seus dados pessoais foram removidos permanentemente</li>
+            <li>Você perdeu acesso a todos os recursos da plataforma</li>
+          </ul>
+        </div>
+
+        <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+          <p style="margin: 0; color: #1e40af;">
+            <strong>Esta ação é irreversível.</strong> Se você não solicitou a exclusão da conta, 
+            entre em contato conosco imediatamente para investigarmos.
+          </p>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+          <p style="color: #6b7280; margin: 0;">
+            Sentiremos sua falta! Caso mude de ideia, você pode criar uma nova conta a qualquer momento.
+          </p>
+        </div>
+
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
+          <p><strong>Dúvidas ou problemas?</strong><br>
+          Entre em contato conosco: suporte@pecaja.com</p>
+          
+          <p style="margin-top: 20px;">
+            Atenciosamente,<br>
+            <strong>Equipe PeçaJá</strong>
+          </p>
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail(usuario.email, subject, html);
   }
 
   /**

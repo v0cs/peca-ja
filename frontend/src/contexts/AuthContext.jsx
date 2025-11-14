@@ -26,11 +26,24 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post("/auth/login", { email, senha });
 
       if (response.data.success) {
-        const { token: newToken, usuario, perfil } = response.data.data;
+        const {
+          token: newToken,
+          usuario,
+          cliente,
+          autopeca,
+          vendedor,
+        } = response.data.data;
 
         // Salvar no estado e localStorage
         setToken(newToken);
-        const userData = { ...usuario, perfil };
+        const perfil = cliente || autopeca || vendedor || null; // Get the specific profile data
+        const userData = {
+          ...usuario,
+          cliente: cliente || null,
+          autopeca: autopeca || null,
+          vendedor: vendedor || null,
+          perfil: perfil, // Store profile for easy access
+        };
         setUser(userData);
 
         localStorage.setItem("token", newToken);

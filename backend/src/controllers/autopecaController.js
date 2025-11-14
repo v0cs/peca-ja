@@ -5,6 +5,7 @@ const {
   Cliente,
   SolicitacoesAtendimento,
   ImagemSolicitacao,
+  Vendedor,
 } = require("../models");
 
 /**
@@ -154,6 +155,7 @@ class AutopecaController {
 
       // Campos permitidos para atualização
       const camposPermitidos = [
+        "razao_social",
         "nome_fantasia",
         "telefone",
         "endereco_rua",
@@ -189,12 +191,28 @@ class AutopecaController {
       // Validações específicas dos campos
       const errors = {};
 
+      // Validar razão social se fornecida
+      if (dadosAtualizacao.razao_social) {
+        if (dadosAtualizacao.razao_social.trim().length < 2) {
+          errors.razao_social =
+            "Razão social deve ter pelo menos 2 caracteres";
+        } else {
+          dadosAtualizacao.razao_social = dadosAtualizacao.razao_social.trim();
+        }
+      }
+
       // Validar telefone se fornecido
       if (dadosAtualizacao.telefone) {
         const telefoneRegex = /^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/;
         if (!telefoneRegex.test(dadosAtualizacao.telefone)) {
           errors.telefone =
             "Formato de telefone inválido. Use o formato: (11)99999-9999";
+        } else {
+          const telefoneDigits = dadosAtualizacao.telefone.replace(/\D/g, "");
+          dadosAtualizacao.telefone = `(${telefoneDigits.slice(
+            0,
+            2
+          )})${telefoneDigits.slice(2)}`;
         }
       }
 
@@ -237,6 +255,9 @@ class AutopecaController {
           )
         ) {
           errors.endereco_uf = "UF inválida";
+        } else {
+          dadosAtualizacao.endereco_uf =
+            dadosAtualizacao.endereco_uf.toUpperCase().trim();
         }
       }
 
@@ -246,8 +267,23 @@ class AutopecaController {
         if (!cepRegex.test(dadosAtualizacao.endereco_cep)) {
           errors.endereco_cep =
             "CEP deve conter exatamente 8 dígitos numéricos";
+        } else {
+          dadosAtualizacao.endereco_cep =
+            dadosAtualizacao.endereco_cep.replace(/\D/g, "");
         }
       }
+
+      // Normalizar campos de endereço se fornecidos
+      ["nome_fantasia", "endereco_rua", "endereco_numero", "endereco_bairro", "endereco_cidade"].forEach(
+        (campo) => {
+          if (
+            dadosAtualizacao[campo] !== undefined &&
+            typeof dadosAtualizacao[campo] === "string"
+          ) {
+            dadosAtualizacao[campo] = dadosAtualizacao[campo].trim();
+          }
+        }
+      );
 
       // Se há erros de validação, retornar 400
       if (Object.keys(errors).length > 0) {
@@ -349,8 +385,8 @@ class AutopecaController {
           data_aceite_terms: autopecaAtualizada.usuario.data_aceite_terms,
           consentimento_marketing:
             autopecaAtualizada.usuario.consentimento_marketing,
-          created_at: autopecaAtualizada.usuario.created_at,
-          updated_at: autopecaAtualizada.usuario.updated_at,
+          created_at: autopecaAtualizada.usuario.data_criacao,
+          updated_at: autopecaAtualizada.usuario.data_atualizacao,
         },
       };
 
@@ -445,6 +481,11 @@ class AutopecaController {
             where: {
               autopeca_id: autopeca.id,
             },
+            attributes: [
+              "id",
+              "status_atendimento",
+              "vendedor_id",
+            ],
             required: false, // LEFT JOIN para incluir mesmo se não houver atendimento
           },
           {
@@ -460,6 +501,7 @@ class AutopecaController {
           },
         ],
         order: [["data_criacao", "DESC"]],
+        distinct: true,
       });
 
       // 3. Filtrar apenas solicitações não atendidas e não marcadas como lidas por esta autopeça
@@ -468,11 +510,23 @@ class AutopecaController {
         if (solicitacao.atendimentos.length === 0) {
           return true; // Não tem registro de atendimento, está disponível
         }
-        
-        // Se tem atendimento, verificar se não está como "lida" ou "atendida"
-        const atendimento = solicitacao.atendimentos[0];
-        return atendimento.status_atendimento !== "lida" && 
-               atendimento.status_atendimento !== "atendida";
+
+        const possuiAtendimentoConcluido = solicitacao.atendimentos.some(
+          (atendimento) => atendimento.status_atendimento === "atendida"
+        );
+
+        if (possuiAtendimentoConcluido) {
+          return false;
+        }
+
+        const marcadaComoVistaPelaAutopeca = solicitacao.atendimentos.some(
+          (atendimento) =>
+            atendimento.status_atendimento === "lida" &&
+            atendimento.vendedor_id === null
+        );
+
+        // Se apenas vendedores marcaram como vista, continua disponível
+        return !marcadaComoVistaPelaAutopeca;
       });
 
       // 4. Preparar dados de resposta com informações básicas
@@ -609,6 +663,12 @@ class AutopecaController {
               },
             ],
           },
+          {
+            model: Vendedor,
+            as: "vendedor",
+            attributes: ["id", "nome_completo"],
+            required: false,
+          },
         ],
         order: [["data_marcacao", "DESC"]],
       });
@@ -634,6 +694,12 @@ class AutopecaController {
             data_criacao: solicitacao.data_criacao,
             status_cliente: solicitacao.status_cliente,
             data_atendimento: atendimento.data_marcacao,
+            vendedor: atendimento.vendedor
+              ? {
+                  id: atendimento.vendedor.id,
+                  nome_completo: atendimento.vendedor.nome_completo,
+                }
+              : null,
             imagens: solicitacao.imagens
               ? solicitacao.imagens.map((img) => ({
                   id: img.id,
@@ -713,6 +779,7 @@ class AutopecaController {
         where: {
           autopeca_id: autopeca.id,
           status_atendimento: "lida", // Apenas vistas, não atendidas
+          vendedor_id: null,
         },
         include: [
           {
@@ -1331,31 +1398,36 @@ Equipe ${nomeAutopeca}`;
       }
 
       // 3. Verificar se já existe um registro de atendimento
-      let atendimento = await SolicitacoesAtendimento.findOne({
+      const atendimentoAtendido = await SolicitacoesAtendimento.findOne({
         where: {
           solicitacao_id: solicitacaoId,
           autopeca_id: autopeca.id,
+          status_atendimento: "atendida",
         },
         transaction,
       });
 
-      if (atendimento) {
-        // Se já existe e está como "atendida", não permitir mudar para "lida"
-        if (atendimento.status_atendimento === "atendida") {
-          await transaction.rollback();
-          return res.status(400).json({
-            success: false,
-            message: "Solicitação já foi marcada como atendida",
-            errors: {
-              status: "Não é possível marcar como vista uma solicitação já atendida",
-            },
-          });
-        }
-        // Atualizar status para "lida"
-        atendimento.status_atendimento = "lida";
-        await atendimento.save({ transaction });
-      } else {
-        // Criar novo registro com status "lida"
+      if (atendimentoAtendido) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Solicitação já foi marcada como atendida",
+          errors: {
+            status: "Não é possível marcar como vista uma solicitação já atendida",
+          },
+        });
+      }
+
+      let atendimento = await SolicitacoesAtendimento.findOne({
+        where: {
+          solicitacao_id: solicitacaoId,
+          autopeca_id: autopeca.id,
+          vendedor_id: null,
+        },
+        transaction,
+      });
+
+      if (!atendimento) {
         atendimento = await SolicitacoesAtendimento.create(
           {
             solicitacao_id: solicitacaoId,
@@ -1365,6 +1437,9 @@ Equipe ${nomeAutopeca}`;
           },
           { transaction }
         );
+      } else {
+        atendimento.status_atendimento = "lida";
+        await atendimento.save({ transaction });
       }
 
       // 4. Commit da transação

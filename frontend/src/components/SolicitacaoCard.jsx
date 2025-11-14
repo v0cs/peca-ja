@@ -2,15 +2,16 @@ import { Link } from "react-router-dom";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from "./ui";
 import { MapPin, Calendar, Car, MessageCircle, CheckCircle, XCircle, Eye } from "lucide-react";
 
-const SolicitacaoCard = ({ 
-  solicitacao, 
+const SolicitacaoCard = ({
+  solicitacao,
   tipoUsuario = "cliente",
   onAtender,
   onMarcarConcluida,
   onDesmarcar,
   onMarcarComoVista,
   onDesmarcarComoVista,
-  showActions = true 
+  showActions = true,
+  renderActions,
 }) => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -44,6 +45,104 @@ const SolicitacaoCard = ({
       </Badge>
     );
   };
+
+  let renderedActions = null;
+
+  if (showActions) {
+    if (renderActions) {
+      renderedActions = renderActions({
+        solicitacao,
+        onAtender,
+        onMarcarConcluida,
+        onDesmarcar,
+        onMarcarComoVista,
+        onDesmarcarComoVista,
+      });
+    } else if (tipoUsuario === "cliente") {
+      renderedActions = (
+        <>
+          <Link to={`/solicitacoes/${solicitacao.id}`}>
+            <Button variant="outline" size="sm">
+              Ver Detalhes
+            </Button>
+          </Link>
+          {solicitacao.status_cliente === "ativa" && (
+            <>
+              <Link to={`/solicitacoes/${solicitacao.id}/editar`}>
+                <Button variant="ghost" size="sm">
+                  Editar
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  onMarcarConcluida && onMarcarConcluida(solicitacao)
+                }
+                className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Marcar como Concluída
+              </Button>
+            </>
+          )}
+        </>
+      );
+    } else if (tipoUsuario === "autopeca") {
+      renderedActions = (
+        <>
+          <Link to={`/solicitacoes/${solicitacao.id}`}>
+            <Button variant="outline" size="sm">
+              Ver Detalhes
+            </Button>
+          </Link>
+          {solicitacao.status_cliente === "ativa" && onAtender && (
+            <Button
+              size="sm"
+              onClick={() => onAtender(solicitacao)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Atender via WhatsApp
+            </Button>
+          )}
+          {solicitacao.status_cliente === "ativa" && onMarcarComoVista && (
+            <Button
+              size="sm"
+              onClick={() => onMarcarComoVista(solicitacao)}
+              variant="outline"
+              className="text-muted-foreground hover:bg-muted"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Marcar como Vista
+            </Button>
+          )}
+          {solicitacao.data_atendimento && onDesmarcar && (
+            <Button
+              size="sm"
+              onClick={() => onDesmarcar(solicitacao)}
+              variant="outline"
+              className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Desmarcar
+            </Button>
+          )}
+          {solicitacao.data_marcacao && onDesmarcarComoVista && (
+            <Button
+              size="sm"
+              onClick={() => onDesmarcarComoVista(solicitacao)}
+              variant="outline"
+              className="text-primary border-primary/20 hover:bg-primary/10"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Retornar ao Dashboard
+            </Button>
+          )}
+        </>
+      );
+    }
+  }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -88,90 +187,20 @@ const SolicitacaoCard = ({
               {solicitacao.cidade_atendimento || solicitacao.cidade}, {solicitacao.uf_atendimento || solicitacao.uf}
             </p>
           </div>
+
+          {tipoUsuario === "autopeca" && solicitacao.vendedor && (
+            <div className="md:col-span-2">
+              <p className="text-sm text-muted-foreground mb-1">Atendida por</p>
+              <p className="text-sm font-medium">
+                {solicitacao.vendedor.nome_completo || "Vendedor não identificado"}
+              </p>
+            </div>
+          )}
         </div>
 
-        {showActions && (
+        {showActions && renderedActions && (
           <div className="flex gap-2 pt-4 border-t flex-wrap">
-            {tipoUsuario === "cliente" && (
-              <>
-                <Link to={`/solicitacoes/${solicitacao.id}`}>
-                  <Button variant="outline" size="sm">
-                    Ver Detalhes
-                  </Button>
-                </Link>
-                {solicitacao.status_cliente === "ativa" && (
-                  <>
-                    <Link to={`/solicitacoes/${solicitacao.id}/editar`}>
-                      <Button variant="ghost" size="sm">
-                        Editar
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onMarcarConcluida && onMarcarConcluida(solicitacao)}
-                      className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Marcar como Concluída
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
-
-            {tipoUsuario === "autopeca" && (
-              <>
-                <Link to={`/solicitacoes/${solicitacao.id}`}>
-                  <Button variant="outline" size="sm">
-                    Ver Detalhes
-                  </Button>
-                </Link>
-                {solicitacao.status_cliente === "ativa" && onAtender && (
-                  <Button
-                    size="sm"
-                    onClick={() => onAtender(solicitacao)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    Atender via WhatsApp
-                  </Button>
-                )}
-                {solicitacao.status_cliente === "ativa" && onMarcarComoVista && (
-                  <Button
-                    size="sm"
-                    onClick={() => onMarcarComoVista(solicitacao)}
-                    variant="outline"
-                    className="text-muted-foreground hover:bg-muted"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Marcar como Vista
-                  </Button>
-                )}
-                {solicitacao.data_atendimento && onDesmarcar && (
-                  <Button
-                    size="sm"
-                    onClick={() => onDesmarcar(solicitacao)}
-                    variant="outline"
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
-                  >
-                    <XCircle className="mr-2 h-4 w-4" />
-                    Desmarcar
-                  </Button>
-                )}
-                {solicitacao.data_marcacao && onDesmarcarComoVista && (
-                  <Button
-                    size="sm"
-                    onClick={() => onDesmarcarComoVista(solicitacao)}
-                    variant="outline"
-                    className="text-primary border-primary/20 hover:bg-primary/10"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Retornar ao Dashboard
-                  </Button>
-                )}
-              </>
-            )}
+            {renderedActions}
           </div>
         )}
       </CardContent>

@@ -222,6 +222,12 @@ class ClienteController {
         if (!telefoneRegex.test(dadosAtualizacao.telefone)) {
           errors.telefone =
             "Formato de telefone inválido. Use o formato: (11)99999-9999";
+        } else {
+          const telefoneDigits = dadosAtualizacao.telefone.replace(/\D/g, "");
+          dadosAtualizacao.telefone = `(${telefoneDigits.slice(
+            0,
+            2
+          )})${telefoneDigits.slice(2)}`;
         }
       }
 
@@ -231,6 +237,12 @@ class ClienteController {
         if (!celularRegex.test(dadosAtualizacao.celular)) {
           errors.celular =
             "Formato de celular inválido. Use o formato: (11)999999999";
+        } else {
+          const celularDigits = dadosAtualizacao.celular.replace(/\D/g, "");
+          dadosAtualizacao.celular = `(${celularDigits.slice(
+            0,
+            2
+          )})${celularDigits.slice(2)}`;
         }
       }
 

@@ -749,7 +749,7 @@ class VendedorController {
           {
             model: Usuario,
             as: "usuario",
-            attributes: ["id", "email", "ativo"],
+            attributes: ["id", "email", "ativo", "tipo_usuario"],
           },
         ],
         transaction,
@@ -778,9 +778,29 @@ class VendedorController {
         });
       }
 
+      // Verificar se o usuário do vendedor mudou de tipo (ex: se cadastrou como cliente)
+      // Se mudou, permitir reativação e restaurar tipo_usuario para "vendedor"
+      // Isso permite que a autopeça reative um vendedor mesmo após ele ter se cadastrado como cliente e excluído a conta
+      const tipoUsuarioOriginal = vendedor.usuario.tipo_usuario;
+      const precisaRestaurarTipo = tipoUsuarioOriginal !== "vendedor";
+
       // Reativar vendedor e usuário
+      // Se o tipo_usuario foi alterado (ex: cliente após cadastro), restaurar para "vendedor"
       await vendedor.update({ ativo: true }, { transaction });
-      await vendedor.usuario.update({ ativo: true }, { transaction });
+      await vendedor.usuario.update(
+        {
+          ativo: true,
+          tipo_usuario: "vendedor", // Restaurar/garantir que o tipo seja "vendedor"
+        },
+        { transaction }
+      );
+
+      // Log para auditoria se o tipo foi restaurado
+      if (precisaRestaurarTipo) {
+        console.log(
+          `Vendedor ${vendedor.id} reativado: tipo_usuario restaurado de "${tipoUsuarioOriginal}" para "vendedor"`
+        );
+      }
 
       // Commit da transação
       await transaction.commit();

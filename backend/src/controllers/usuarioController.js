@@ -1,5 +1,5 @@
 const bcrypt = require("bcryptjs");
-const { Usuario, Cliente, Autopeca } = require("../models");
+const { Usuario, Cliente, Autopeca, Vendedor } = require("../models");
 
 /**
  * Controller de Usuario
@@ -65,6 +65,7 @@ class UsuarioController {
 
       const errors = {};
       const dadosAtualizacao = {};
+      const emailAnterior = usuario.email;
 
       // === ATUALIZAÇÃO DE EMAIL ===
       if (email) {
@@ -143,24 +144,33 @@ class UsuarioController {
 
       // Commit da transação
       await transaction.commit();
+      await usuario.reload();
 
       // Enviar email de confirmação de alteração (assíncrono - não bloqueia response)
       if (dadosAtualizacao.email || dadosAtualizacao.senha_hash) {
         try {
           const { emailService } = require("../services");
-          const mensagem = dadosAtualizacao.email
-            ? "Seu email foi alterado com sucesso"
-            : "Sua senha foi alterada com sucesso";
+          if (dadosAtualizacao.email) {
+            emailService
+              .sendSecurityNotification(usuario, {
+                tipo: "email",
+                metadados: {
+                  antigoEmail: emailAnterior,
+                  novoEmail: usuario.email,
+                },
+              })
+              .catch((err) =>
+                console.log("Erro ao enviar notificação de email:", err)
+              );
+          }
 
-          emailService
-            .sendWelcomeEmail(
-              usuario,
-              { nome_completo: usuario.email },
-              "usuario"
-            )
-            .catch((err) =>
-              console.log("Erro ao enviar email de confirmação:", err)
-            );
+          if (dadosAtualizacao.senha_hash) {
+            emailService
+              .sendSecurityNotification(usuario, { tipo: "senha" })
+              .catch((err) =>
+                console.log("Erro ao enviar notificação de senha:", err)
+              );
+          }
         } catch (emailError) {
           console.log("Erro no envio de email de confirmação:", emailError);
         }
@@ -244,15 +254,27 @@ class UsuarioController {
       const { userId, tipo } = req.user;
       const { confirmacao, senha } = req.body;
 
+      // Verificar se o tipo é vendedor (não pode excluir conta)
+      if (tipo === "vendedor") {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: "Operação não permitida",
+          errors: {
+            conta: "Vendedores não podem excluir a própria conta. Solicite ao administrador da autopeça.",
+          },
+        });
+      }
+
       // Validar confirmação
-      if (confirmacao !== "EXCLUIR") {
+      if (confirmacao !== "CONFIRMAR") {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: "Confirmação inválida",
           errors: {
             confirmacao:
-              'Para excluir sua conta, você deve enviar confirmacao: "EXCLUIR"',
+              'Para excluir sua conta, você deve digitar "CONFIRMAR" no campo de confirmação',
           },
         });
       }
@@ -302,11 +324,13 @@ class UsuarioController {
       const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
       if (!senhaCorreta) {
         await transaction.rollback();
-        return res.status(401).json({
+        // Retornar 400 (Bad Request) ao invés de 401 (Unauthorized) para evitar logout automático
+        // Este é um erro de validação de entrada, não um problema de autenticação
+        return res.status(400).json({
           success: false,
           message: "Senha incorreta",
           errors: {
-            senha: "Senha incorreta",
+            senha: "Senha incorreta. Por favor, verifique sua senha e tente novamente.",
           },
         });
       }
@@ -341,6 +365,33 @@ class UsuarioController {
           },
           { transaction }
         );
+
+        // Cancelar todas as solicitações ativas do cliente
+        const { Solicitacao } = require("../models");
+        const solicitacoesAtivas = await Solicitacao.findAll({
+          where: {
+            cliente_id: usuario.cliente.id,
+            status_cliente: "ativa",
+          },
+          transaction,
+        });
+
+        // Atualizar status de todas as solicitações ativas para "cancelada"
+        if (solicitacoesAtivas.length > 0) {
+          await Solicitacao.update(
+            {
+              status_cliente: "cancelada",
+              data_conclusao: dataExclusao,
+            },
+            {
+              where: {
+                cliente_id: usuario.cliente.id,
+                status_cliente: "ativa",
+              },
+              transaction,
+            }
+          );
+        }
       } else if (tipo === "autopeca" && usuario.autopeca) {
         await usuario.autopeca.update(
           {
@@ -348,25 +399,71 @@ class UsuarioController {
           },
           { transaction }
         );
+
+        // Desativar todos os vendedores vinculados à autopeça e seus usuários
+        const vendedoresVinculados = await Vendedor.findAll({
+          where: {
+            autopeca_id: usuario.autopeca.id,
+            ativo: true,
+          },
+          include: [
+            {
+              model: Usuario,
+              as: "usuario",
+              required: true,
+            },
+          ],
+          transaction,
+        });
+
+        // Desativar vendedores e seus usuários
+        if (vendedoresVinculados.length > 0) {
+          for (const vendedor of vendedoresVinculados) {
+            // Desativar o vendedor
+            await vendedor.update(
+              {
+                ativo: false,
+              },
+              { transaction }
+            );
+
+            // Desativar o usuário do vendedor
+            if (vendedor.usuario) {
+              await vendedor.usuario.update(
+                {
+                  ativo: false,
+                },
+                { transaction }
+              );
+            }
+          }
+        }
       }
 
       // Commit da transação
       await transaction.commit();
 
+      // Preparar dados do perfil para o email
+      let perfilData = {};
+      if (tipo === "cliente" && usuario.cliente) {
+        perfilData = { nome_completo: usuario.cliente.nome_completo };
+      } else if (tipo === "autopeca" && usuario.autopeca) {
+        perfilData = {
+          razao_social: usuario.autopeca.razao_social,
+          nome_fantasia: usuario.autopeca.nome_fantasia,
+        };
+      }
+
       // Enviar email de confirmação de exclusão (assíncrono - não bloqueia response)
       try {
         const { emailService } = require("../services");
         emailService
-          .sendWelcomeEmail(
-            usuario,
-            { nome_completo: usuario.email },
-            "usuario"
-          )
+          .sendAccountDeletionEmail(usuario, perfilData, tipo)
           .catch((err) =>
-            console.log("Erro ao enviar email de confirmação:", err)
+            console.log("Erro ao enviar email de confirmação de exclusão:", err)
           );
       } catch (emailError) {
-        console.log("Erro no envio de email de confirmação:", emailError);
+        console.log("Erro no envio de email de confirmação de exclusão:", emailError);
       }
 
       return res.status(200).json({

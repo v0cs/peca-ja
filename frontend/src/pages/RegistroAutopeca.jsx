@@ -31,7 +31,6 @@ const RegistroAutopeca = () => {
     endereco_cidade: "",
     endereco_uf: "",
     termos_aceitos: false,
-    consentimento_marketing: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -126,7 +125,6 @@ const RegistroAutopeca = () => {
         endereco_cidade: formData.endereco_cidade,
         endereco_uf: formData.endereco_uf,
         termos_aceitos: formData.termos_aceitos,
-        consentimento_marketing: formData.consentimento_marketing,
       };
 
       const response = await api.post("/auth/register-autopeca", payload);
@@ -381,26 +379,6 @@ const RegistroAutopeca = () => {
                 </div>
               </div>
 
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="consentimento_marketing"
-                    name="consentimento_marketing"
-                    type="checkbox"
-                    checked={formData.consentimento_marketing}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label
-                    htmlFor="consentimento_marketing"
-                    className="text-gray-600"
-                  >
-                    Desejo receber ofertas e novidades por email
-                  </label>
-                </div>
-              </div>
             </div>
 
             <div>

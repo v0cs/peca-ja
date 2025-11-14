@@ -78,6 +78,24 @@ const ufsValidas = [
   "TO",
 ];
 
+const formatarCelularBanco = (valor) => {
+  if (!valor) return null;
+  const apenasDigitos = valor.replace(/\D/g, "");
+  if (apenasDigitos.length !== 11) {
+    return null;
+  }
+  return `(${apenasDigitos.slice(0, 2)})${apenasDigitos.slice(2)}`;
+};
+
+const formatarTelefoneBanco = (valor) => {
+  if (!valor) return null;
+  const apenasDigitos = valor.replace(/\D/g, "");
+  if (apenasDigitos.length < 10 || apenasDigitos.length > 11) {
+    return null;
+  }
+  return `(${apenasDigitos.slice(0, 2)})${apenasDigitos.slice(2)}`;
+};
+
 /**
  * Controller de Autenticação
  * Gerencia operações de registro e login de usuários
@@ -143,10 +161,18 @@ class AuthController {
       }
 
       // Validar celular (formato brasileiro)
-      const celularRegex = /^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/;
-      if (!celularRegex.test(celular)) {
+      const celularLimpo = celular ? celular.replace(/\D/g, "") : "";
+      if (celularLimpo.length !== 11) {
+        errors.celular =
+          "Celular deve conter 11 dígitos (DDD + número). Ex: (11)98765-4321";
+      } else if (!/^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/.test(celular)) {
         errors.celular =
           "Formato de celular inválido. Use o formato: (11)999999999";
+      }
+      const celularFormatado = formatarCelularBanco(celular);
+      if (!celularFormatado) {
+        errors.celular =
+          "Celular deve conter 11 dígitos válidos. Ex: (11)98765-4321";
       }
 
       // Validar UF (2 caracteres e válida)
@@ -187,11 +213,38 @@ class AuthController {
             as: "cliente",
             required: false,
           },
+          {
+            model: Autopeca,
+            as: "autopeca",
+            required: false,
+          },
         ],
         transaction,
       });
 
       if (emailExistente) {
+        // Verificar se é um vendedor ativo vinculado a uma autopeça
+        if (emailExistente.tipo_usuario === "vendedor") {
+          const vendedorAtivo = await Vendedor.findOne({
+            where: {
+              usuario_id: emailExistente.id,
+              ativo: true,
+            },
+            transaction,
+          });
+
+          if (vendedorAtivo) {
+            await transaction.rollback();
+            return res.status(409).json({
+              success: false,
+              message: "Email já cadastrado como vendedor",
+              errors: {
+                email: "Este email já está sendo usado por um vendedor vinculado a uma autopeça. Não é possível cadastrar como cliente enquanto estiver vinculado.",
+              },
+            });
+          }
+        }
+
         // Se o email existe e a conta está ativa, bloquear registro
         if (emailExistente.ativo) {
           await transaction.rollback();
@@ -216,17 +269,31 @@ class AuthController {
             senha_hash: senhaHash,
             termos_aceitos: true,
             data_aceite_terms: new Date(),
+            tipo_usuario: "cliente",
+            senha_temporaria: false,
           },
           { transaction }
         );
+
+        // Se havia autopeça associada, mantemos como registro histórico,
+        // mas garantimos que não esteja ativa após a conversão.
+        if (emailExistente.autopeca) {
+          await emailExistente.autopeca.update(
+            {
+              data_exclusao_pedida:
+                emailExistente.autopeca.data_exclusao_pedida || new Date(),
+            },
+            { transaction }
+          );
+        }
 
         // Atualizar dados do cliente
         if (emailExistente.cliente) {
           await emailExistente.cliente.update(
             {
               nome_completo: nome_completo.trim(),
-              telefone: celular,
-              celular: celular.trim(),
+              telefone: formatarTelefoneBanco(celular) || celularFormatado,
+              celular: celularFormatado,
               cidade: cidade.trim(),
               uf: uf.toUpperCase().trim(),
               data_exclusao_pedida: null, // Limpar data de exclusão se existir
@@ -239,8 +306,8 @@ class AuthController {
             {
               usuario_id: emailExistente.id,
               nome_completo: nome_completo.trim(),
-              telefone: celular,
-              celular: celular.trim(),
+              telefone: formatarTelefoneBanco(celular) || celularFormatado,
+              celular: celularFormatado,
               cidade: cidade.trim(),
               uf: uf.toUpperCase().trim(),
             },
@@ -327,8 +394,8 @@ class AuthController {
         {
           usuario_id: novoUsuario.id,
           nome_completo: nome_completo.trim(),
-          telefone: celular, // Assumindo que celular será usado como telefone principal
-          celular: celular.trim(),
+          telefone: formatarTelefoneBanco(celular) || celularFormatado, // Persistir no padrão esperado
+          celular: celularFormatado,
           cidade: cidade.trim(),
           uf: uf.toUpperCase().trim(),
         },
@@ -546,10 +613,10 @@ class AuthController {
       }
 
       // Validar telefone (formato brasileiro)
-      const telefoneRegex = /^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/;
-      if (!telefoneRegex.test(telefone)) {
+      const telefoneFormatado = formatarTelefoneBanco(telefone);
+      if (!telefoneFormatado) {
         errors.telefone =
-          "Formato de telefone inválido. Use o formato: (11)99999-9999";
+          "Telefone deve conter DDD + número. Use o formato: (11)3333-4444 ou (11)98888-7777";
       }
 
       // Validar UF (2 caracteres e válida)
@@ -605,6 +672,34 @@ class AuthController {
       });
 
       if (emailExistente) {
+        // Verificar se é um vendedor ativo vinculado a uma autopeça
+        if (emailExistente.tipo_usuario === "vendedor") {
+          const vendedorAtivo = await Vendedor.findOne({
+            where: {
+              usuario_id: emailExistente.id,
+              ativo: true,
+            },
+            transaction,
+          });
+
+          if (vendedorAtivo) {
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                "Email já existe como vendedor ativo:",
+                emailExistente.email
+              );
+            }
+            await transaction.rollback();
+            return res.status(409).json({
+              success: false,
+              message: "Email já cadastrado como vendedor",
+              errors: {
+                email: "Este email já está sendo usado por um vendedor vinculado a uma autopeça. Não é possível cadastrar como autopeça enquanto estiver vinculado.",
+              },
+            });
+          }
+        }
+
         // Se o email existe e a conta está ativa, bloquear registro
         if (emailExistente.ativo) {
           if (process.env.NODE_ENV === "development") {
@@ -650,7 +745,7 @@ class AuthController {
               razao_social: razao_social.trim(),
               nome_fantasia: nome_fantasia ? nome_fantasia.trim() : null,
               cnpj: cnpj.trim(),
-              telefone: telefone.trim(),
+              telefone: telefoneFormatado,
               endereco_rua: endereco_rua.trim(),
               endereco_numero: endereco_numero.trim(),
               endereco_bairro: endereco_bairro.trim(),
@@ -669,7 +764,7 @@ class AuthController {
               razao_social: razao_social.trim(),
               nome_fantasia: nome_fantasia ? nome_fantasia.trim() : null,
               cnpj: cnpj.trim(),
-              telefone: telefone.trim(),
+              telefone: telefoneFormatado,
               endereco_rua: endereco_rua.trim(),
               endereco_numero: endereco_numero.trim(),
               endereco_bairro: endereco_bairro.trim(),
@@ -820,7 +915,7 @@ class AuthController {
         razao_social: razao_social.trim(),
         nome_fantasia: nome_fantasia ? nome_fantasia.trim() : null,
         cnpj: cnpj.trim(),
-        telefone: telefone.trim(),
+        telefone: telefoneFormatado,
         endereco_rua: endereco_rua.trim(),
         endereco_numero: endereco_numero.trim(),
         endereco_bairro: endereco_bairro.trim(),
@@ -1125,6 +1220,59 @@ class AuthController {
         };
       }
 
+      // Adicionar dados específicos do vendedor se for do tipo vendedor
+      if (usuario.tipo_usuario === "vendedor") {
+        const vendedorAtivo = await Vendedor.findOne({
+          where: {
+            usuario_id: usuario.id,
+            ativo: true,
+          },
+          include: [
+            {
+              model: Autopeca,
+              as: "autopeca",
+              required: true,
+              include: [
+                {
+                  model: Usuario,
+                  as: "usuario",
+                  required: true,
+                },
+              ],
+            },
+          ],
+        });
+
+        if (vendedorAtivo) {
+          // Verificar se a autopeça vinculada está ativa
+          if (!vendedorAtivo.autopeca || !vendedorAtivo.autopeca.usuario || !vendedorAtivo.autopeca.usuario.ativo) {
+            return res.status(403).json({
+              success: false,
+              message: "Conta inativa",
+              errors: {
+                conta: "A autopeça vinculada à sua conta foi desativada. Entre em contato com o suporte.",
+              },
+            });
+          }
+
+          responseData.vendedor = {
+            id: vendedorAtivo.id,
+            nome_completo: vendedorAtivo.nome_completo,
+            ativo: vendedorAtivo.ativo,
+            autopeca_id: vendedorAtivo.autopeca_id,
+          };
+        } else {
+          // Vendedor não encontrado ou inativo
+          return res.status(403).json({
+            success: false,
+            message: "Conta inativa",
+            errors: {
+              conta: "Sua conta de vendedor está inativa. Entre em contato com o administrador da autopeça.",
+            },
+          });
+        }
+      }
+
       return res.status(200).json({
         success: true,
         message: "Login realizado com sucesso",
@@ -1394,27 +1542,17 @@ class AuthController {
       // 8. Commit da transação
       await transaction.commit();
 
-      // 9. Enviar email de confirmação (assíncrono - não bloqueia response)
+      // 9. Enviar email de confirmação de redefinição de senha (assíncrono - não bloqueia response)
       try {
         const { emailService } = require("../services");
-        // Criar objeto temporário para o email
-        const usuarioParaEmail = {
-          email: usuario.email,
-          nome: usuario.email, // Fallback para nome
-        };
-
-        // Enviar email de confirmação (usando sendWelcomeEmail como base)
+        // Usar sendSecurityNotification com tipo "senha" para notificação de redefinição
         emailService
-          .sendWelcomeEmail(
-            usuarioParaEmail,
-            { nome_completo: usuario.email },
-            "usuario"
-          )
+          .sendSecurityNotification(usuario, { tipo: "senha" })
           .catch((err) =>
-            console.log("Erro ao enviar email de confirmação:", err)
+            console.log("Erro ao enviar email de confirmação de redefinição:", err)
           );
       } catch (emailError) {
-        console.log("Erro no envio de email de confirmação:", emailError);
+        console.log("Erro no envio de email de confirmação de redefinição:", emailError);
       }
 
       // 10. Retornar sucesso

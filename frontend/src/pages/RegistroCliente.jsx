@@ -4,13 +4,7 @@ import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { Button, Input } from "../components/ui";
 import { Header, Footer } from "../components/layout";
-import {
-  validarEmail,
-  validarCPF,
-  formatarCPF,
-  formatarCelular,
-  formatarCEP,
-} from "../utils/validators";
+import { validarEmail, formatarCelular } from "../utils/validators";
 
 const RegistroCliente = () => {
   const navigate = useNavigate();
@@ -22,12 +16,9 @@ const RegistroCliente = () => {
     confirmarSenha: "",
     nome_completo: "",
     celular: "",
-    cpf: "",
-    cep: "",
     cidade: "",
     uf: "",
     termos_aceitos: false,
-    consentimento_marketing: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -40,12 +31,8 @@ const RegistroCliente = () => {
     let formattedValue = value;
 
     // Formatação automática
-    if (name === "cpf") {
-      formattedValue = formatarCPF(value);
-    } else if (name === "celular") {
+    if (name === "celular") {
       formattedValue = formatarCelular(value);
-    } else if (name === "cep") {
-      formattedValue = formatarCEP(value);
     } else if (name === "uf") {
       formattedValue = value.toUpperCase().slice(0, 2);
     }
@@ -76,17 +63,17 @@ const RegistroCliente = () => {
       newErrors.confirmarSenha = "As senhas não coincidem";
     }
 
-    if (!validarCPF(formData.cpf)) {
-      newErrors.cpf = "CPF inválido";
-    }
-
     const celularRegex = /^\([0-9]{2}\)[0-9]{4,5}-[0-9]{4}$/;
     if (!celularRegex.test(formData.celular)) {
       newErrors.celular = "Formato inválido. Use: (11)99999-9999";
     }
 
-    if (formData.cep.replace(/\D/g, "").length !== 8) {
-      newErrors.cep = "CEP deve ter 8 dígitos";
+    if (!formData.cidade.trim()) {
+      newErrors.cidade = "Cidade é obrigatória";
+    }
+
+    if (!formData.uf || formData.uf.trim().length !== 2) {
+      newErrors.uf = "UF deve ter 2 caracteres";
     }
 
     if (!formData.termos_aceitos) {
@@ -113,12 +100,9 @@ const RegistroCliente = () => {
         senha: formData.senha,
         nome_completo: formData.nome_completo,
         celular: formData.celular,
-        cpf: formData.cpf,
-        cep: formData.cep.replace(/\D/g, ""),
         cidade: formData.cidade,
         uf: formData.uf,
         termos_aceitos: formData.termos_aceitos,
-        consentimento_marketing: formData.consentimento_marketing,
       };
 
       const response = await api.post("/auth/register", payload);
@@ -235,20 +219,6 @@ const RegistroCliente = () => {
 
               <div>
                 <Input
-                  label="CPF"
-                  id="cpf"
-                  name="cpf"
-                  value={formData.cpf}
-                  onChange={handleChange}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                  required
-                  error={errors.cpf}
-                />
-              </div>
-
-              <div>
-                <Input
                   label="Celular"
                   id="celular"
                   name="celular"
@@ -258,20 +228,6 @@ const RegistroCliente = () => {
                   maxLength={15}
                   required
                   error={errors.celular}
-                />
-              </div>
-
-              <div>
-                <Input
-                  label="CEP"
-                  id="cep"
-                  name="cep"
-                  value={formData.cep}
-                  onChange={handleChange}
-                  placeholder="00000-000"
-                  maxLength={9}
-                  required
-                  error={errors.cep}
                 />
               </div>
 
@@ -327,26 +283,6 @@ const RegistroCliente = () => {
                 </div>
               </div>
 
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="consentimento_marketing"
-                    name="consentimento_marketing"
-                    type="checkbox"
-                    checked={formData.consentimento_marketing}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label
-                    htmlFor="consentimento_marketing"
-                    className="text-gray-600"
-                  >
-                    Desejo receber ofertas e novidades por email
-                  </label>
-                </div>
-              </div>
             </div>
 
             <div>

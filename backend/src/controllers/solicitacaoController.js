@@ -5,7 +5,9 @@ const {
   ImagemSolicitacao,
   SolicitacoesAtendimento,
   Autopeca,
+  Vendedor,
 } = require("../models");
+const { Op } = require("sequelize");
 const { uploadMiddleware } = require("../middleware/uploadMiddleware");
 const { emailService } = require("../services");
 const NotificationService = require("../services/notificationService");
@@ -518,13 +520,63 @@ class SolicitacaoController {
           whereClause.uf_atendimento = autopeca.endereco_uf;
         }
       } else {
-        return res.status(403).json({
-          success: false,
-          message: "Acesso negado",
-          errors: {
-            authorization: "Apenas clientes e autopeças podem visualizar solicitações",
-          },
-        });
+        if (tipo === "vendedor") {
+          const vendedor = await Vendedor.findOne({
+            where: { usuario_id: req.user.userId },
+            include: [
+              {
+                model: Autopeca,
+                as: "autopeca",
+                attributes: ["id", "endereco_cidade", "endereco_uf"],
+              },
+            ],
+          });
+
+          if (!vendedor || !vendedor.autopeca) {
+            return res.status(404).json({
+              success: false,
+              message: "Vendedor não encontrado",
+              errors: {
+                vendedor: "Usuário autenticado não possui perfil de vendedor",
+              },
+            });
+          }
+
+          // Verificar se o vendedor (ou a autopeça sem vendedor vinculado) já interagiu com a solicitação
+          const atendimento = await SolicitacoesAtendimento.findOne({
+            where: {
+              solicitacao_id: id,
+              [Op.or]: [
+                { vendedor_id: vendedor.id },
+                {
+                  [Op.and]: [
+                    { autopeca_id: vendedor.autopeca_id },
+                    { vendedor_id: null },
+                  ],
+                },
+              ],
+            },
+          });
+
+          if (atendimento) {
+            whereClause.cidade_atendimento = vendedor.autopeca.endereco_cidade;
+            whereClause.uf_atendimento = vendedor.autopeca.endereco_uf;
+          } else {
+            whereClause.status_cliente = "ativa";
+            whereClause.cidade_atendimento =
+              vendedor.autopeca.endereco_cidade;
+            whereClause.uf_atendimento = vendedor.autopeca.endereco_uf;
+          }
+        } else {
+          return res.status(403).json({
+            success: false,
+            message: "Acesso negado",
+            errors: {
+              authorization:
+                "Apenas clientes, autopeças ou vendedores podem visualizar solicitações",
+            },
+          });
+        }
       }
 
       // 2. Buscar solicitação específica

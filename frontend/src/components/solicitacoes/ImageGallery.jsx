@@ -1,10 +1,34 @@
-import { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
-import { cn } from "../../lib/utils";
+import api from "../../services/api";
 
-const ImageGallery = ({ images = [] }) => {
+const resolveBaseUrl = () => {
+  const configuredBase =
+    api?.defaults?.baseURL ||
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:3001/api";
+
+  try {
+    const url = new URL(configuredBase);
+    if (url.pathname) {
+      url.pathname = url.pathname.replace(/\/api\/?$/i, "");
+    }
+    const normalized = `${url.origin}${url.pathname}`.replace(/\/$/, "");
+    return normalized || url.origin;
+  } catch (error) {
+    const fallback =
+      configuredBase.replace(/\/api\/?$/i, "").replace(/\/$/, "") ||
+      "http://localhost:3001";
+    return fallback || "http://localhost:3001";
+  }
+};
+
+const API_BASE_URL = resolveBaseUrl();
+
+const ImageGalleryComponent = ({ images = [] }) => {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
+  const isDev = import.meta.env.DEV;
 
   if (!images || images.length === 0) {
     return (
@@ -31,7 +55,8 @@ const ImageGallery = ({ images = [] }) => {
   };
 
   // Construir URL da imagem (pode ser URL completa ou relativa)
-  const getImageUrl = (image) => {
+  const getImageUrl = useCallback(
+    (image) => {
     // Se for objeto com propriedade url (formato retornado pelo backend)
     if (image && typeof image === "object") {
       // Se já tiver URL formatada
@@ -40,29 +65,32 @@ const ImageGallery = ({ images = [] }) => {
           return image.url;
         }
         // Path relativo do backend: /uploads/filename.jpg
-        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-        const cleanBaseURL = baseURL.replace("/api", "");
-        const finalUrl = `${cleanBaseURL}${image.url}`;
-        console.log(`🖼️ [ImageGallery] Construindo URL:`, {
-          originalUrl: image.url,
-          baseURL,
-          cleanBaseURL,
-          finalUrl,
-        });
+        const finalUrl = `${API_BASE_URL}${
+          image.url.startsWith("/") ? image.url : `/${image.url}`
+        }`;
+        if (isDev) {
+          console.log("🖼️ [ImageGallery] Construindo URL:", {
+            originalUrl: image.url,
+            baseURL: API_BASE_URL,
+            finalUrl,
+          });
+        }
         return finalUrl;
       }
       
       // Se tiver nome_arquivo_fisico, construir URL
       if (image.nome_arquivo_fisico) {
-        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-        const cleanBaseURL = baseURL.replace("/api", "");
-        const finalUrl = `${cleanBaseURL}/uploads/${image.nome_arquivo_fisico}`;
-        console.log(`🖼️ [ImageGallery] Construindo URL a partir de nome_arquivo_fisico:`, {
-          nome_arquivo_fisico: image.nome_arquivo_fisico,
-          baseURL,
-          cleanBaseURL,
-          finalUrl,
-        });
+        const finalUrl = `${API_BASE_URL}/uploads/${image.nome_arquivo_fisico}`;
+        if (isDev) {
+          console.log(
+            "🖼️ [ImageGallery] Construindo URL a partir de nome_arquivo_fisico:",
+            {
+              nome_arquivo_fisico: image.nome_arquivo_fisico,
+              baseURL: API_BASE_URL,
+              finalUrl,
+            }
+          );
+        }
         return finalUrl;
       }
     }
@@ -73,15 +101,16 @@ const ImageGallery = ({ images = [] }) => {
         return image;
       }
       // Path relativo: /uploads/filename.jpg
-      const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-      const cleanBaseURL = baseURL.replace("/api", "");
-      const finalUrl = `${cleanBaseURL}${image.startsWith("/") ? image : `/${image}`}`;
-      console.log(`🖼️ [ImageGallery] Construindo URL a partir de string:`, {
-        image,
-        baseURL,
-        cleanBaseURL,
-        finalUrl,
-      });
+      const finalUrl = `${API_BASE_URL}${
+        image.startsWith("/") ? image : `/${image}`
+      }`;
+      if (isDev) {
+        console.log("🖼️ [ImageGallery] Construindo URL a partir de string:", {
+          image,
+          baseURL: API_BASE_URL,
+          finalUrl,
+        });
+      }
       return finalUrl;
     }
     
@@ -90,9 +119,13 @@ const ImageGallery = ({ images = [] }) => {
       return URL.createObjectURL(image);
     }
     
-    console.warn(`🖼️ [ImageGallery] Não foi possível construir URL para:`, image);
+    if (isDev) {
+      console.warn("🖼️ [ImageGallery] Não foi possível construir URL para:", image);
+    }
     return "";
-  };
+  },
+    [isDev]
+  );
 
   return (
     <>
@@ -107,7 +140,13 @@ const ImageGallery = ({ images = [] }) => {
 
           return (
             <div
-              key={index}
+              key={
+                image?.id ??
+                image?.nome_arquivo_fisico ??
+                image?.url ??
+                image?.nome_arquivo ??
+                `image-${index}`
+              }
               className="relative aspect-square rounded-lg border border-input overflow-hidden bg-muted cursor-pointer group"
               onClick={() => !hasError && openLightbox(index)}
             >
@@ -193,6 +232,8 @@ const ImageGallery = ({ images = [] }) => {
     </>
   );
 };
+
+const ImageGallery = React.memo(ImageGalleryComponent);
 
 export default ImageGallery;
 

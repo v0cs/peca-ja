@@ -10,10 +10,15 @@ import {
   DashboardCliente,
   DashboardAutopeca,
   DashboardVendedor,
+  PerfilCliente,
+  PerfilAutopeca,
+  PerfilVendedor,
   NovaSolicitacao,
   DetalheSolicitacao,
   EditarSolicitacao,
   GerenciarVendedores,
+  RecuperarSenha,
+  ResetPassword,
 } from "./pages";
 
 function App() {
@@ -24,6 +29,8 @@ function App() {
           {/* Rotas públicas */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/cadastrar" element={<Registro />} />
           {/* Rotas antigas mantidas para compatibilidade */}
           <Route path="/cadastrar/cliente" element={<RegistroCliente />} />
@@ -47,12 +54,41 @@ function App() {
             }
           />
           <Route
-            path="/dashboard/vendedor"
+            path="/cliente/perfil"
+            element={
+              <PrivateRoute tipoUsuario="cliente">
+                <PerfilCliente />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/autopeca/perfil"
+            element={
+              <PrivateRoute tipoUsuario="autopeca">
+                <PerfilAutopeca />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendedor/perfil"
+            element={
+              <PrivateRoute tipoUsuario="vendedor">
+                <PerfilVendedor />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendedor/dashboard"
             element={
               <PrivateRoute tipoUsuario="vendedor">
                 <DashboardVendedor />
               </PrivateRoute>
             }
+          />
+          {/* Rota legada para compatibilidade */}
+          <Route
+            path="/dashboard/vendedor"
+            element={<Navigate to="/vendedor/dashboard" replace />}
           />
 
           {/* Rotas protegidas - Cliente */}
@@ -67,7 +103,7 @@ function App() {
           <Route
             path="/solicitacoes/:id"
             element={
-              <PrivateRoute tipoUsuario={["cliente", "autopeca"]}>
+              <PrivateRoute tipoUsuario={["cliente", "autopeca", "vendedor"]}>
                 <DetalheSolicitacao />
               </PrivateRoute>
             }

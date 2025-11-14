@@ -1,0 +1,489 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ProfileTabs,
+  ProfileForm,
+  PasswordForm,
+  DeleteAccountModal,
+} from "../../components";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button,
+  LoadingSpinner,
+} from "../../components/ui";
+import { Header } from "../../components/layout";
+import api from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  formatarCEP,
+  formatarTelefone,
+  formatarCNPJ,
+} from "../../utils/validators";
+
+const ufsValidas = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+];
+
+const formatDate = (dateString) => {
+  if (!dateString) return "—";
+  try {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  } catch (error) {
+    return "—";
+  }
+};
+
+const PerfilAutopeca = () => {
+  const navigate = useNavigate();
+  const { user, updateUser, logout } = useAuth();
+
+  const [activeTab, setActiveTab] = useState("dados");
+  const [profile, setProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState("");
+
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoadingProfile(true);
+      setProfileError("");
+      try {
+        const response = await api.get("/autopecas/profile");
+        if (response.data.success) {
+          setProfile(response.data.data);
+        } else {
+          setProfileError(
+            response.data.message ||
+              "Não foi possível carregar os dados da autopeça."
+          );
+        }
+      } catch (error) {
+        const message =
+          error?.response?.data?.message ||
+          "Erro ao carregar os dados da autopeça. Tente novamente.";
+        setProfileError(message);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const initialValues = useMemo(() => {
+    if (!profile) return {};
+
+    const { autopeca, usuario } = profile;
+    return {
+      razao_social: autopeca?.razao_social || "",
+      nome_fantasia: autopeca?.nome_fantasia || "",
+      telefone: formatarTelefone(autopeca?.telefone || ""),
+      endereco_rua: autopeca?.endereco_rua || "",
+      endereco_numero: autopeca?.endereco_numero || "",
+      endereco_bairro: autopeca?.endereco_bairro || "",
+      endereco_cidade: autopeca?.endereco_cidade || "",
+      endereco_uf: (autopeca?.endereco_uf || "").toUpperCase(),
+      endereco_cep: formatarCEP(autopeca?.endereco_cep || ""),
+      email: usuario?.email || "",
+      cnpj: formatarCNPJ(autopeca?.cnpj || ""),
+      dataCadastro: formatDate(autopeca?.created_at || usuario?.created_at),
+    };
+  }, [profile]);
+
+  const editableFields = useMemo(
+    () => [
+      {
+        name: "razao_social",
+        label: "Razão social",
+        required: true,
+        fullWidth: true,
+        validate: (value) =>
+          value && value.trim().length < 2
+            ? "Razão social deve ter pelo menos 2 caracteres"
+            : "",
+        normalize: (value) => (value || "").trim(),
+      },
+      {
+        name: "nome_fantasia",
+        label: "Nome fantasia",
+        fullWidth: true,
+        normalize: (value) => (value || "").trim(),
+      },
+      {
+        name: "telefone",
+        label: "Telefone comercial",
+        required: true,
+        placeholder: "(11)3333-4444",
+        mask: (value) => formatarTelefone(value || ""),
+        validate: (value) => {
+          const digits = (value || "").replace(/\D/g, "");
+          if (digits.length < 10 || digits.length > 11) {
+            return "Informe um telefone válido com DDD";
+          }
+          return "";
+        },
+        normalize: (value) => {
+          const digits = (value || "").replace(/\D/g, "").slice(0, 11);
+          if (!digits) return "";
+          return `(${digits.slice(0, 2)})${digits.slice(2)}`;
+        },
+      },
+      {
+        name: "endereco_rua",
+        label: "Rua / Avenida",
+        required: true,
+        fullWidth: true,
+        normalize: (value) => (value || "").trim(),
+      },
+      {
+        name: "endereco_numero",
+        label: "Número",
+        required: true,
+        normalize: (value) => (value || "").trim(),
+      },
+      {
+        name: "endereco_bairro",
+        label: "Bairro",
+        required: true,
+        normalize: (value) => (value || "").trim(),
+      },
+      {
+        name: "endereco_cidade",
+        label: "Cidade",
+        required: true,
+        validate: (value) =>
+          value && value.trim().length < 2
+            ? "Cidade deve ter pelo menos 2 caracteres"
+            : "",
+        normalize: (value) => (value || "").trim(),
+      },
+      {
+        name: "endereco_uf",
+        label: "UF",
+        required: true,
+        placeholder: "SP",
+        maxLength: 2,
+        mask: (value) => (value || "").toUpperCase().slice(0, 2),
+        validate: (value) => {
+          const uf = (value || "").toUpperCase();
+          return ufsValidas.includes(uf) ? "" : "Informe uma UF válida";
+        },
+        normalize: (value) => (value || "").toUpperCase().slice(0, 2),
+      },
+      {
+        name: "endereco_cep",
+        label: "CEP",
+        required: true,
+        placeholder: "00000-000",
+        mask: (value) => formatarCEP(value || ""),
+        validate: (value) => {
+          const digits = (value || "").replace(/\D/g, "");
+          return digits.length === 8 ? "" : "CEP deve ter 8 dígitos";
+        },
+        normalize: (value) => (value || "").replace(/\D/g, "").slice(0, 8),
+      },
+    ],
+    []
+  );
+
+  const readOnlyFields = useMemo(
+    () => [
+      {
+        name: "email",
+        label: "Email",
+      },
+      {
+        name: "cnpj",
+        label: "CNPJ",
+      },
+      {
+        name: "dataCadastro",
+        label: "Data de cadastro",
+      },
+    ],
+    []
+  );
+
+  const handleProfileSubmit = async (payload) => {
+    setSavingProfile(true);
+    try {
+      const response = await api.put("/autopecas/profile", payload);
+      if (response.data.success) {
+        setProfile(response.data.data);
+
+        if (user) {
+          updateUser({
+            ...user,
+            autopeca: {
+              ...(user.autopeca || {}),
+              ...response.data.data.autopeca,
+            },
+          });
+        }
+
+        return {
+          success: true,
+          message: response.data.message || "Dados atualizados com sucesso.",
+        };
+      }
+
+      return {
+        success: false,
+        message: response.data.message || "Não foi possível salvar os dados.",
+        fieldErrors: response.data.errors,
+      };
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Não foi possível salvar os dados. Tente novamente.";
+      return {
+        success: false,
+        message,
+        fieldErrors: error?.response?.data?.errors,
+      };
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (values) => {
+    setPasswordLoading(true);
+    try {
+      const response = await api.put("/usuarios/profile", {
+        senha_atual: values.senha_atual,
+        nova_senha: values.nova_senha,
+      });
+
+      if (response.data.success) {
+        window.alert(
+          "Senha alterada com sucesso. Você precisará fazer login novamente."
+        );
+        await logout();
+        navigate("/login", { replace: true });
+
+        return {
+          success: true,
+          message: response.data.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.data.message || "Não foi possível alterar a senha.",
+        fieldErrors: response.data.errors,
+      };
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Não foi possível alterar a senha. Tente novamente.";
+      return {
+        success: false,
+        message,
+        fieldErrors: error?.response?.data?.errors,
+      };
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async ({ confirmacao, senha }) => {
+    setDeleteLoading(true);
+    try {
+      const response = await api.delete("/usuarios/profile", {
+        data: {
+          confirmacao,
+          senha,
+        },
+      });
+
+      if (response.data.success) {
+        window.alert(
+          "Conta excluída com sucesso. Esperamos vê-lo novamente em breve!"
+        );
+        await logout();
+        navigate("/", { replace: true });
+        setDeleteModalOpen(false);
+
+        return {
+          success: true,
+          message: response.data.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.data.message || "Não foi possível excluir a conta.",
+        fieldErrors: response.data.errors,
+      };
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Não foi possível excluir a conta. Tente novamente.";
+      return {
+        success: false,
+        message,
+        fieldErrors: error?.response?.data?.errors,
+      };
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleTabChange = (tabId) => {
+    if (tabId === activeTab) return;
+    if (hasUnsavedChanges) {
+      const shouldProceed = window.confirm(
+        "Você possui alterações não salvas. Deseja descartá-las e continuar?"
+      );
+      if (!shouldProceed) {
+        return;
+      }
+    }
+    setActiveTab(tabId);
+  };
+
+  const tabs = [
+    { id: "dados", label: "Meus Dados" },
+    { id: "seguranca", label: "Segurança" },
+    { id: "conta", label: "Conta" },
+  ];
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <Header />
+      <main className="container mx-auto flex-1 px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Perfil da Autopeça</CardTitle>
+            <CardDescription>
+              Mantenha os dados da sua empresa atualizados, gerencie sua senha
+              e controle a conta da autopeça.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingProfile && (
+              <div className="py-12">
+                <LoadingSpinner size="lg" />
+              </div>
+            )}
+
+            {!loadingProfile && profileError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {profileError}
+              </div>
+            )}
+
+            {!loadingProfile && !profileError && profile && (
+              <>
+                <ProfileTabs
+                  tabs={tabs}
+                  activeTab={activeTab}
+                  onTabChange={handleTabChange}
+                />
+
+                <div className="mt-6">
+                  {activeTab === "dados" && (
+                    <ProfileForm
+                      fields={editableFields}
+                      readOnlyFields={readOnlyFields}
+                      initialValues={initialValues}
+                      onSubmit={handleProfileSubmit}
+                      loading={savingProfile}
+                      onDirtyChange={setHasUnsavedChanges}
+                      submitLabel="Salvar alterações"
+                    />
+                  )}
+
+                  {activeTab === "seguranca" && (
+                    <PasswordForm
+                      onSubmit={handlePasswordSubmit}
+                      loading={passwordLoading}
+                    />
+                  )}
+
+                  {activeTab === "conta" && (
+                    <div className="space-y-6">
+                      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-5">
+                        <h3 className="text-lg font-semibold text-red-700">
+                          Exclusão de conta
+                        </h3>
+                        <p className="mt-2 text-sm text-red-600">
+                          Ao excluir a conta da autopeça:
+                        </p>
+                        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-red-600">
+                          <li>Todas as solicitações em atendimento serão canceladas.</li>
+                          <li>Os vendedores perderão acesso imediatamente.</li>
+                          <li>Os dados da empresa serão removidos permanentemente.</li>
+                        </ul>
+                        <div className="mt-4">
+                          <Button
+                            variant="destructive"
+                            onClick={() => setDeleteModalOpen(true)}
+                          >
+                            Excluir conta da autopeça
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+
+      <DeleteAccountModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+        loading={deleteLoading}
+      />
+    </div>
+  );
+};
+
+export default PerfilAutopeca;
+
+
+
+

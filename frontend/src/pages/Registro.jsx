@@ -6,9 +6,7 @@ import { Button, Input, Card, CardContent, CardHeader, CardTitle } from "../comp
 import { Header, Footer } from "../components/layout";
 import {
   validarEmail,
-  validarCPF,
   validarCNPJ,
-  formatarCPF,
   formatarCNPJ,
   formatarCelular,
   formatarTelefone,
@@ -32,12 +30,9 @@ const Registro = () => {
     senha: "",
     confirmarSenha: "",
     termos_aceitos: false,
-    consentimento_marketing: false,
     // Campos de cliente
     nome_completo: "",
     celular: "",
-    cpf: "",
-    cep: "",
     cidade: "",
     uf: "",
     // Campos de autopeça
@@ -63,15 +58,13 @@ const Registro = () => {
     let formattedValue = value;
 
     // Formatação automática
-    if (name === "cpf") {
-      formattedValue = formatarCPF(value);
-    } else if (name === "cnpj") {
+    if (name === "cnpj") {
       formattedValue = formatarCNPJ(value);
     } else if (name === "celular") {
       formattedValue = formatarCelular(value);
     } else if (name === "telefone") {
       formattedValue = formatarTelefone(value);
-    } else if (name === "cep" || name === "endereco_cep") {
+    } else if (name === "endereco_cep") {
       formattedValue = formatarCEP(value);
     } else if (name === "uf" || name === "endereco_uf") {
       formattedValue = value.toUpperCase().slice(0, 2);
@@ -110,17 +103,21 @@ const Registro = () => {
 
     // Validações específicas por tipo
     if (tipoUsuario === "cliente") {
-      if (!validarCPF(formData.cpf)) {
-        newErrors.cpf = "CPF inválido";
-      }
-
       const celularRegex = /^\([0-9]{2}\)[0-9]{4,5}-[0-9]{4}$/;
       if (!celularRegex.test(formData.celular)) {
         newErrors.celular = "Formato inválido. Use: (11)99999-9999";
       }
 
-      if (formData.cep.replace(/\D/g, "").length !== 8) {
-        newErrors.cep = "CEP deve ter 8 dígitos";
+      if (!formData.nome_completo.trim()) {
+        newErrors.nome_completo = "Nome completo é obrigatório";
+      }
+
+      if (!formData.cidade.trim()) {
+        newErrors.cidade = "Cidade é obrigatória";
+      }
+
+      if (!formData.uf || formData.uf.trim().length !== 2) {
+        newErrors.uf = "UF deve ter 2 caracteres";
       }
     } else {
       // Autopeça
@@ -163,12 +160,9 @@ const Registro = () => {
           senha: formData.senha,
           nome_completo: formData.nome_completo,
           celular: formData.celular,
-          cpf: formData.cpf,
-          cep: formData.cep.replace(/\D/g, ""),
           cidade: formData.cidade,
           uf: formData.uf,
           termos_aceitos: formData.termos_aceitos,
-          consentimento_marketing: formData.consentimento_marketing,
         };
       } else {
         endpoint = "/auth/register-autopeca";
@@ -186,7 +180,6 @@ const Registro = () => {
           endereco_cidade: formData.endereco_cidade,
           endereco_uf: formData.endereco_uf,
           termos_aceitos: formData.termos_aceitos,
-          consentimento_marketing: formData.consentimento_marketing,
         };
       }
 
@@ -385,20 +378,6 @@ const Registro = () => {
                     <>
                       <div>
                         <Input
-                          label="CPF"
-                          id="cpf"
-                          name="cpf"
-                          value={formData.cpf}
-                          onChange={handleChange}
-                          placeholder="000.000.000-00"
-                          maxLength={14}
-                          required
-                          error={errors.cpf}
-                        />
-                      </div>
-
-                      <div>
-                        <Input
                           label="Celular"
                           id="celular"
                           name="celular"
@@ -410,21 +389,6 @@ const Registro = () => {
                           error={errors.celular}
                         />
                       </div>
-
-                      <div>
-                        <Input
-                          label="CEP"
-                          id="cep"
-                          name="cep"
-                          value={formData.cep}
-                          onChange={handleChange}
-                          placeholder="00000-000"
-                          maxLength={9}
-                          required
-                          error={errors.cep}
-                        />
-                      </div>
-
                       <div>
                         <Input
                           label="Cidade"
@@ -436,7 +400,6 @@ const Registro = () => {
                           error={errors.cidade}
                         />
                       </div>
-
                       <div>
                         <Input
                           label="UF"
@@ -586,26 +549,6 @@ const Registro = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="consentimento_marketing"
-                        name="consentimento_marketing"
-                        type="checkbox"
-                        checked={formData.consentimento_marketing}
-                        onChange={handleChange}
-                        className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor="consentimento_marketing"
-                        className="text-muted-foreground"
-                      >
-                        Desejo receber ofertas e novidades por email
-                      </label>
-                    </div>
-                  </div>
                 </div>
 
                 <div>

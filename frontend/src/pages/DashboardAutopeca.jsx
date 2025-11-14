@@ -5,7 +5,7 @@ import { useSolicitacoesDisponiveis } from "../hooks";
 import { Header } from "../components/layout";
 import { Button, StatsCard, EmptyState, Card, CardContent, CardHeader, CardTitle, Input } from "../components/ui";
 import SolicitacaoCard from "../components/SolicitacaoCard";
-import { Clock, CheckCircle, Users, RefreshCw, CheckCircle2, Filter, Eye, Search, X as XIcon } from "lucide-react";
+import { Clock, CheckCircle, RefreshCw, CheckCircle2, Filter, Eye, Search, X as XIcon } from "lucide-react";
 import api from "../services/api";
 
 const DashboardAutopeca = () => {
@@ -243,17 +243,11 @@ const DashboardAutopeca = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Dashboard da Autopeça</h2>
-              <p className="text-muted-foreground">
-                Gerencie solicitações de clientes da sua cidade e sua equipe de vendedores
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => navigate("/vendedores")}>
-              <Users className="mr-2 h-4 w-4" />
-              Gerenciar Vendedores
-            </Button>
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Dashboard da Autopeça</h2>
+            <p className="text-muted-foreground">
+              Gerencie solicitações de clientes da sua cidade e sua equipe de vendedores
+            </p>
           </div>
         </div>
 

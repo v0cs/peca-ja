@@ -1,7 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Header } from "../components/layout";
-import { Button, Card, CardContent, CardHeader, CardTitle, LoadingSpinner } from "../components/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  LoadingSpinner,
+} from "../components/ui";
 import { ImageGallery, SolicitationStatus } from "../components";
 import { useSolicitacao, useSolicitacoesDisponiveis } from "../hooks";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,8 +21,12 @@ const DetalheSolicitacao = () => {
   const { user } = useAuth();
   const { solicitacao, loading, error, cancelarSolicitacao } = useSolicitacao(id);
   
-  const isAutopeca = user?.tipo_usuario === "autopeca" || user?.tipo === "autopeca";
-  const isCliente = user?.tipo_usuario === "cliente" || user?.tipo === "cliente";
+  const isAutopeca =
+    user?.tipo_usuario === "autopeca" || user?.tipo === "autopeca";
+  const isCliente =
+    user?.tipo_usuario === "cliente" || user?.tipo === "cliente";
+  const isVendedor =
+    user?.tipo_usuario === "vendedor" || user?.tipo === "vendedor";
   
   // Só usar o hook se for autopeça (evitar 403)
   const { atenderSolicitacao, marcarComoLida, desmarcarComoVista } = useSolicitacoesDisponiveis("disponiveis", !isAutopeca);
@@ -28,6 +39,11 @@ const DetalheSolicitacao = () => {
   const [desmarcandoComoVista, setDesmarcandoComoVista] = useState(false);
   const [foiAtendida, setFoiAtendida] = useState(false);
   const [foiVista, setFoiVista] = useState(false);
+  const [statusVendedor, setStatusVendedor] = useState({
+    foiVista: false,
+    foiAtendida: false,
+  });
+  const [acaoVendedor, setAcaoVendedor] = useState(null);
 
   // Verificar se a solicitação foi atendida ou vista pela autopeça
   useEffect(() => {
@@ -60,6 +76,41 @@ const DetalheSolicitacao = () => {
     verificarStatus();
   }, [isAutopeca, solicitacao]);
 
+  useEffect(() => {
+    const verificarStatusVendedor = async () => {
+      if (isVendedor && solicitacao?.id) {
+        try {
+          const [vistasResp, atendidasResp] = await Promise.all([
+            api.get("/vendedor/solicitacoes-vistas"),
+            api.get("/vendedor/solicitacoes-atendidas"),
+          ]);
+
+          const vistas =
+            vistasResp.data.success && vistasResp.data.data?.solicitacoes
+              ? vistasResp.data.data.solicitacoes
+              : [];
+          const atendidas =
+            atendidasResp.data.success &&
+            atendidasResp.data.data?.solicitacoes
+              ? atendidasResp.data.data.solicitacoes
+              : [];
+
+          setStatusVendedor({
+            foiVista: vistas.some((s) => s.id === solicitacao.id),
+            foiAtendida: atendidas.some((s) => s.id === solicitacao.id),
+          });
+        } catch (err) {
+          console.error(
+            "[DetalheSolicitacao] Erro ao verificar status do vendedor:",
+            err
+          );
+        }
+      }
+    };
+
+    verificarStatusVendedor();
+  }, [isVendedor, solicitacao]);
+
   const formatDate = (dateString) => {
     if (!dateString) return "Não informado";
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -69,6 +120,136 @@ const DetalheSolicitacao = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleVendedorAtender = async () => {
+    if (
+      !window.confirm(
+        "Deseja marcar esta solicitação como atendida e abrir o WhatsApp do cliente?"
+      )
+    ) {
+      return;
+    }
+
+    setAcaoVendedor("atender");
+    try {
+      const resultado = await api.post(
+        `/vendedor/solicitacoes/${id}/atender`
+      );
+
+      if (resultado.data.success) {
+        const dados = resultado.data.data;
+        setStatusVendedor((prev) => ({ ...prev, foiAtendida: true }));
+        if (dados.link_whatsapp || dados.whatsapp_link) {
+          window.open(dados.link_whatsapp || dados.whatsapp_link, "_blank");
+        }
+        alert("Solicitação marcada como atendida!");
+        navigate("/vendedor/dashboard");
+      } else {
+        alert(resultado.data.message || "Erro ao atender solicitação");
+      }
+    } catch (err) {
+      console.error("[DetalheSolicitacao] Erro ao atender (vendedor):", err);
+      alert(err.response?.data?.message || "Erro ao atender solicitação");
+    } finally {
+      setAcaoVendedor(null);
+    }
+  };
+
+  const handleVendedorMarcarComoVista = async () => {
+    if (
+      !window.confirm(
+        "Deseja marcar esta solicitação como vista? Ela sairá do seu dashboard principal."
+      )
+    ) {
+      return;
+    }
+
+    setAcaoVendedor("marcar_vista");
+    try {
+      const response = await api.post(
+        `/vendedor/solicitacoes/${id}/marcar-vista`
+      );
+      if (response.data.success) {
+        alert("Solicitação marcada como vista!");
+        setStatusVendedor((prev) => ({ ...prev, foiVista: true }));
+        navigate("/vendedor/dashboard");
+      } else {
+        alert(response.data.message || "Erro ao marcar como vista");
+      }
+    } catch (err) {
+      console.error(
+        "[DetalheSolicitacao] Erro ao marcar vista (vendedor):",
+        err
+      );
+      alert(err.response?.data?.message || "Erro ao marcar como vista");
+    } finally {
+      setAcaoVendedor(null);
+    }
+  };
+
+  const handleVendedorRetornarDashboard = async () => {
+    if (
+      !window.confirm(
+        "Deseja retornar esta solicitação ao seu dashboard principal?"
+      )
+    ) {
+      return;
+    }
+
+    setAcaoVendedor("desmarcar_vista");
+    try {
+      const response = await api.delete(
+        `/vendedor/solicitacoes/${id}/marcar-vista`
+      );
+      if (response.data.success) {
+        alert("Solicitação retornada ao dashboard!");
+        setStatusVendedor((prev) => ({ ...prev, foiVista: false }));
+        navigate("/vendedor/dashboard");
+      } else {
+        alert(response.data.message || "Erro ao retornar solicitação");
+      }
+    } catch (err) {
+      console.error(
+        "[DetalheSolicitacao] Erro ao retornar solicitação (vendedor):",
+        err
+      );
+      alert(err.response?.data?.message || "Erro ao retornar solicitação");
+    } finally {
+      setAcaoVendedor(null);
+    }
+  };
+
+  const handleVendedorDesmarcarAtendida = async () => {
+    if (
+      !window.confirm(
+        "Deseja reabrir esta solicitação? Ela voltará a aparecer como disponível para todos os vendedores da sua autopeça."
+      )
+    ) {
+      return;
+    }
+
+    setAcaoVendedor("desmarcar_atendida");
+    try {
+      const response = await api.delete(
+        `/vendedor/solicitacoes/${id}/atender`
+      );
+      if (response.data.success) {
+        alert("Solicitação reaberta com sucesso!");
+        setStatusVendedor({ foiVista: false, foiAtendida: false });
+        navigate("/vendedor/dashboard");
+      } else {
+        alert(response.data.message || "Erro ao reabrir solicitação");
+      }
+    } catch (err) {
+      console.error(
+        "[DetalheSolicitacao] Erro ao desmarcar atendimento (vendedor):",
+        err
+      );
+      alert(err.response?.data?.message || "Erro ao reabrir solicitação");
+    } finally {
+      setAcaoVendedor(null);
+    }
   };
 
   const handleCancelar = async () => {
@@ -419,6 +600,63 @@ const DetalheSolicitacao = () => {
                           >
                             <Eye className="mr-2 h-4 w-4" />
                             {desmarcandoComoVista ? "Processando..." : "Retornar ao Dashboard"}
+                          </Button>
+                        )}
+                      </>
+                    )}
+
+                    {/* Ações para Vendedor */}
+                    {isVendedor && (
+                      <>
+                        {!statusVendedor.foiAtendida && !statusVendedor.foiVista && (
+                          <>
+                            <Button
+                              onClick={handleVendedorAtender}
+                              disabled={acaoVendedor === "atender"}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <MessageCircle className="mr-2 h-4 w-4" />
+                              {acaoVendedor === "atender"
+                                ? "Processando..."
+                                : "Atender via WhatsApp"}
+                            </Button>
+                            <Button
+                              onClick={handleVendedorMarcarComoVista}
+                              disabled={acaoVendedor === "marcar_vista"}
+                              variant="outline"
+                              className="text-muted-foreground hover:bg-muted"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              {acaoVendedor === "marcar_vista"
+                                ? "Processando..."
+                                : "Marcar como Vista"}
+                            </Button>
+                          </>
+                        )}
+                        {statusVendedor.foiVista && !statusVendedor.foiAtendida && (
+                          <Button
+                            onClick={handleVendedorRetornarDashboard}
+                            disabled={acaoVendedor === "desmarcar_vista"}
+                            variant="outline"
+                            className="text-primary border-primary/20 hover:bg-primary/10"
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            {acaoVendedor === "desmarcar_vista"
+                              ? "Processando..."
+                              : "Retornar ao Dashboard"}
+                          </Button>
+                        )}
+                        {statusVendedor.foiAtendida && (
+                          <Button
+                            onClick={handleVendedorDesmarcarAtendida}
+                            disabled={acaoVendedor === "desmarcar_atendida"}
+                            variant="outline"
+                            className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            {acaoVendedor === "desmarcar_atendida"
+                              ? "Processando..."
+                              : "Reabrir Solicitação"}
                           </Button>
                         )}
                       </>

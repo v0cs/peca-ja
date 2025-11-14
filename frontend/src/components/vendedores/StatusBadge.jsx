@@ -31,3 +31,5 @@ const StatusBadge = ({ ativo, className = "" }) => {
 export default StatusBadge;
 
 
+
+

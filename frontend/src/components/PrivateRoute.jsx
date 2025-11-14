@@ -31,7 +31,7 @@ const PrivateRoute = ({ children, tipoUsuario }) => {
       } else if (tipoUsuarioAtual === "autopeca") {
         return <Navigate to="/dashboard/autopeca" replace />;
       } else if (tipoUsuarioAtual === "vendedor") {
-        return <Navigate to="/dashboard/vendedor" replace />;
+        return <Navigate to="/vendedor/dashboard" replace />;
       }
       return <Navigate to="/" replace />;
     }

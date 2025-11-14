@@ -5,7 +5,7 @@ import { useSolicitacoes } from "../hooks";
 import { Header } from "../components/layout";
 import { Button, StatsCard, EmptyState, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from "../components/ui";
 import SolicitacaoCard from "../components/SolicitacaoCard";
-import { Plus, Clock, CheckCircle, MessageCircle, Filter } from "lucide-react";
+import { Clock, CheckCircle, MessageCircle, Filter } from "lucide-react";
 import api from "../services/api";
 
 const DashboardCliente = () => {
@@ -86,15 +86,11 @@ const DashboardCliente = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Bem-vindo ao seu dashboard</h2>
-              <p className="text-muted-foreground">Gerencie suas solicitações de autopeças e acompanhe o progresso</p>
-            </div>
-            <Button onClick={() => navigate("/solicitacoes/nova")}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Solicitação
-            </Button>
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Bem-vindo ao seu dashboard</h2>
+            <p className="text-muted-foreground">
+              Gerencie suas solicitações de autopeças e acompanhe o progresso
+            </p>
           </div>
         </div>
 

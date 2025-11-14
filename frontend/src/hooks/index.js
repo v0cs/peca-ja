@@ -5,3 +5,4 @@ export { useSolicitacoes } from "./useSolicitacoes";
 export { useSolicitacoesDisponiveis } from "./useSolicitacoesDisponiveis";
 export { default as useSolicitacao } from "./useSolicitacao";
 export { useVendedores } from "./useVendedores";
+export { useVendedorSolicitacoes } from "./useVendedorSolicitacoes";

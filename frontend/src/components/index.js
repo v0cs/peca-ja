@@ -4,6 +4,7 @@
 export * from "./ui";
 export * from "./layout";
 export * from "./vendedores";
+export * from "./profile";
 export { default as SolicitacaoCard } from "./SolicitacaoCard";
 export { default as PrivateRoute } from "./PrivateRoute";
 export { default as VehicleForm } from "./forms/VehicleForm";
