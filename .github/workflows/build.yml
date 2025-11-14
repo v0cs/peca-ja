@@ -61,10 +61,11 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
-          # Adicione estas configurações obrigatórias
           args: |
             -Dsonar.projectKey=v0cs_peca-ja
             -Dsonar.organization=v0cs
+            -Dsonar.branch.name=${{ github.ref_name }}
+            -Dsonar.branch.enabled=true
             -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
             -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/test/**,**/__tests__/**
             -Dsonar.sources=backend/src,frontend/src
