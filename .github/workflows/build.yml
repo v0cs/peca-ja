@@ -12,18 +12,18 @@ jobs:
   sonarqube:
     name: SonarQube Scan
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Clones superficiais devem ser desativados para uma melhor relevância da análise
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
@@ -41,13 +41,17 @@ jobs:
       # Executar testes do Backend com coverage
       - name: Run Backend Tests
         working-directory: ./backend
-        run: npm test -- --coverage --coverageReporters=lcov
+        run: npm test -- --coverage --coverageReporters=lcov --watchAll=false
+        env:
+          CI: true
         continue-on-error: true
 
       # Executar testes do Frontend com coverage
       - name: Run Frontend Tests
         working-directory: ./frontend
-        run: npm test -- --coverage --reporter=lcov
+        run: npm test -- --coverage --run
+        env:
+          CI: true
         continue-on-error: true
 
       # Executar análise do SonarQube
@@ -56,8 +60,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
-
-
-
-
-
+        with:
+          # Adicione estas configurações obrigatórias
+          args: |
+            -Dsonar.projectKey=v0cs_peca-ja
+            -Dsonar.organization=v0cs
+            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
+            -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/test/**,**/__tests__/**
+            -Dsonar.sources=backend/src,frontend/src
+            -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
