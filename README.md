@@ -26,7 +26,7 @@ O **PeçaJá** é uma aplicação web desenvolvida como **Produto Mínimo Viáve
 - ✅ Gestão de vendedores e permissões
 - ✅ Visualização de solicitações por localização
 - ✅ Filtros avançados (marca, modelo, ano, categoria, data e palavra-chave)
-- ✅ Notificações de novas solicitações (in-app e email)
+- ✅ Notificações de novas solicitações
 - ✅ Contato direto via WhatsApp Business
 
 ## 🛠️ Stack Tecnológica
