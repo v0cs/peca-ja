@@ -292,8 +292,8 @@ class AuthController {
           await emailExistente.cliente.update(
             {
               nome_completo: nome_completo.trim(),
-              telefone: formatarTelefoneBanco(celular) || celularFormatado,
-              celular: celularFormatado,
+            telefone: formatarTelefoneBanco(celular) || celularFormatado,
+            celular: celularFormatado,
               cidade: cidade.trim(),
               uf: uf.toUpperCase().trim(),
               data_exclusao_pedida: null, // Limpar data de exclusão se existir
@@ -306,8 +306,8 @@ class AuthController {
             {
               usuario_id: emailExistente.id,
               nome_completo: nome_completo.trim(),
-              telefone: formatarTelefoneBanco(celular) || celularFormatado,
-              celular: celularFormatado,
+            telefone: formatarTelefoneBanco(celular) || celularFormatado,
+            celular: celularFormatado,
               cidade: cidade.trim(),
               uf: uf.toUpperCase().trim(),
             },

@@ -86,8 +86,8 @@ const DashboardCliente = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Bem-vindo ao seu dashboard</h2>
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Bem-vindo ao seu dashboard</h2>
             <p className="text-muted-foreground">
               Gerencie suas solicitações de autopeças e acompanhe o progresso
             </p>

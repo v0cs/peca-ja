@@ -346,12 +346,12 @@ const DashboardVendedor = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Dashboard do Vendedor</h2>
-          <p className="text-muted-foreground">
-            Gerencie as solicitações da sua cidade com agilidade
-          </p>
-          {erroStats && (
-            <p className="text-sm text-destructive mt-2">{erroStats}</p>
-          )}
+              <p className="text-muted-foreground">
+                Gerencie as solicitações da sua cidade com agilidade
+              </p>
+              {erroStats && (
+                <p className="text-sm text-destructive mt-2">{erroStats}</p>
+              )}
         </div>
 
         <VendedorStats
@@ -409,11 +409,11 @@ const DashboardVendedor = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {carregandoStats && (
-              <span className="text-xs text-muted-foreground">
-                Atualizando estatísticas...
-              </span>
-            )}
+          {carregandoStats && (
+            <span className="text-xs text-muted-foreground">
+              Atualizando estatísticas...
+            </span>
+          )}
             <Button
               variant="ghost"
               size="sm"
