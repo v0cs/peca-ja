@@ -434,10 +434,42 @@ const PerfilAutopeca = () => {
                   )}
 
                   {activeTab === "seguranca" && (
-                    <PasswordForm
-                      onSubmit={handlePasswordSubmit}
-                      loading={passwordLoading}
-                    />
+                    <>
+                      {user?.google_id ? (
+                        <div className="space-y-4">
+                          <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-5">
+                            <h3 className="text-lg font-semibold text-blue-700">
+                              Conta vinculada ao Google
+                            </h3>
+                            <p className="mt-2 text-sm text-blue-600">
+                              Sua conta foi criada via Google OAuth e está vinculada à sua conta do Google.
+                            </p>
+                            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-blue-600">
+                              <li>Você faz login usando sua conta do Google</li>
+                              <li>Não é necessário criar ou alterar senha</li>
+                              <li>Sua autenticação é gerenciada pelo Google</li>
+                            </ul>
+                            <p className="mt-4 text-sm text-blue-600">
+                              <strong>Importante:</strong> Para alterar sua senha do Google, acesse suas{" "}
+                              <a
+                                href="https://myaccount.google.com/security"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium underline hover:text-blue-700"
+                              >
+                                configurações de segurança do Google
+                              </a>
+                              .
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <PasswordForm
+                          onSubmit={handlePasswordSubmit}
+                          loading={passwordLoading}
+                        />
+                      )}
+                    </>
                   )}
 
                   {activeTab === "conta" && (
@@ -477,6 +509,7 @@ const PerfilAutopeca = () => {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteAccount}
         loading={deleteLoading}
+        isOAuthAccount={!!user?.google_id}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import {
   LandingPage,
   Login,
+  OAuthCallback,
   Registro,
   RegistroCliente,
   RegistroAutopeca,
@@ -29,6 +30,7 @@ function App() {
           {/* Rotas públicas */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/auth/oauth-callback" element={<OAuthCallback />} />
           <Route path="/recuperar-senha" element={<RecuperarSenha />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/cadastrar" element={<Registro />} />

@@ -83,9 +83,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Função para atualizar dados do usuário
-  const updateUser = (userData) => {
+  const updateUser = (userData, newToken = null) => {
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
+    if (newToken) {
+      setToken(newToken);
+      localStorage.setItem("token", newToken);
+    }
   };
 
   const value = {

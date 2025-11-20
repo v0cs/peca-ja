@@ -33,9 +33,9 @@ class VendedorController {
       }
 
       // 1. Validar campos obrigatórios
-      const { nome, email, telefone } = req.body;
+      const { nome, email } = req.body;
 
-      const camposObrigatorios = { nome, email, telefone };
+      const camposObrigatorios = { nome, email };
 
       // Verificar se todos os campos obrigatórios foram fornecidos
       const camposFaltando = Object.entries(camposObrigatorios)
@@ -66,13 +66,6 @@ class VendedorController {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         errors.email = "Formato de email inválido";
-      }
-
-      // Validar telefone (formato brasileiro)
-      const telefoneRegex = /^\([0-9]{2}\)[0-9]{4,5}-?[0-9]{4}$/;
-      if (!telefoneRegex.test(telefone)) {
-        errors.telefone =
-          "Formato de telefone inválido. Use o formato: (11)99999-9999";
       }
 
       // Validar nome
@@ -111,74 +104,154 @@ class VendedorController {
       // 4. Verificar se email já existe
       const emailExistente = await Usuario.findOne({
         where: { email: email.toLowerCase().trim() },
+        include: [
+          {
+            model: Vendedor,
+            as: "vendedores",
+            required: false,
+          },
+        ],
         transaction,
       });
 
+      let novoUsuario;
+      let senhaTemporariaParaEmail; // Variável para armazenar senha temporária a ser enviada no email
+
       if (emailExistente) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          message: "Email já cadastrado",
-          errors: {
-            email: "Este email já está sendo usado por outro usuário",
+        // Se o email existe e a conta está ativa, verificar se já é vendedor
+        if (emailExistente.ativo) {
+          // Verificar se já é vendedor ativo
+          const vendedorAtivo = emailExistente.vendedores?.find((v) => v.ativo);
+          
+          if (vendedorAtivo) {
+            await transaction.rollback();
+            return res.status(409).json({
+              success: false,
+              message: "Email já cadastrado como vendedor",
+              errors: {
+                email: "Este email já está sendo usado por um vendedor ativo",
+              },
+            });
+          }
+
+          // Se é usuário ativo mas não é vendedor, não permitir cadastrar como vendedor
+          await transaction.rollback();
+          return res.status(409).json({
+            success: false,
+            message: "Email já cadastrado",
+            errors: {
+              email: "Este email já está sendo usado por outro usuário. O usuário precisa excluir sua conta primeiro.",
+            },
+          });
+        }
+
+        // Se o email existe mas a conta está inativa, reativar e converter para vendedor
+        // Gerar senha temporária
+        senhaTemporariaParaEmail = Math.random().toString(36).slice(-8);
+        const saltRounds = 12;
+        const senhaHash = await bcrypt.hash(senhaTemporariaParaEmail, saltRounds);
+
+        // Reativar usuário e converter para vendedor
+        await emailExistente.update(
+          {
+            ativo: true,
+            tipo_usuario: "vendedor",
+            senha_hash: senhaHash,
+            termos_aceitos: true,
+            data_aceite_terms: new Date(),
+            senha_temporaria: true,
+            consentimento_marketing: false,
           },
-        });
+          { transaction }
+        );
+
+        novoUsuario = emailExistente;
+      } else {
+        // Se o email não existe, criar novo usuário
+        // Gerar senha temporária (sempre gerada automaticamente)
+        const senhaTemporariaNova = Math.random().toString(36).slice(-8); // 8 caracteres aleatórios
+        const saltRounds = 12;
+        const senhaHash = await bcrypt.hash(senhaTemporariaNova, saltRounds);
+
+        // Criar registro na tabela Usuarios
+        novoUsuario = await Usuario.create(
+          {
+            email: email.toLowerCase().trim(),
+            senha_hash: senhaHash,
+            tipo_usuario: "vendedor",
+            termos_aceitos: true,
+            data_aceite_terms: new Date(),
+            ativo: true,
+            consentimento_marketing: false,
+            senha_temporaria: true, // Marcar que precisa trocar senha no primeiro acesso
+          },
+          { transaction }
+        );
+        // Armazenar senha temporária para envio no email
+        senhaTemporariaParaEmail = senhaTemporariaNova;
       }
 
-      // 5. Gerar senha temporária (sempre gerada automaticamente)
-      const senhaTemporaria = Math.random().toString(36).slice(-8); // 8 caracteres aleatórios
-      const saltRounds = 12;
-      const senhaHash = await bcrypt.hash(senhaTemporaria, saltRounds);
-
-      // 6. Criar registro na tabela Usuarios
-      const novoUsuario = await Usuario.create(
-        {
-          email: email.toLowerCase().trim(),
-          senha_hash: senhaHash,
-          tipo_usuario: "vendedor",
-          termos_aceitos: true,
-          data_aceite_terms: new Date(),
-          ativo: true,
-          consentimento_marketing: false,
-          senha_temporaria: true, // Marcar que precisa trocar senha no primeiro acesso
-        },
-        { transaction }
-      );
-
-      // 7. Criar registro na tabela Vendedores
-      const novoVendedor = await Vendedor.create(
-        {
+      // Verificar se já existe vendedor inativo para esse usuário e autopeça
+      const vendedorExistente = await Vendedor.findOne({
+        where: {
           usuario_id: novoUsuario.id,
           autopeca_id: autopeca.id,
-          nome_completo: nome.trim(),
-          ativo: true,
         },
-        { transaction }
-      );
+        transaction,
+      });
 
-      // 8. Commit da transação
-      await transaction.commit();
+      let novoVendedor;
 
-      // 9. Enviar email com credenciais (assíncrono - não bloqueia response)
-      try {
-        const { emailService } = require("../services");
-        await emailService.sendVendorCredentials(
-          novoUsuario.email,
-          novoVendedor.nome_completo,
-          senhaTemporaria,
-          autopeca.razao_social
+      if (vendedorExistente) {
+        // Se já existe vendedor (mesmo que inativo), reativar e atualizar
+        await vendedorExistente.update(
+          {
+            nome_completo: nome.trim(),
+            ativo: true,
+          },
+          { transaction }
         );
-
-        console.log(
-          "✅ Email com credenciais enviado para:",
-          novoUsuario.email
+        novoVendedor = vendedorExistente;
+      } else {
+        // Criar novo registro na tabela Vendedores
+        novoVendedor = await Vendedor.create(
+          {
+            usuario_id: novoUsuario.id,
+            autopeca_id: autopeca.id,
+            nome_completo: nome.trim(),
+            ativo: true,
+          },
+          { transaction }
         );
-      } catch (emailError) {
-        console.log("❌ Erro ao enviar email com credenciais:", emailError);
       }
 
-      // 10. Retornar sucesso (201)
-      return res.status(201).json({
+      // 5. Commit da transação
+      await transaction.commit();
+
+      // 6. Enviar email com credenciais (assíncrono - não bloqueia response)
+      // Fazer envio de email fora do try/catch principal para não afetar a resposta
+      setImmediate(async () => {
+        try {
+          const { emailService } = require("../services");
+          await emailService.sendVendorCredentials(
+            novoUsuario.email,
+            novoVendedor.nome_completo,
+            senhaTemporariaParaEmail,
+            autopeca.razao_social
+          );
+
+          console.log(
+            "✅ Email com credenciais enviado para:",
+            novoUsuario.email
+          );
+        } catch (emailError) {
+          console.log("❌ Erro ao enviar email com credenciais:", emailError);
+        }
+      });
+
+      // 7. Retornar sucesso (201)
+      // Garantir que a resposta sempre seja válida, mesmo se houver erro no email
+      const responseData = {
         success: true,
         message: "Vendedor cadastrado com sucesso",
         data: {
@@ -186,7 +259,7 @@ class VendedorController {
             id: novoVendedor.id,
             nome_completo: novoVendedor.nome_completo,
             ativo: novoVendedor.ativo,
-            created_at: novoVendedor.data_criacao,
+            created_at: novoVendedor.data_criacao?.toISOString() || new Date().toISOString(),
           },
           usuario: {
             id: novoUsuario.id,
@@ -196,17 +269,19 @@ class VendedorController {
           },
           autopeca: {
             id: autopeca.id,
-            razao_social: autopeca.razao_social,
-            nome_fantasia: autopeca.nome_fantasia,
+            razao_social: autopeca.razao_social || null,
+            nome_fantasia: autopeca.nome_fantasia || null,
           },
           credenciais: {
             email: email,
-            senha_temporaria: senhaTemporaria,
+            senha_temporaria: senhaTemporariaParaEmail || null,
             // Nota: Em produção, a senha não deveria ser retornada na resposta
-            mensagem: "Credenciais enviadas por email",
+            mensagem: "Credenciais serão enviadas por email",
           },
         },
-      });
+      };
+
+      return res.status(201).json(responseData);
     } catch (error) {
       // Rollback da transação em caso de erro
       await transaction.rollback();
@@ -441,11 +516,17 @@ class VendedorController {
       // Campos permitidos para atualização
       const camposPermitidos = ["nome_completo"];
 
-      // Filtrar apenas campos permitidos
+      // Filtrar apenas campos permitidos e que realmente mudaram
       const dadosAtualizacao = {};
       Object.keys(req.body).forEach((campo) => {
-        if (camposPermitidos.includes(campo) && req.body[campo] !== undefined) {
-          dadosAtualizacao[campo] = req.body[campo];
+        if (camposPermitidos.includes(campo) && req.body[campo] !== undefined && req.body[campo] !== null) {
+          const valorNovo = typeof req.body[campo] === "string" ? req.body[campo].trim() : req.body[campo];
+          const valorAtual = campo === "nome_completo" ? (vendedor.nome_completo || "").trim() : null;
+          
+          // Só adicionar se o valor for diferente do atual e não estiver vazio
+          if (valorNovo && valorNovo !== valorAtual && valorNovo !== "") {
+            dadosAtualizacao[campo] = valorNovo;
+          }
         }
       });
 
@@ -454,11 +535,9 @@ class VendedorController {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
-          message: "Nenhum campo válido para atualização",
+          message: "Não há alterações a serem salvas. Os dados fornecidos são idênticos aos atuais.",
           errors: {
-            campos: `Campos permitidos para atualização: ${camposPermitidos.join(
-              ", "
-            )}`,
+            campos: "Nenhum campo válido foi modificado.",
           },
         });
       }

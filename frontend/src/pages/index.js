@@ -1,5 +1,6 @@
 export { default as LandingPage } from "./LandingPage";
 export { default as Login } from "./Login";
+export { default as OAuthCallback } from "./OAuthCallback";
 export { default as Registro } from "./Registro";
 export { default as RegistroCliente } from "./RegistroCliente";
 export { default as RegistroAutopeca } from "./RegistroAutopeca";
