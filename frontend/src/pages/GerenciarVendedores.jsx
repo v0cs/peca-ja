@@ -103,12 +103,15 @@ const GerenciarVendedores = () => {
           setSucessoMensagem(null);
         }, resultado.data?.credenciais ? 15000 : 5000);
       } else {
-        // Mostrar erro
-        alert(resultado.message || "Erro ao salvar vendedor");
+        // Fechar formulário e deixar a mensagem de erro ser exibida no frontend
+        // A mensagem de erro já está sendo setada pelo hook useVendedores
+        handleFecharFormulario();
       }
     } catch (err) {
       console.error("Erro ao salvar vendedor:", err);
-      alert("Erro ao salvar vendedor. Tente novamente.");
+      // Fechar formulário e deixar a mensagem de erro ser exibida no frontend
+      // A mensagem de erro já está sendo setada pelo hook useVendedores
+      handleFecharFormulario();
     }
   };
 
@@ -176,11 +179,15 @@ const GerenciarVendedores = () => {
           setSucessoMensagem(null);
         }, 5000);
       } else {
-        alert(resultado.message || "Erro ao reativar vendedor");
+        // Fechar modal e deixar a mensagem de erro ser exibida no frontend
+        // A mensagem de erro já está sendo setada pelo hook useVendedores
+        handleFecharModalReativacao();
       }
     } catch (err) {
       console.error("Erro ao reativar vendedor:", err);
-      alert("Erro ao reativar vendedor. Tente novamente.");
+      // Fechar modal e deixar a mensagem de erro ser exibida no frontend
+      // A mensagem de erro já está sendo setada pelo hook useVendedores
+      handleFecharModalReativacao();
     }
   };
 

@@ -9,6 +9,14 @@ const {
   consultaVeicularSolicitacoesMiddleware,
   logConsultaVeicularMiddleware,
 } = require("./consultaVeicularMiddleware");
+const {
+  generalRateLimiter,
+  authRateLimiter,
+  apiRateLimiter,
+  uploadRateLimiter,
+  solicitationRateLimiter,
+  vendedorCreationRateLimiter,
+} = require("./rateLimitMiddleware");
 
 module.exports = {
   authMiddleware,
@@ -17,4 +25,10 @@ module.exports = {
   consultaVeicularMiddleware,
   consultaVeicularSolicitacoesMiddleware,
   logConsultaVeicularMiddleware,
+  generalRateLimiter,
+  authRateLimiter,
+  apiRateLimiter,
+  uploadRateLimiter,
+  solicitationRateLimiter,
+  vendedorCreationRateLimiter,
 };

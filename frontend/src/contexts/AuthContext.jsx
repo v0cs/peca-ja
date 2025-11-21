@@ -83,13 +83,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Função para atualizar dados do usuário
+  // Atualiza o estado primeiro, depois o localStorage para garantir sincronização
   const updateUser = (userData, newToken = null) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
     if (newToken) {
       setToken(newToken);
       localStorage.setItem("token", newToken);
     }
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
   const value = {

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const vendedorController = require("../controllers/vendedorController");
-const { authMiddleware } = require("../middleware");
+const { authMiddleware, vendedorCreationRateLimiter } = require("../middleware");
 
 /**
  * Middleware para verificar se o usuário é do tipo autopeca
@@ -32,7 +32,8 @@ router.use(authMiddleware);
 router.use(autopecaMiddleware);
 
 // Rota para cadastrar novo vendedor
-router.post("/", vendedorController.criarVendedor);
+// Aplicar rate limiting específico para prevenir criação em massa
+router.post("/", vendedorCreationRateLimiter, vendedorController.criarVendedor);
 
 // Rota para listar vendedores da autopeça
 router.get("/", vendedorController.listarVendedores);

@@ -59,25 +59,30 @@ const OAuthCallback = () => {
             perfil: perfil,
           };
 
-          localStorage.setItem("user", JSON.stringify(fullUserData));
+          // Atualizar estado ANTES de salvar no localStorage para garantir sincronização
           updateUser(fullUserData, tokenFromURL);
+          localStorage.setItem("user", JSON.stringify(fullUserData));
 
           setStatus("sucesso");
 
-          // Redirecionar para dashboard baseado no tipo de usuário
-          setTimeout(() => {
-            const tipoUsuario = userData.usuario.tipo_usuario;
-
-            if (tipoUsuario === "cliente") {
-              navigate("/dashboard/cliente");
-            } else if (tipoUsuario === "autopeca") {
-              navigate("/dashboard/autopeca");
-            } else if (tipoUsuario === "vendedor") {
-              navigate("/vendedor/dashboard");
-            } else {
-              navigate("/");
-            }
-          }, 1000);
+          // Redirecionar imediatamente para dashboard baseado no tipo de usuário
+          // Usar setTimeout mínimo apenas para garantir que o React processou a atualização do estado
+          const tipoUsuario = userData.usuario.tipo_usuario;
+          
+          // Usar requestAnimationFrame para garantir que o DOM foi atualizado
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              if (tipoUsuario === "cliente") {
+                navigate("/dashboard/cliente", { replace: true });
+              } else if (tipoUsuario === "autopeca") {
+                navigate("/dashboard/autopeca", { replace: true });
+              } else if (tipoUsuario === "vendedor") {
+                navigate("/vendedor/dashboard", { replace: true });
+              } else {
+                navigate("/", { replace: true });
+              }
+            }, 50); // Delay mínimo para garantir que o Header re-renderizou
+          });
         } else {
           throw new Error("Erro ao buscar dados do usuário");
         }

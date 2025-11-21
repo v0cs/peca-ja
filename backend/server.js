@@ -68,6 +68,9 @@ const { sequelize } = require("./src/config/database");
 // Importar e inicializar Passport para OAuth
 require("./src/config/passport");
 
+// Importar middlewares
+const { generalRateLimiter } = require("./src/middleware");
+
 // Importar todas as rotas organizadas
 const routes = require("./src/routes");
 
@@ -102,6 +105,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Aplicar rate limiting global ANTES de processar o body
+// Isso evita processamento desnecessário em caso de rate limit excedido
+app.use(generalRateLimiter);
+
 app.use(express.json());
 
 // Configurar todas as rotas com prefixo /api
@@ -138,7 +146,14 @@ app.listen(PORT, async () => {
   }
 
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📋 Rotas disponíveis:`);
+  console.log(`\n🛡️  Rate Limiting Global Ativo:`);
+  console.log(`   Geral: ${config.RATE_LIMIT_MAX_REQUESTS} requisições / ${config.RATE_LIMIT_WINDOW_MS / 1000 / 60} minutos`);
+  console.log(`   Autenticação: ${config.RATE_LIMIT_AUTH_MAX} tentativas / 15 minutos`);
+  console.log(`   API: ${config.RATE_LIMIT_API_MAX} requisições / 15 minutos`);
+  console.log(`   Upload: ${config.RATE_LIMIT_UPLOAD_MAX} uploads / hora`);
+  console.log(`   Solicitações: ${config.RATE_LIMIT_SOLICITATION_MAX} criações / hora`);
+  console.log(`   Cadastro Vendedores: ${config.RATE_LIMIT_VENDEDOR_MAX} cadastros / dia`);
+  console.log(`\n📋 Rotas disponíveis:`);
   console.log(`   GET  /api/health`);
   console.log(`   POST /api/auth/register`);
   console.log(`   POST /api/auth/login`);

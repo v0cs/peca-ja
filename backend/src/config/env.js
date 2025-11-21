@@ -56,6 +56,11 @@ module.exports = {
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS || 900000, // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS || 100,
+  RATE_LIMIT_AUTH_MAX: process.env.RATE_LIMIT_AUTH_MAX || (isProduction ? 10 : 20), // Tentativas de auth (aumentado para ser mais tolerante)
+  RATE_LIMIT_API_MAX: process.env.RATE_LIMIT_API_MAX || (isProduction ? 200 : 500), // Requisições API
+  RATE_LIMIT_UPLOAD_MAX: process.env.RATE_LIMIT_UPLOAD_MAX || (isProduction ? 10 : 20), // Uploads por hora
+  RATE_LIMIT_SOLICITATION_MAX: process.env.RATE_LIMIT_SOLICITATION_MAX || (isProduction ? 10 : 20), // Solicitações por hora
+  RATE_LIMIT_VENDEDOR_MAX: process.env.RATE_LIMIT_VENDEDOR_MAX || (isProduction ? 5 : 10), // Cadastros por dia
 
   // API Veicular Configuration
   API_VEICULAR_KEY:

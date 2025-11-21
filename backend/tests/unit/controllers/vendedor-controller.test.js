@@ -1,0 +1,486 @@
+const VendedorController = require("../../../src/controllers/vendedorController");
+const { Vendedor, Usuario, Autopeca, Cliente } = require("../../../src/models");
+const bcrypt = require("bcryptjs");
+
+// Mock dos modelos
+jest.mock("../../../src/models", () => ({
+  Vendedor: {
+    findOne: jest.fn(),
+    findAll: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  Usuario: {
+    sequelize: {
+      transaction: jest.fn(() => ({
+        commit: jest.fn(),
+        rollback: jest.fn(),
+      })),
+    },
+    findOne: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  Autopeca: {
+    findOne: jest.fn(),
+  },
+  Cliente: {
+    findOne: jest.fn(),
+  },
+}));
+
+// Mock do bcrypt
+jest.mock("bcryptjs");
+
+// Mock do emailService
+jest.mock("../../../src/services", () => ({
+  emailService: {
+    sendVendorCredentials: jest.fn(),
+  },
+}));
+
+describe("VendedorController", () => {
+  let req, res, mockTransaction;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    req = {
+      user: {
+        userId: 1,
+        tipo: "autopeca",
+      },
+      body: {},
+      params: {},
+    };
+
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    };
+
+    mockTransaction = {
+      commit: jest.fn(),
+      rollback: jest.fn(),
+    };
+
+    Usuario.sequelize.transaction.mockResolvedValue(mockTransaction);
+  });
+
+  describe("criarVendedor", () => {
+    const validVendedorData = {
+      nome: "João Vendedor",
+      email: "vendedor@teste.com",
+    };
+
+    beforeEach(() => {
+      req.body = validVendedorData;
+    });
+
+    it("deve criar um vendedor com sucesso", async () => {
+      // Arrange
+      const mockAutopeca = {
+        id: 1,
+        razao_social: "Auto Peças LTDA",
+        nome_fantasia: "Auto Peças Silva",
+      };
+      const mockUsuario = {
+        id: 2,
+        email: "vendedor@teste.com",
+        tipo_usuario: "vendedor",
+        ativo: true,
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: true,
+        data_criacao: new Date(),
+      };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Usuario.findOne.mockResolvedValue(null); // Email não existe
+      bcrypt.hash.mockResolvedValue("hashedPassword");
+      Usuario.create.mockResolvedValue(mockUsuario);
+      Vendedor.findOne.mockResolvedValue(null); // Não existe vendedor
+      Vendedor.create.mockResolvedValue(mockVendedor);
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Vendedor cadastrado com sucesso",
+        data: expect.objectContaining({
+          vendedor: expect.objectContaining({
+            id: 1,
+            nome_completo: "João Vendedor",
+            ativo: true,
+          }),
+          usuario: expect.objectContaining({
+            id: 2,
+            email: "vendedor@teste.com",
+            tipo_usuario: "vendedor",
+          }),
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando usuário não é autopeca", async () => {
+      // Arrange
+      req.user.tipo = "cliente";
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Acesso negado",
+        errors: {
+          tipo_usuario: "Esta operação é exclusiva para autopeças",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando campos obrigatórios estão faltando", async () => {
+      // Arrange
+      req.body = { email: "vendedor@teste.com" }; // Nome faltando
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Campos obrigatórios não fornecidos",
+        errors: expect.objectContaining({
+          campos_faltando: expect.arrayContaining(["nome"]),
+        }),
+      });
+    });
+
+    it("deve retornar erro quando email já existe como vendedor ativo", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockUsuarioExistente = {
+        id: 2,
+        email: "vendedor@teste.com",
+        ativo: true,
+        vendedores: [{ id: 1, ativo: true }],
+      };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Usuario.findOne.mockResolvedValue(mockUsuarioExistente);
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Email já cadastrado como vendedor",
+        errors: {
+          email: "Este email já está sendo usado por um vendedor ativo",
+        },
+      });
+    });
+  });
+
+  describe("listarVendedores", () => {
+    it("deve listar vendedores com sucesso", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockVendedores = [
+        {
+          id: 1,
+          nome_completo: "João Vendedor",
+          ativo: true,
+          data_criacao: new Date(),
+          data_atualizacao: new Date(),
+          usuario: {
+            id: 2,
+            email: "vendedor@teste.com",
+            tipo_usuario: "vendedor",
+            ativo: true,
+            data_criacao: new Date(),
+            data_atualizacao: new Date(),
+          },
+        },
+      ];
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findAll.mockResolvedValue(mockVendedores);
+
+      // Act
+      await VendedorController.listarVendedores(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Vendedores listados com sucesso",
+        data: {
+          vendedores: expect.arrayContaining([
+            expect.objectContaining({
+              id: 1,
+              nome_completo: "João Vendedor",
+              ativo: true,
+            }),
+          ]),
+          total: 1,
+        },
+      });
+    });
+
+    it("deve retornar erro quando usuário não é autopeca", async () => {
+      // Arrange
+      req.user.tipo = "cliente";
+
+      // Act
+      await VendedorController.listarVendedores(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Acesso negado",
+        errors: {
+          tipo_usuario: "Esta operação é exclusiva para autopeças",
+        },
+      });
+    });
+  });
+
+  describe("atualizarVendedor", () => {
+    beforeEach(() => {
+      req.params = { vendedorId: "1" };
+    });
+
+    it("deve atualizar vendedor com sucesso", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: true,
+        update: jest.fn().mockResolvedValue(true),
+        usuario: {
+          id: 2,
+          email: "vendedor@teste.com",
+          tipo_usuario: "vendedor",
+          ativo: true,
+          data_criacao: new Date(),
+          data_atualizacao: new Date(),
+        },
+      };
+      const mockVendedorAtualizado = {
+        id: 1,
+        nome_completo: "João Vendedor Atualizado",
+        ativo: true,
+        data_criacao: new Date(),
+        data_atualizacao: new Date(),
+        usuario: mockVendedor.usuario,
+      };
+
+      req.body = { nome_completo: "João Vendedor Atualizado" };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+      Vendedor.findOne.mockResolvedValueOnce(mockVendedor);
+      Vendedor.findOne.mockResolvedValueOnce(mockVendedorAtualizado);
+
+      // Act
+      await VendedorController.atualizarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Vendedor atualizado com sucesso",
+        data: expect.objectContaining({
+          id: 1,
+          nome_completo: "João Vendedor Atualizado",
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando vendedor não pertence à autopeça", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.atualizarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Vendedor não encontrado",
+        errors: {
+          vendedor: "Vendedor não encontrado ou não pertence a esta autopeça",
+        },
+      });
+    });
+  });
+
+  describe("inativarVendedor", () => {
+    beforeEach(() => {
+      req.params = { vendedorId: "1" };
+    });
+
+    it("deve inativar vendedor com sucesso", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockUsuario = {
+        id: 2,
+        email: "vendedor@teste.com",
+        ativo: true,
+        update: jest.fn().mockResolvedValue(true),
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: true,
+        update: jest.fn().mockResolvedValue(true),
+        usuario: mockUsuario,
+      };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+
+      // Act
+      await VendedorController.inativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Vendedor inativado com sucesso",
+        data: expect.objectContaining({
+          vendedor: expect.objectContaining({
+            id: 1,
+            ativo: false,
+          }),
+          usuario: expect.objectContaining({
+            id: 2,
+            ativo: false,
+          }),
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando vendedor já está inativo", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockVendedor = {
+        id: 1,
+        ativo: false,
+        usuario: { id: 2, ativo: false },
+      };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+
+      // Act
+      await VendedorController.inativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Vendedor já está inativo",
+        errors: {
+          status: "Este vendedor já está inativo",
+        },
+      });
+    });
+  });
+
+  describe("reativarVendedor", () => {
+    beforeEach(() => {
+      req.params = { vendedorId: "1" };
+    });
+
+    it("deve reativar vendedor com sucesso", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockUsuario = {
+        id: 2,
+        email: "vendedor@teste.com",
+        ativo: false,
+        tipo_usuario: "vendedor",
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: false,
+        usuario: mockUsuario,
+      };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+      Cliente.findOne.mockResolvedValue(null);
+      Autopeca.findOne.mockResolvedValueOnce(mockAutopeca);
+      Autopeca.findOne.mockResolvedValueOnce(null);
+
+      // Act
+      await VendedorController.reativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Vendedor reativado com sucesso",
+        data: expect.objectContaining({
+          vendedor: expect.objectContaining({
+            id: 1,
+            ativo: true,
+          }),
+          usuario: expect.objectContaining({
+            id: 2,
+            ativo: true,
+          }),
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando vendedor já está ativo", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockVendedor = {
+        id: 1,
+        ativo: true,
+        usuario: { id: 2, ativo: true, tipo_usuario: "vendedor" },
+      };
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+
+      // Act
+      await VendedorController.reativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Vendedor já está ativo",
+        errors: {
+          status: "Este vendedor já está ativo",
+        },
+      });
+    });
+  });
+});
+

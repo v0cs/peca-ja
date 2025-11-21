@@ -116,12 +116,12 @@ const Registro = () => {
 
     // Senha só é obrigatória se NÃO for OAuth
     if (!isOAuth) {
-      if (formData.senha.length < 6) {
-        newErrors.senha = "A senha deve ter pelo menos 6 caracteres";
-      }
+    if (formData.senha.length < 6) {
+      newErrors.senha = "A senha deve ter pelo menos 6 caracteres";
+    }
 
-      if (formData.senha !== formData.confirmarSenha) {
-        newErrors.confirmarSenha = "As senhas não coincidem";
+    if (formData.senha !== formData.confirmarSenha) {
+      newErrors.confirmarSenha = "As senhas não coincidem";
       }
     }
 
@@ -244,16 +244,16 @@ const Registro = () => {
           }
         } else {
           // Fazer login automático após cadastro (não OAuth)
-          const loginResult = await login(formData.email, formData.senha);
+        const loginResult = await login(formData.email, formData.senha);
 
-          if (loginResult.success) {
-            // Usar o tipo_usuario retornado pelo backend ao invés da variável do formulário
-            // Isso garante que o redirecionamento seja baseado no tipo real do usuário no banco
-            const userType = loginResult.user?.tipo_usuario || tipoUsuario;
-            const dashboardPath = userType === "cliente" ? "/dashboard/cliente" : "/dashboard/autopeca";
-            navigate(dashboardPath);
-          } else {
-            navigate("/login");
+        if (loginResult.success) {
+          // Usar o tipo_usuario retornado pelo backend ao invés da variável do formulário
+          // Isso garante que o redirecionamento seja baseado no tipo real do usuário no banco
+          const userType = loginResult.user?.tipo_usuario || tipoUsuario;
+          const dashboardPath = userType === "cliente" ? "/dashboard/cliente" : "/dashboard/autopeca";
+          navigate(dashboardPath);
+        } else {
+          navigate("/login");
           }
         }
       }
@@ -304,13 +304,13 @@ const Registro = () => {
                 </>
               ) : (
                 <>
-                  Já tem uma conta?{" "}
-                  <Link
-                    to="/login"
-                    className="font-medium text-primary hover:text-primary/80"
-                  >
-                    Faça login
-                  </Link>
+              Já tem uma conta?{" "}
+              <Link
+                to="/login"
+                className="font-medium text-primary hover:text-primary/80"
+              >
+                Faça login
+              </Link>
                 </>
               )}
             </p>
@@ -442,31 +442,31 @@ const Registro = () => {
 
                   {!isOAuth && (
                     <>
-                      <div>
-                        <Input
-                          label="Senha"
-                          id="senha"
-                          name="senha"
-                          type="password"
-                          value={formData.senha}
-                          onChange={handleChange}
-                          required
-                          error={errors.senha}
-                        />
-                      </div>
+                  <div>
+                    <Input
+                      label="Senha"
+                      id="senha"
+                      name="senha"
+                      type="password"
+                      value={formData.senha}
+                      onChange={handleChange}
+                      required
+                      error={errors.senha}
+                    />
+                  </div>
 
-                      <div>
-                        <Input
-                          label="Confirmar Senha"
-                          id="confirmarSenha"
-                          name="confirmarSenha"
-                          type="password"
-                          value={formData.confirmarSenha}
-                          onChange={handleChange}
-                          required
-                          error={errors.confirmarSenha}
-                        />
-                      </div>
+                  <div>
+                    <Input
+                      label="Confirmar Senha"
+                      id="confirmarSenha"
+                      name="confirmarSenha"
+                      type="password"
+                      value={formData.confirmarSenha}
+                      onChange={handleChange}
+                      required
+                      error={errors.confirmarSenha}
+                    />
+                  </div>
                     </>
                   )}
                   {isOAuth && (

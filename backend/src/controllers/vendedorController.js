@@ -1,5 +1,5 @@
 const bcrypt = require("bcryptjs");
-const { Vendedor, Usuario, Autopeca } = require("../models");
+const { Vendedor, Usuario, Autopeca, Cliente } = require("../models");
 
 /**
  * Controller de Vendedores
@@ -145,7 +145,66 @@ class VendedorController {
           });
         }
 
-        // Se o email existe mas a conta está inativa, reativar e converter para vendedor
+        // Se o email existe mas a conta está inativa, verificar conflitos antes de reativar
+        // IMPORTANTE: Verificar se o usuário tem perfil ativo de outro tipo (cliente ou autopeca)
+        let clienteAtivo = null;
+        let autopecaAtiva = null;
+        
+        try {
+          // Buscar perfis SEM transação (apenas leitura) para não afetar a transação principal
+          clienteAtivo = await Cliente.findOne({
+            where: {
+              usuario_id: emailExistente.id,
+            },
+            include: [
+              {
+                model: Usuario,
+                as: "usuario",
+                attributes: ["id", "ativo"],
+                required: false,
+              },
+            ],
+          });
+          
+          autopecaAtiva = await Autopeca.findOne({
+            where: {
+              usuario_id: emailExistente.id,
+            },
+            include: [
+              {
+                model: Usuario,
+                as: "usuario",
+                attributes: ["id", "ativo"],
+                required: false,
+              },
+            ],
+          });
+        } catch (validationError) {
+          // Se houver erro na busca, logar mas continuar
+          console.error("❌ Erro ao buscar perfis para validação em criarVendedor:", validationError);
+        }
+        
+        // Verificar se encontrou cliente ou autopeca ATIVA
+        const temClienteAtivo = clienteAtivo !== null && 
+                                clienteAtivo.usuario && 
+                                clienteAtivo.usuario.ativo === true;
+        const temAutopecaAtiva = autopecaAtiva !== null && 
+                                autopecaAtiva.usuario && 
+                                autopecaAtiva.usuario.ativo === true;
+        
+        // Se encontrou cliente ou autopeca ATIVA, bloquear criação/reativação
+        if (temClienteAtivo || temAutopecaAtiva) {
+          await transaction.rollback();
+          return res.status(409).json({
+            success: false,
+            message: "Não é possível cadastrar o vendedor",
+            errors: {
+              conflito: "Este email já está cadastrado como cliente/autopeça. Para cadastrar o vendedor, é necessário primeiro excluir a conta ativa.",
+            },
+          });
+        }
+        
+        // Se não há conflito, reativar e converter para vendedor
         // Gerar senha temporária
         senhaTemporariaParaEmail = Math.random().toString(36).slice(-8);
         const saltRounds = 12;
@@ -857,27 +916,111 @@ class VendedorController {
         });
       }
 
-      // Verificar se o usuário do vendedor mudou de tipo (ex: se cadastrou como cliente)
-      // Se mudou, permitir reativação e restaurar tipo_usuario para "vendedor"
-      // Isso permite que a autopeça reative um vendedor mesmo após ele ter se cadastrado como cliente e excluído a conta
-      const tipoUsuarioOriginal = vendedor.usuario.tipo_usuario;
-      const precisaRestaurarTipo = tipoUsuarioOriginal !== "vendedor";
+      // Verificar se o usuário tem perfil ativo de outro tipo (cliente ou autopeca)
+      // Se tiver, BLOQUEAR reativação - não é permitido ter múltiplos perfis ativos
+      // IMPORTANTE: Fazer buscas SEM transação para não abortar a transação principal em caso de erro
+      // IMPORTANTE: Cliente não tem campo 'ativo', então verificamos se o Usuario associado está ativo
+      let clienteAtivo = null;
+      let autopecaAtiva = null;
+      
+      try {
+        // Buscar Cliente com Usuario para verificar se o usuário está ativo
+        // Cliente não tem campo 'ativo', então verificamos usuario.ativo
+        clienteAtivo = await Cliente.findOne({
+          where: {
+            usuario_id: vendedor.usuario.id,
+          },
+          include: [
+            {
+              model: Usuario,
+              as: "usuario",
+              attributes: ["id", "ativo"],
+              required: false,
+            },
+          ],
+        });
+        
+        // Buscar Autopeca com Usuario para verificar se o usuário está ativo
+        autopecaAtiva = await Autopeca.findOne({
+          where: {
+            usuario_id: vendedor.usuario.id,
+          },
+          include: [
+            {
+              model: Usuario,
+              as: "usuario",
+              attributes: ["id", "ativo"],
+              required: false,
+            },
+          ],
+        });
+      } catch (validationError) {
+        // Se houver erro na busca, logar mas continuar - não é erro crítico
+        console.error("❌ Erro ao buscar perfis para validação:", validationError);
+        // Continuar - se não conseguirmos verificar, assumir que não há conflito
+      }
+      
+      // Verificar se encontrou cliente ou autopeca ATIVA
+      // IMPORTANTE: Tanto Cliente quanto Autopeca verificam se o usuario.ativo === true
+      const temClienteAtivo = clienteAtivo !== null && 
+                              clienteAtivo.usuario && 
+                              clienteAtivo.usuario.ativo === true;
+      const temAutopecaAtiva = autopecaAtiva !== null && 
+                              autopecaAtiva.usuario && 
+                              autopecaAtiva.usuario.ativo === true;
+      
+      // Log para debug
+      if (clienteAtivo || autopecaAtiva) {
+        console.log("🔍 Validação de reativação:", {
+          clienteEncontrado: !!clienteAtivo,
+          clienteAtivo: temClienteAtivo,
+          autopecaEncontrada: !!autopecaAtiva,
+          autopecaAtiva: temAutopecaAtiva,
+          usuarioId: vendedor.usuario.id,
+        });
+      }
+      
+        // Se encontrou cliente ou autopeca ATIVA, bloquear reativação
+        if (temClienteAtivo || temAutopecaAtiva) {
+          await transaction.rollback();
+          return res.status(409).json({
+            success: false,
+            message: "Não é possível reativar o vendedor",
+            errors: {
+              conflito: "Este email já está cadastrado como cliente/autopeça. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+            },
+          });
+        }
 
       // Reativar vendedor e usuário
-      // Se o tipo_usuario foi alterado (ex: cliente após cadastro), restaurar para "vendedor"
-      await vendedor.update({ ativo: true }, { transaction });
-      await vendedor.usuario.update(
+      // Garantir que o tipo_usuario seja "vendedor" ao reativar
+      const tipoUsuarioOriginal = vendedor.usuario.tipo_usuario;
+      
+      // Atualizar vendedor usando método estático (mais seguro com transações)
+      await Vendedor.update(
+        { ativo: true },
+        {
+          where: { id: vendedor.id },
+          transaction,
+        }
+      );
+      
+      // Atualizar usuário usando método estático (mais seguro com transações)
+      await Usuario.update(
         {
           ativo: true,
-          tipo_usuario: "vendedor", // Restaurar/garantir que o tipo seja "vendedor"
+          tipo_usuario: "vendedor", // Garantir que o tipo seja "vendedor" ao reativar
         },
-        { transaction }
+        {
+          where: { id: vendedor.usuario.id },
+          transaction,
+        }
       );
 
-      // Log para auditoria se o tipo foi restaurado
-      if (precisaRestaurarTipo) {
+      // Log para auditoria se o tipo foi alterado
+      if (tipoUsuarioOriginal !== "vendedor") {
         console.log(
-          `Vendedor ${vendedor.id} reativado: tipo_usuario restaurado de "${tipoUsuarioOriginal}" para "vendedor"`
+          `✅ Vendedor ${vendedor.id} reativado: tipo_usuario alterado de "${tipoUsuarioOriginal}" para "vendedor"`
         );
       }
 
@@ -902,17 +1045,49 @@ class VendedorController {
         },
       });
     } catch (error) {
-      // Rollback da transação em caso de erro
-      await transaction.rollback();
+      // Rollback da transação em caso de erro (se ainda não foi feito)
+      if (!res.headersSent) {
+        try {
+          await transaction.rollback();
+        } catch (rollbackError) {
+          console.error("Erro ao fazer rollback:", rollbackError);
+        }
+      }
 
-      console.error("Erro ao reativar vendedor:", error);
+      console.error("❌ Erro ao reativar vendedor:", error);
+      console.error("Stack:", error.stack);
+      
+      // Se já foi retornado uma resposta (ex: 409 do catch interno), não fazer nada
+      if (res.headersSent) {
+        return;
+      }
 
-      // Erro interno do servidor (500)
+      // Verificar se é erro relacionado a modelo ou validação de perfil
+      const errorMessage = (error.message || "").toLowerCase();
+      const errorStack = (error.stack || "").toLowerCase();
+      
+      // Se for erro relacionado a Cliente, Autopeca, ou validação, retornar 409
+      if (errorMessage.includes("cliente") || 
+          errorMessage.includes("autopeca") || 
+          errorMessage.includes("perfil") ||
+          errorStack.includes("cliente") ||
+          errorStack.includes("autopeca")) {
+        return res.status(409).json({
+          success: false,
+          message: "Não é possível reativar o vendedor",
+          errors: {
+            conflito: "Este email já está cadastrado como cliente/autopeça. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+          },
+        });
+      }
+
+      // Erro interno do servidor (500) - apenas para erros realmente inesperados
       return res.status(500).json({
         success: false,
         message: "Erro interno do servidor",
         errors: {
           message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+          detalhes: process.env.NODE_ENV === "development" ? error.message : undefined,
         },
       });
     }
