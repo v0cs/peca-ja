@@ -1,11 +1,11 @@
-const express = require("express");
-const request = require("supertest");
-
 // CRÍTICO: Mockar uploadMiddleware ANTES de qualquer coisa para evitar execução de código no nível do módulo
 jest.mock("../../../src/middleware/uploadMiddleware", () => ({
   uploadMiddleware: jest.fn((req, res, next) => next()),
   uploadSingleMiddleware: jest.fn((req, res, next) => next()),
 }));
+
+const express = require("express");
+const request = require("supertest");
 
 // Mock dos controllers e middlewares
 jest.mock("../../../src/controllers/vehicleController", () => ({

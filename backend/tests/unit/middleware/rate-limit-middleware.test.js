@@ -1,17 +1,7 @@
-const {
-  generalRateLimiter,
-  authRateLimiter,
-  apiRateLimiter,
-  uploadRateLimiter,
-  solicitationRateLimiter,
-  vendedorCreationRateLimiter,
-} = require("../../../src/middleware/rateLimitMiddleware");
-
-// Mock do express-rate-limit
+// Mock do express-rate-limit ANTES de qualquer require
 jest.mock("express-rate-limit", () => {
   return jest.fn((options) => {
     return (req, res, next) => {
-      // Simular rate limit não excedido
       req.rateLimit = {
         limit: options.max || 100,
         remaining: 99,
@@ -22,7 +12,7 @@ jest.mock("express-rate-limit", () => {
   });
 });
 
-// Mock do config
+// Mock do config ANTES de qualquer require
 jest.mock("../../../src/config/env", () => ({
   RATE_LIMIT_GENERAL_MAX: 100,
   RATE_LIMIT_GENERAL_WINDOW: 15,
@@ -37,6 +27,15 @@ jest.mock("../../../src/config/env", () => ({
   RATE_LIMIT_VENDEDOR_CREATION_MAX: 3,
   RATE_LIMIT_VENDEDOR_CREATION_WINDOW: 60,
 }));
+
+const {
+  generalRateLimiter,
+  authRateLimiter,
+  apiRateLimiter,
+  uploadRateLimiter,
+  solicitationRateLimiter,
+  vendedorCreationRateLimiter,
+} = require("../../../src/middleware/rateLimitMiddleware");
 
 describe("Rate Limit Middleware", () => {
   let req, res, next;
