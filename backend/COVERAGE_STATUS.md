@@ -1,10 +1,10 @@
 # Status da Cobertura de Testes Unitários - Backend
 
 ## 📊 Cobertura Atual
-- **Statements**: 78.61% (2070/2633) ✅ **Meta de 75% atingida!**
-- **Branches**: 70.48% (1127/1599)
-- **Functions**: 73.36% (157/214) ✅ **Meta de 75% quase atingida!**
-- **Lines**: 78.74% (2052/2606) ✅ **Meta de 75% atingida!**
+- **Statements**: 64.97% (2015/3101)
+- **Branches**: 64.78% (1183/1826)
+- **Functions**: 55.31% (156/282)
+- **Lines**: 64.93% (1996/3074)
 
 ## ✅ Controllers Testados (9/9 - 100%)
 
@@ -94,10 +94,10 @@
 - **1/1 Routes principal** (100%)
 
 ### 📊 Cobertura:
-- **Statements**: 78.61% ✅ (meta: 75% - **ATINGIDA!**)
-- **Branches**: 70.48% (meta: 75% - faltam 4.52%)
-- **Functions**: 73.36% ✅ (meta: 75% - **QUASE ATINGIDA!**)
-- **Lines**: 78.74% ✅ (meta: 75% - **ATINGIDA!**)
+- **Statements**: 64.97% (meta: 75%)
+- **Branches**: 64.78%
+- **Functions**: 55.31%
+- **Lines**: 64.93%
 
 ### 🔧 Problemas Conhecidos:
 1. `config/database.test.js` - 1 teste falhando (logging em development)
@@ -114,9 +114,7 @@
 
 **Os principais testes unitários JÁ FORAM IMPLEMENTADOS!**
 
-Todos os controllers, services e middleware principais têm cobertura de testes. A cobertura atual está em **78.61%** para statements e **78.74%** para lines, **superando a meta de 75%!** 🎉
-
-Apenas branches está ligeiramente abaixo (70.48%), faltando 4.52% para atingir a meta.
+Todos os controllers, services e middleware principais têm cobertura de testes. A cobertura atual está em **64.97%**, faltando aproximadamente **10%** para chegar à meta de **75%**.
 
 Os próximos passos seriam:
 1. Corrigir os testes que estão falhando
