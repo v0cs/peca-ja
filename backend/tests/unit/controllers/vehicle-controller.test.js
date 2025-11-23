@@ -139,14 +139,8 @@ describe("VehicleController", () => {
       await VehicleController.consultarPlaca(req, res);
 
       // Assert
-      expect(res.set).toHaveBeenCalledWith(
-        "X-RateLimit-Remaining",
-        "50"
-      );
-      expect(res.set).toHaveBeenCalledWith(
-        "X-RateLimit-Reset",
-        "1234567890"
-      );
+      expect(res.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "50");
+      expect(res.set).toHaveBeenCalledWith("X-RateLimit-Reset", "1234567890");
     });
 
     it("deve retornar erro 429 quando rate limit é excedido", async () => {
@@ -327,6 +321,164 @@ describe("VehicleController", () => {
         "192.168.1.1"
       );
     });
+
+    it("deve usar IP do req.connection.remoteAddress quando req.ip não existe", async () => {
+      // Arrange
+      req.params.placa = "ABC1234";
+      req.ip = undefined;
+      req.connection.remoteAddress = "192.168.1.2";
+      req.socket.remoteAddress = undefined;
+      const mockDadosVeiculo = {
+        placa: "ABC1234",
+        marca: "Fiat",
+        origem_dados_veiculo: "api",
+      };
+
+      apiVeicularService.consultarVeiculoPorPlaca.mockResolvedValue(
+        mockDadosVeiculo
+      );
+
+      // Act
+      await VehicleController.consultarPlaca(req, res);
+
+      // Assert
+      expect(apiVeicularService.consultarVeiculoPorPlaca).toHaveBeenCalledWith(
+        "ABC1234",
+        "192.168.1.2"
+      );
+    });
+
+    it("deve usar IP do req.socket.remoteAddress quando req.ip e req.connection.remoteAddress não existem", async () => {
+      // Arrange
+      req.params.placa = "ABC1234";
+      req.ip = undefined;
+      req.connection.remoteAddress = undefined;
+      req.socket.remoteAddress = "192.168.1.3";
+      const mockDadosVeiculo = {
+        placa: "ABC1234",
+        marca: "Fiat",
+        origem_dados_veiculo: "api",
+      };
+
+      apiVeicularService.consultarVeiculoPorPlaca.mockResolvedValue(
+        mockDadosVeiculo
+      );
+
+      // Act
+      await VehicleController.consultarPlaca(req, res);
+
+      // Assert
+      expect(apiVeicularService.consultarVeiculoPorPlaca).toHaveBeenCalledWith(
+        "ABC1234",
+        "192.168.1.3"
+      );
+    });
+
+    it("deve usar IP padrão 127.0.0.1 quando nenhum IP está disponível", async () => {
+      // Arrange
+      req.params.placa = "ABC1234";
+      req.ip = undefined;
+      req.connection.remoteAddress = undefined;
+      req.socket.remoteAddress = undefined;
+      const mockDadosVeiculo = {
+        placa: "ABC1234",
+        marca: "Fiat",
+        origem_dados_veiculo: "api",
+      };
+
+      apiVeicularService.consultarVeiculoPorPlaca.mockResolvedValue(
+        mockDadosVeiculo
+      );
+
+      // Act
+      await VehicleController.consultarPlaca(req, res);
+
+      // Assert
+      expect(apiVeicularService.consultarVeiculoPorPlaca).toHaveBeenCalledWith(
+        "ABC1234",
+        "127.0.0.1"
+      );
+    });
+
+    it("deve incluir api_veicular_metadata quando presente na resposta", async () => {
+      // Arrange
+      req.params.placa = "ABC1234";
+      const mockDadosVeiculo = {
+        placa: "ABC1234",
+        marca: "Fiat",
+        modelo: "Uno",
+        origem_dados_veiculo: "api",
+        api_veicular_metadata: {
+          response_time: 150,
+          cached: false,
+        },
+      };
+
+      apiVeicularService.consultarVeiculoPorPlaca.mockResolvedValue(
+        mockDadosVeiculo
+      );
+
+      // Act
+      await VehicleController.consultarPlaca(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            api_metadata: mockDadosVeiculo.api_veicular_metadata,
+          }),
+        })
+      );
+    });
+
+    it("deve usar timestamp atual quando timestamp_consulta não está presente", async () => {
+      // Arrange
+      req.params.placa = "ABC1234";
+      const mockDadosVeiculo = {
+        placa: "ABC1234",
+        marca: "Fiat",
+        origem_dados_veiculo: "api",
+      };
+
+      apiVeicularService.consultarVeiculoPorPlaca.mockResolvedValue(
+        mockDadosVeiculo
+      );
+
+      const beforeCall = new Date().toISOString();
+
+      // Act
+      await VehicleController.consultarPlaca(req, res);
+
+      // Assert
+      const afterCall = new Date().toISOString();
+      const responseData = res.json.mock.calls[0][0];
+      const timestamp = responseData.data.consulta_info.timestamp;
+
+      expect(timestamp).toBeDefined();
+      expect(timestamp >= beforeCall && timestamp <= afterCall).toBe(true);
+    });
+
+    it("deve tratar erro quando req.user não existe no catch", async () => {
+      // Arrange
+      req.params.placa = "ABC1234";
+      delete req.user;
+      const error = new Error("Erro interno");
+
+      apiVeicularService.consultarVeiculoPorPlaca.mockRejectedValue(error);
+
+      // Act
+      await VehicleController.consultarPlaca(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          debug_info: expect.objectContaining({
+            usuario_id: "não autenticado",
+          }),
+        })
+      );
+    });
   });
 
   describe("obterEstatisticas", () => {
@@ -420,6 +572,81 @@ describe("VehicleController", () => {
         message: "Erro interno do servidor",
         error: "Erro ao obter estatísticas",
       });
+    });
+
+    it("deve usar IP do req.connection.remoteAddress quando req.ip não existe", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      req.ip = undefined;
+      req.connection.remoteAddress = "192.168.1.2";
+      req.socket.remoteAddress = undefined;
+      const mockStats = {
+        cache: { hits: 10 },
+        rate_limiting: { total: 100 },
+        circuit_breaker: { state: "closed" },
+      };
+
+      apiVeicularService.obterEstatisticasCache.mockReturnValue(mockStats);
+      apiVeicularService.verificarConfiguracao.mockReturnValue({});
+      apiVeicularService.obterEstatisticasRateLimit.mockReturnValue({});
+
+      // Act
+      await VehicleController.obterEstatisticas(req, res);
+
+      // Assert
+      expect(
+        apiVeicularService.obterEstatisticasRateLimit
+      ).toHaveBeenCalledWith("192.168.1.2");
+    });
+
+    it("deve usar IP do req.socket.remoteAddress quando req.ip e req.connection.remoteAddress não existem", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      req.ip = undefined;
+      req.connection.remoteAddress = undefined;
+      req.socket.remoteAddress = "192.168.1.3";
+      const mockStats = {
+        cache: { hits: 10 },
+        rate_limiting: { total: 100 },
+        circuit_breaker: { state: "closed" },
+      };
+
+      apiVeicularService.obterEstatisticasCache.mockReturnValue(mockStats);
+      apiVeicularService.verificarConfiguracao.mockReturnValue({});
+      apiVeicularService.obterEstatisticasRateLimit.mockReturnValue({});
+
+      // Act
+      await VehicleController.obterEstatisticas(req, res);
+
+      // Assert
+      expect(
+        apiVeicularService.obterEstatisticasRateLimit
+      ).toHaveBeenCalledWith("192.168.1.3");
+    });
+
+    it("deve usar IP padrão 127.0.0.1 quando nenhum IP está disponível em obterEstatisticas", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      req.ip = undefined;
+      req.connection.remoteAddress = undefined;
+      req.socket.remoteAddress = undefined;
+      const mockStats = {
+        cache: { hits: 10 },
+        rate_limiting: { total: 100 },
+        circuit_breaker: { state: "closed" },
+      };
+
+      apiVeicularService.obterEstatisticasCache.mockReturnValue(mockStats);
+      apiVeicularService.verificarConfiguracao.mockReturnValue({});
+      apiVeicularService.obterEstatisticasRateLimit.mockReturnValue({});
+
+      // Act
+      await VehicleController.obterEstatisticas(req, res);
+
+      // Assert
+      expect(
+        apiVeicularService.obterEstatisticasRateLimit
+      ).toHaveBeenCalledWith("127.0.0.1");
     });
   });
 
@@ -541,6 +768,51 @@ describe("VehicleController", () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    it("deve retornar erro 500 quando ocorre erro ao limpar cache de placa", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      req.query.placa = "ABC1234";
+      apiVeicularService.limparCachePlaca.mockImplementation(() => {
+        throw new Error("Erro ao limpar cache de placa");
+      });
+
+      // Act
+      await VehicleController.limparCache(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("deve retornar erro 500 quando ocorre erro ao limpar rate limit", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      req.query.ip = "192.168.1.1";
+      apiVeicularService.limparRateLimit.mockImplementation(() => {
+        throw new Error("Erro ao limpar rate limit");
+      });
+
+      // Act
+      await VehicleController.limparCache(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("deve retornar erro 500 quando ocorre erro ao limpar rate limit completo", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      req.query.rate_limit = "true";
+      apiVeicularService.limparRateLimitCompleto.mockImplementation(() => {
+        throw new Error("Erro ao limpar rate limit completo");
+      });
+
+      // Act
+      await VehicleController.limparCache(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
   });
 
   describe("obterStatusCircuitBreaker", () => {
@@ -551,6 +823,29 @@ describe("VehicleController", () => {
         state: "closed",
         failures: 0,
         successes: 100,
+      };
+
+      apiVeicularService.obterStatusCircuitBreaker.mockReturnValue(mockStatus);
+
+      // Act
+      await VehicleController.obterStatusCircuitBreaker(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Status do circuit breaker obtido com sucesso",
+        data: mockStatus,
+      });
+    });
+
+    it("deve obter status do circuit breaker com sucesso para autopeca", async () => {
+      // Arrange
+      req.user.tipo = "autopeca";
+      const mockStatus = {
+        state: "open",
+        failures: 5,
+        successes: 95,
       };
 
       apiVeicularService.obterStatusCircuitBreaker.mockReturnValue(mockStatus);
@@ -602,7 +897,9 @@ describe("VehicleController", () => {
       await VehicleController.forcarAberturaCircuitBreaker(req, res);
 
       // Assert
-      expect(apiVeicularService.forcarAberturaCircuitBreaker).toHaveBeenCalled();
+      expect(
+        apiVeicularService.forcarAberturaCircuitBreaker
+      ).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
@@ -622,6 +919,20 @@ describe("VehicleController", () => {
 
       // Assert
       expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("deve retornar erro 500 quando ocorre erro", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      apiVeicularService.forcarAberturaCircuitBreaker.mockImplementation(() => {
+        throw new Error("Erro ao forçar abertura");
+      });
+
+      // Act
+      await VehicleController.forcarAberturaCircuitBreaker(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 
@@ -657,6 +968,22 @@ describe("VehicleController", () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(403);
     });
+
+    it("deve retornar erro 500 quando ocorre erro", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      apiVeicularService.forcarFechamentoCircuitBreaker.mockImplementation(
+        () => {
+          throw new Error("Erro ao forçar fechamento");
+        }
+      );
+
+      // Act
+      await VehicleController.forcarFechamentoCircuitBreaker(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
   });
 
   describe("resetarMetricasCircuitBreaker", () => {
@@ -691,6 +1018,21 @@ describe("VehicleController", () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(403);
     });
+
+    it("deve retornar erro 500 quando ocorre erro", async () => {
+      // Arrange
+      req.user.tipo = "admin";
+      apiVeicularService.resetarMetricasCircuitBreaker.mockImplementation(
+        () => {
+          throw new Error("Erro ao resetar métricas");
+        }
+      );
+
+      // Act
+      await VehicleController.resetarMetricasCircuitBreaker(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
   });
 });
-

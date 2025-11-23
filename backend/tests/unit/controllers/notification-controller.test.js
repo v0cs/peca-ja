@@ -163,6 +163,108 @@ describe("NotificationController", () => {
       });
     });
 
+    it("deve aplicar filtros combinados de tipo e lida", async () => {
+      // Arrange
+      req.query.tipo = "nova_solicitacao";
+      req.query.lida = "false";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 1,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+          tipo_notificacao: "nova_solicitacao",
+          lida: false,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it("deve tratar página inválida como página 1", async () => {
+      // Arrange
+      req.query.page = "invalid";
+      req.query.limit = "10";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 25,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 10,
+        offset: 0,
+      });
+    });
+
+    it("deve tratar limite inválido como limite padrão 20", async () => {
+      // Arrange
+      req.query.page = "1";
+      req.query.limit = "invalid";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 25,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it("deve calcular paginação corretamente na última página", async () => {
+      // Arrange
+      req.query.page = "3";
+      req.query.limit = "10";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 25,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            paginacao: expect.objectContaining({
+              pagina_atual: 3,
+              total_paginas: 3,
+              tem_proxima: false,
+              tem_anterior: true,
+            }),
+          }),
+        })
+      );
+    });
+
     it("deve aplicar paginação corretamente", async () => {
       // Arrange
       req.query.page = "2";
@@ -301,6 +403,29 @@ describe("NotificationController", () => {
       });
     });
 
+    it("não deve remover ':' se não estiver no início do ID", async () => {
+      // Arrange
+      req.params.id = "1:2";
+      const mockNotificacao = {
+        id: 1,
+        lida: false,
+        update: jest.fn().mockResolvedValue(true),
+      };
+
+      Notificacao.findOne.mockResolvedValue(mockNotificacao);
+
+      // Act
+      await NotificationController.marcarComoLida(req, res);
+
+      // Assert
+      expect(Notificacao.findOne).toHaveBeenCalledWith({
+        where: {
+          id: "1:2",
+          usuario_id: 1,
+        },
+      });
+    });
+
     it("deve retornar erro 404 quando notificação não é encontrada", async () => {
       // Arrange
       req.params.id = "999";
@@ -315,8 +440,7 @@ describe("NotificationController", () => {
         success: false,
         message: "Notificação não encontrada",
         errors: {
-          notificacao:
-            "Notificação não existe ou não pertence a este usuário",
+          notificacao: "Notificação não existe ou não pertence a este usuário",
         },
       });
     });
@@ -443,7 +567,7 @@ describe("NotificationController", () => {
       });
     });
 
-    it("deve retornar erro 500 quando ocorre erro", async () => {
+    it("deve retornar erro 500 quando ocorre erro no count", async () => {
       // Arrange
       Notificacao.count.mockRejectedValue(new Error("Database error"));
 
@@ -452,6 +576,62 @@ describe("NotificationController", () => {
 
       // Assert
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("deve retornar erro 500 quando ocorre erro no findAll", async () => {
+      // Arrange
+      Notificacao.count.mockResolvedValue(3);
+      Notificacao.findAll.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await NotificationController.contarNaoLidas(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("deve formatar contagem por tipo corretamente", async () => {
+      // Arrange
+      Notificacao.count.mockResolvedValue(5);
+      Notificacao.findAll.mockResolvedValue([
+        { tipo_notificacao: "nova_solicitacao", total: "3" },
+        { tipo_notificacao: "solicitacao_atendida", total: "2" },
+      ]);
+
+      // Act
+      await NotificationController.contarNaoLidas(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Contagem de notificações não lidas",
+        data: {
+          total_nao_lidas: 5,
+          por_tipo: {
+            nova_solicitacao: 3,
+            solicitacao_atendida: 2,
+          },
+        },
+      });
+    });
+
+    it("deve tratar contagem por tipo quando findAll retorna vazio", async () => {
+      // Arrange
+      Notificacao.count.mockResolvedValue(0);
+      Notificacao.findAll.mockResolvedValue([]);
+
+      // Act
+      await NotificationController.contarNaoLidas(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Contagem de notificações não lidas",
+        data: {
+          total_nao_lidas: 0,
+          por_tipo: {},
+        },
+      });
     });
   });
 
@@ -497,6 +677,28 @@ describe("NotificationController", () => {
 
       // Assert
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("deve remover ':' do início do ID ao deletar", async () => {
+      // Arrange
+      req.params.id = ":1";
+      const mockNotificacao = {
+        id: 1,
+        destroy: jest.fn().mockResolvedValue(true),
+      };
+
+      Notificacao.findOne.mockResolvedValue(mockNotificacao);
+
+      // Act
+      await NotificationController.deletarNotificacao(req, res);
+
+      // Assert
+      expect(Notificacao.findOne).toHaveBeenCalledWith({
+        where: {
+          id: "1",
+          usuario_id: 1,
+        },
+      });
     });
 
     it("deve retornar erro 500 quando ocorre erro", async () => {
@@ -610,6 +812,29 @@ describe("NotificationController", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
+    it("deve remover ':' do início do ID ao buscar", async () => {
+      // Arrange
+      req.params.id = ":1";
+      const mockNotificacao = {
+        id: 1,
+        tipo_notificacao: "nova_solicitacao",
+        lida: false,
+      };
+
+      Notificacao.findOne.mockResolvedValue(mockNotificacao);
+
+      // Act
+      await NotificationController.buscarPorId(req, res);
+
+      // Assert
+      expect(Notificacao.findOne).toHaveBeenCalledWith({
+        where: {
+          id: "1",
+          usuario_id: 1,
+        },
+      });
+    });
+
     it("deve retornar erro 500 quando ocorre erro", async () => {
       // Arrange
       req.params.id = "1";
@@ -621,6 +846,213 @@ describe("NotificationController", () => {
       // Assert
       expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    it("deve tratar ID vazio corretamente", async () => {
+      // Arrange
+      req.params.id = "";
+      Notificacao.findOne.mockResolvedValue(null);
+
+      // Act
+      await NotificationController.buscarPorId(req, res);
+
+      // Assert
+      expect(Notificacao.findOne).toHaveBeenCalledWith({
+        where: {
+          id: "",
+          usuario_id: 1,
+        },
+      });
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("listarNotificacoes - edge cases", () => {
+    it("deve tratar página 0 como página 1", async () => {
+      // Arrange
+      req.query.page = "0";
+      req.query.limit = "10";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 25,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 10,
+        offset: 0,
+      });
+    });
+
+    it("deve tratar limite 0 como limite padrão 20", async () => {
+      // Arrange
+      req.query.page = "1";
+      req.query.limit = "0";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 25,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it("deve tratar lida como string 'false' corretamente", async () => {
+      // Arrange
+      req.query.lida = "false";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 1,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+          lida: false,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it("deve tratar lida como string 'true' corretamente", async () => {
+      // Arrange
+      req.query.lida = "true";
+
+      Notificacao.findAndCountAll.mockResolvedValue({
+        count: 1,
+        rows: [],
+      });
+
+      // Act
+      await NotificationController.listarNotificacoes(req, res);
+
+      // Assert
+      expect(Notificacao.findAndCountAll).toHaveBeenCalledWith({
+        where: {
+          usuario_id: 1,
+          lida: true,
+        },
+        order: [["data_criacao", "DESC"]],
+        limit: 20,
+        offset: 0,
+      });
+    });
+  });
+
+  describe("marcarComoLida - edge cases", () => {
+    it("deve tratar ID vazio corretamente", async () => {
+      // Arrange
+      req.params.id = "";
+      Notificacao.findOne.mockResolvedValue(null);
+
+      // Act
+      await NotificationController.marcarComoLida(req, res);
+
+      // Assert
+      expect(Notificacao.findOne).toHaveBeenCalledWith({
+        where: {
+          id: "",
+          usuario_id: 1,
+        },
+      });
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("deletarNotificacao - edge cases", () => {
+    it("deve tratar ID vazio corretamente", async () => {
+      // Arrange
+      req.params.id = "";
+      Notificacao.findOne.mockResolvedValue(null);
+
+      // Act
+      await NotificationController.deletarNotificacao(req, res);
+
+      // Assert
+      expect(Notificacao.findOne).toHaveBeenCalledWith({
+        where: {
+          id: "",
+          usuario_id: 1,
+        },
+      });
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("contarNaoLidas - edge cases", () => {
+    it("deve tratar contagem por tipo quando total é string numérica", async () => {
+      // Arrange
+      Notificacao.count.mockResolvedValue(3);
+      Notificacao.findAll.mockResolvedValue([
+        { tipo_notificacao: "nova_solicitacao", total: "2" },
+        { tipo_notificacao: "solicitacao_atendida", total: "1" },
+      ]);
+
+      // Act
+      await NotificationController.contarNaoLidas(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Contagem de notificações não lidas",
+        data: {
+          total_nao_lidas: 3,
+          por_tipo: {
+            nova_solicitacao: 2,
+            solicitacao_atendida: 1,
+          },
+        },
+      });
+    });
+
+    it("deve tratar contagem por tipo quando total é número", async () => {
+      // Arrange
+      Notificacao.count.mockResolvedValue(3);
+      Notificacao.findAll.mockResolvedValue([
+        { tipo_notificacao: "nova_solicitacao", total: 2 },
+        { tipo_notificacao: "solicitacao_atendida", total: 1 },
+      ]);
+
+      // Act
+      await NotificationController.contarNaoLidas(req, res);
+
+      // Assert
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Contagem de notificações não lidas",
+        data: {
+          total_nao_lidas: 3,
+          por_tipo: {
+            nova_solicitacao: 2,
+            solicitacao_atendida: 1,
+          },
+        },
+      });
+    });
   });
 });
-

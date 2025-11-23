@@ -13,6 +13,13 @@ class VehicleController {
    * @param {Object} res - Response object
    */
   static async consultarPlaca(req, res) {
+    // Obter IP do cliente para rate limiting (definido antes do try para estar disponível no catch)
+    const clientIp =
+      req.ip ||
+      req.connection?.remoteAddress ||
+      req.socket?.remoteAddress ||
+      "127.0.0.1";
+
     try {
       const { placa } = req.params;
 
@@ -30,13 +37,6 @@ class VehicleController {
       // 2. Log da consulta
       console.log(`🔍 VehicleController: Consulta direta para placa: ${placa}`);
       console.log(`👤 Usuário: ${req.user.userId} (${req.user.tipo})`);
-
-      // Obter IP do cliente para rate limiting
-      const clientIp =
-        req.ip ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        "127.0.0.1";
       console.log(`🌐 VehicleController: IP do cliente: ${clientIp}`);
 
       // 3. Consultar API veicular com rate limiting

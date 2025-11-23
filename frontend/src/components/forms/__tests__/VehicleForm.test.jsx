@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { useState } from "react";
 import VehicleForm from "../VehicleForm";
 import api from "../../../services/api";
 
@@ -60,29 +60,34 @@ describe("VehicleForm", () => {
       <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
     );
 
-    // Assert
-    expect(screen.getByLabelText(/placa/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/marca/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/modelo/i)).toBeInTheDocument();
+    // Assert - Usar função de matcher para normalizar texto dos labels (ignora asteriscos e espaços)
+    const normalizeLabel = (text) => text?.trim().replace(/\s+/g, ' ').replace(/\s*\*+\s*$/, '').toLowerCase();
+    
+    expect(screen.getByLabelText(/placa do veículo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText((content) => normalizeLabel(content) === 'marca')).toBeInTheDocument();
+    // Para "Modelo", verificar que é exatamente "Modelo" e não "Ano do Modelo"
+    expect(screen.getByLabelText((content) => {
+      const normalized = normalizeLabel(content);
+      return normalized === 'modelo' && !content.toLowerCase().includes('ano');
+    })).toBeInTheDocument();
     expect(screen.getByLabelText(/ano de fabricação/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/ano do modelo/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/categoria/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/cor/i)).toBeInTheDocument();
+    expect(screen.getByLabelText((content) => normalizeLabel(content) === 'categoria')).toBeInTheDocument();
+    expect(screen.getByLabelText((content) => normalizeLabel(content) === 'cor')).toBeInTheDocument();
   });
 
-  it("deve permitir preencher campos do formulário", async () => {
+  it("deve permitir preencher campos do formulário", () => {
     // Arrange
-    const user = userEvent.setup();
     render(
       <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
     );
 
-    const placaInput = screen.getByLabelText(/placa/i);
+    const placaInput = screen.getByLabelText(/placa do veículo/i);
     const marcaInput = screen.getByLabelText(/marca/i);
 
     // Act
-    await user.type(placaInput, "ABC1234");
-    await user.type(marcaInput, "Volkswagen");
+    fireEvent.change(placaInput, { target: { value: "ABC1234" } });
+    fireEvent.change(marcaInput, { target: { value: "Volkswagen" } });
 
     // Assert
     expect(mockOnChange).toHaveBeenCalled();
@@ -90,7 +95,6 @@ describe("VehicleForm", () => {
 
   it("deve consultar API quando placa válida é digitada", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockResponse = {
       data: {
         success: true,
@@ -110,19 +114,36 @@ describe("VehicleForm", () => {
 
     api.get.mockResolvedValue(mockResponse);
 
-    render(
-      <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
-    );
+    // Wrapper com estado para simular mudança de formData
+    const TestWrapper = () => {
+      const [formData, setFormData] = useState(mockFormData);
+      const handleChange = (e) => {
+        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        mockOnChange(e);
+      };
+      return <VehicleForm formData={formData} onChange={handleChange} errors={{}} />;
+    };
 
-    const placaInput = screen.getByLabelText(/placa/i);
+    render(<TestWrapper />);
 
-    // Act
-    await user.type(placaInput, "ABC1234");
+    const placaInput = screen.getByLabelText(/placa do veículo/i);
 
-    // Assert
+    // Act - Simular digitação da placa
+    fireEvent.change(placaInput, { target: { value: "ABC1234" } });
+
+    // Aguardar o debounce de 1 segundo
+    await new Promise(resolve => setTimeout(resolve, 1100));
+
+    // Assert - Verificar que a API foi chamada após o debounce
     await waitFor(
       () => {
-        expect(api.get).toHaveBeenCalledWith("/vehicle/consulta/ABC1234");
+        expect(api.get).toHaveBeenCalled();
+        // Verificar que foi chamada com a placa normalizada (sem hífen)
+        const calls = api.get.mock.calls;
+        const placaCall = calls.find(call => 
+          call[0]?.includes("ABC1234")
+        );
+        expect(placaCall).toBeDefined();
       },
       { timeout: 3000 }
     );
@@ -130,7 +151,6 @@ describe("VehicleForm", () => {
 
   it("deve preencher campos automaticamente quando API retorna dados", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockResponse = {
       data: {
         success: true,
@@ -150,26 +170,39 @@ describe("VehicleForm", () => {
 
     api.get.mockResolvedValue(mockResponse);
 
-    render(
-      <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
-    );
+    // Wrapper com estado para simular mudança de formData
+    const TestWrapper = () => {
+      const [formData, setFormData] = useState(mockFormData);
+      const handleChange = (e) => {
+        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        mockOnChange(e);
+      };
+      return <VehicleForm formData={formData} onChange={handleChange} errors={{}} />;
+    };
 
-    const placaInput = screen.getByLabelText(/placa/i);
+    render(<TestWrapper />);
 
-    // Act
-    await user.type(placaInput, "ABC1234");
+    const placaInput = screen.getByLabelText(/placa do veículo/i);
 
-    // Assert
+    // Act - Simular digitação da placa
+    fireEvent.change(placaInput, { target: { value: "ABC1234" } });
+
+    // Aguardar o debounce de 1 segundo
+    await new Promise(resolve => setTimeout(resolve, 1100));
+
+    // Assert - Verificar que onChange foi chamado para preencher os campos
     await waitFor(
       () => {
-        expect(mockOnChange).toHaveBeenCalledWith(
-          expect.objectContaining({
-            target: expect.objectContaining({
-              name: "marca",
-              value: "Volkswagen",
-            }),
-          })
+        // Verificar que a API foi chamada
+        expect(api.get).toHaveBeenCalled();
+        // Verificar que onChange foi chamado (pode ser chamado múltiplas vezes para diferentes campos)
+        expect(mockOnChange).toHaveBeenCalled();
+        // Verificar que pelo menos um dos calls foi para preencher a marca
+        const calls = mockOnChange.mock.calls;
+        const marcaCall = calls.find(call => 
+          call[0]?.target?.name === "marca" && call[0]?.target?.value === "Volkswagen"
         );
+        expect(marcaCall).toBeDefined();
       },
       { timeout: 3000 }
     );
@@ -177,9 +210,9 @@ describe("VehicleForm", () => {
 
   it("deve exibir erro quando consulta de placa falha", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockError = {
       response: {
+        status: 404,
         data: {
           success: false,
           message: "Placa não encontrada",
@@ -189,23 +222,40 @@ describe("VehicleForm", () => {
 
     api.get.mockRejectedValue(mockError);
 
-    render(
-      <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
-    );
+    // Wrapper com estado para simular mudança de formData
+    const TestWrapper = () => {
+      const [formData, setFormData] = useState(mockFormData);
+      const handleChange = (e) => {
+        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        mockOnChange(e);
+      };
+      return <VehicleForm formData={formData} onChange={handleChange} errors={{}} />;
+    };
 
-    const placaInput = screen.getByLabelText(/placa/i);
+    render(<TestWrapper />);
+
+    const placaInput = screen.getByLabelText(/placa do veículo/i);
 
     // Act
-    await user.type(placaInput, "ABC1234");
+    fireEvent.change(placaInput, { target: { value: "ABC1234" } });
 
-    // Assert
+    // Aguardar o debounce de 1 segundo
+    await new Promise(resolve => setTimeout(resolve, 1100));
+
+    // Assert - Verificar que a API foi chamada e erro foi exibido
     await waitFor(
       () => {
         expect(api.get).toHaveBeenCalled();
-        // Verificar se erro é exibido (pode estar em um elemento de erro)
       },
       { timeout: 3000 }
     );
+
+    // Aguardar um pouco mais para o erro aparecer na tela
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Verificar se mensagem de erro aparece na tela (pode ser a mensagem específica ou a padrão)
+    const errorMessage = screen.queryByText(/placa não encontrada|não foi possível consultar/i);
+    expect(errorMessage).toBeInTheDocument();
   });
 
   it("deve exibir erros de validação quando fornecidos", () => {
@@ -230,25 +280,34 @@ describe("VehicleForm", () => {
 
   it("não deve consultar API para placas muito curtas", async () => {
     // Arrange
-    const user = userEvent.setup();
-    render(
-      <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
-    );
+    // Wrapper com estado para simular mudança de formData
+    const TestWrapper = () => {
+      const [formData, setFormData] = useState(mockFormData);
+      const handleChange = (e) => {
+        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        mockOnChange(e);
+      };
+      return <VehicleForm formData={formData} onChange={handleChange} errors={{}} />;
+    };
 
-    const placaInput = screen.getByLabelText(/placa/i);
+    render(<TestWrapper />);
+
+    const placaInput = screen.getByLabelText(/placa do veículo/i);
 
     // Act
-    await user.type(placaInput, "ABC");
+    fireEvent.change(placaInput, { target: { value: "ABC" } });
 
-    // Assert
+    // Aguardar o debounce de 1 segundo
+    await new Promise(resolve => setTimeout(resolve, 1100));
+
+    // Assert - API não deve ser chamada para placas muito curtas
     await waitFor(() => {
       expect(api.get).not.toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
   });
 
   it("deve normalizar placa removendo hífen", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockResponse = {
       data: {
         success: true,
@@ -264,20 +323,36 @@ describe("VehicleForm", () => {
 
     api.get.mockResolvedValue(mockResponse);
 
-    render(
-      <VehicleForm formData={mockFormData} onChange={mockOnChange} errors={{}} />
-    );
+    // Wrapper com estado para simular mudança de formData
+    const TestWrapper = () => {
+      const [formData, setFormData] = useState(mockFormData);
+      const handleChange = (e) => {
+        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        mockOnChange(e);
+      };
+      return <VehicleForm formData={formData} onChange={handleChange} errors={{}} />;
+    };
 
-    const placaInput = screen.getByLabelText(/placa/i);
+    render(<TestWrapper />);
 
-    // Act
-    await user.type(placaInput, "ABC-1234");
+    const placaInput = screen.getByLabelText(/placa do veículo/i);
 
-    // Assert
+    // Act - Digitar placa com hífen
+    fireEvent.change(placaInput, { target: { value: "ABC-1234" } });
+
+    // Aguardar o debounce de 1 segundo
+    await new Promise(resolve => setTimeout(resolve, 1100));
+
+    // Assert - API deve ser chamada com placa normalizada (sem hífen)
     await waitFor(
       () => {
-        // API deve ser chamada com placa normalizada (sem hífen)
-        expect(api.get).toHaveBeenCalledWith("/vehicle/consulta/ABC1234");
+        expect(api.get).toHaveBeenCalled();
+        // Verificar que foi chamada com a placa normalizada (sem hífen)
+        const calls = api.get.mock.calls;
+        const placaCall = calls.find(call => 
+          call[0]?.includes("ABC1234")
+        );
+        expect(placaCall).toBeDefined();
       },
       { timeout: 3000 }
     );

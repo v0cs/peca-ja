@@ -8,10 +8,7 @@ const { Usuario, TokenRecuperacaoSenha } = require("../../../src/models");
 jest.mock("../../../src/models", () => ({
   Usuario: {
     sequelize: {
-      transaction: jest.fn(() => ({
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      })),
+      transaction: jest.fn(),
     },
     findOne: jest.fn(),
     findByPk: jest.fn(),
@@ -59,7 +56,10 @@ describe("AuthController - Recuperação de Senha", () => {
       rollback: jest.fn(),
     };
 
-    Usuario.sequelize.transaction.mockResolvedValue(mockTransaction);
+    // Reconfigurar mock de transaction após clearAllMocks
+    if (Usuario.sequelize) {
+      Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
+    }
   });
 
   describe("forgotPassword", () => {
@@ -422,4 +422,6 @@ describe("AuthController - Recuperação de Senha", () => {
     });
   });
 });
+
+
 

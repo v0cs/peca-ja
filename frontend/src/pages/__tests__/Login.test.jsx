@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Login from "../Login";
 import { AuthProvider } from "../../contexts/AuthContext";
@@ -58,20 +57,24 @@ describe("Login", () => {
     // Assert
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/senha/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /entrar/i })).toBeInTheDocument();
+    // Usar getAllByRole porque há dois botões com "Entrar" (submit e Google)
+    const buttons = screen.getAllByRole("button", { name: /entrar/i });
+    expect(buttons.length).toBeGreaterThan(0);
+    // Verificar que o botão de submit existe
+    const submitButton = buttons.find(btn => btn.type === "submit");
+    expect(submitButton).toBeInTheDocument();
   });
 
-  it("deve permitir preencher email e senha", async () => {
+  it("deve permitir preencher email e senha", () => {
     // Arrange
-    const user = userEvent.setup();
     renderWithProviders(<Login />);
 
     const emailInput = screen.getByLabelText(/email/i);
     const senhaInput = screen.getByLabelText(/senha/i);
 
     // Act
-    await user.type(emailInput, "test@teste.com");
-    await user.type(senhaInput, "123456");
+    fireEvent.change(emailInput, { target: { value: "test@teste.com" } });
+    fireEvent.change(senhaInput, { target: { value: "123456" } });
 
     // Assert
     expect(emailInput).toHaveValue("test@teste.com");
@@ -80,7 +83,6 @@ describe("Login", () => {
 
   it("deve fazer login e redirecionar cliente para dashboard", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockResponse = {
       data: {
         success: true,
@@ -104,12 +106,13 @@ describe("Login", () => {
 
     const emailInput = screen.getByLabelText(/email/i);
     const senhaInput = screen.getByLabelText(/senha/i);
-    const submitButton = screen.getByRole("button", { name: /entrar/i });
+    const buttons = screen.getAllByRole("button", { name: /entrar/i });
+    const submitButton = buttons.find(btn => btn.type === "submit");
 
     // Act
-    await user.type(emailInput, "cliente@teste.com");
-    await user.type(senhaInput, "123456");
-    await user.click(submitButton);
+    fireEvent.change(emailInput, { target: { value: "cliente@teste.com" } });
+    fireEvent.change(senhaInput, { target: { value: "123456" } });
+    fireEvent.click(submitButton);
 
     // Assert
     await waitFor(() => {
@@ -123,7 +126,6 @@ describe("Login", () => {
 
   it("deve fazer login e redirecionar autopeca para dashboard", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockResponse = {
       data: {
         success: true,
@@ -147,12 +149,13 @@ describe("Login", () => {
 
     const emailInput = screen.getByLabelText(/email/i);
     const senhaInput = screen.getByLabelText(/senha/i);
-    const submitButton = screen.getByRole("button", { name: /entrar/i });
+    const buttons = screen.getAllByRole("button", { name: /entrar/i });
+    const submitButton = buttons.find(btn => btn.type === "submit");
 
     // Act
-    await user.type(emailInput, "autopeca@teste.com");
-    await user.type(senhaInput, "123456");
-    await user.click(submitButton);
+    fireEvent.change(emailInput, { target: { value: "autopeca@teste.com" } });
+    fireEvent.change(senhaInput, { target: { value: "123456" } });
+    fireEvent.click(submitButton);
 
     // Assert
     await waitFor(() => {
@@ -162,7 +165,6 @@ describe("Login", () => {
 
   it("deve exibir erro quando login falha", async () => {
     // Arrange
-    const user = userEvent.setup();
     const mockError = {
       response: {
         data: {
@@ -177,12 +179,13 @@ describe("Login", () => {
 
     const emailInput = screen.getByLabelText(/email/i);
     const senhaInput = screen.getByLabelText(/senha/i);
-    const submitButton = screen.getByRole("button", { name: /entrar/i });
+    const buttons = screen.getAllByRole("button", { name: /entrar/i });
+    const submitButton = buttons.find(btn => btn.type === "submit");
 
     // Act
-    await user.type(emailInput, "test@teste.com");
-    await user.type(senhaInput, "senha-errada");
-    await user.click(submitButton);
+    fireEvent.change(emailInput, { target: { value: "test@teste.com" } });
+    fireEvent.change(senhaInput, { target: { value: "senha-errada" } });
+    fireEvent.click(submitButton);
 
     // Assert
     await waitFor(() => {
@@ -192,7 +195,6 @@ describe("Login", () => {
 
   it("deve desabilitar botão durante loading", async () => {
     // Arrange
-    const user = userEvent.setup();
     let resolveLogin;
     const loginPromise = new Promise((resolve) => {
       resolveLogin = resolve;
@@ -203,12 +205,13 @@ describe("Login", () => {
 
     const emailInput = screen.getByLabelText(/email/i);
     const senhaInput = screen.getByLabelText(/senha/i);
-    const submitButton = screen.getByRole("button", { name: /entrar/i });
+    const buttons = screen.getAllByRole("button", { name: /entrar/i });
+    const submitButton = buttons.find(btn => btn.type === "submit");
 
     // Act
-    await user.type(emailInput, "test@teste.com");
-    await user.type(senhaInput, "123456");
-    await user.click(submitButton);
+    fireEvent.change(emailInput, { target: { value: "test@teste.com" } });
+    fireEvent.change(senhaInput, { target: { value: "123456" } });
+    fireEvent.click(submitButton);
 
     // Assert - Botão deve estar desabilitado durante loading
     await waitFor(() => {

@@ -6,10 +6,7 @@ const bcrypt = require("bcryptjs");
 jest.mock("../../../src/models", () => ({
   Usuario: {
     sequelize: {
-      transaction: jest.fn(() => ({
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      })),
+      transaction: jest.fn(),
     },
     findOne: jest.fn(),
     update: jest.fn(),
@@ -67,7 +64,10 @@ describe("UsuarioController", () => {
       rollback: jest.fn(),
     };
 
-    Usuario.sequelize.transaction.mockResolvedValue(mockTransaction);
+    // Reconfigurar mock de transaction após clearAllMocks
+    if (Usuario.sequelize) {
+      Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
+    }
   });
 
   describe("updateProfile", () => {

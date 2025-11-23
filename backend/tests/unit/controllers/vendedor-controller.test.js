@@ -12,10 +12,7 @@ jest.mock("../../../src/models", () => ({
   },
   Usuario: {
     sequelize: {
-      transaction: jest.fn(() => ({
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      })),
+      transaction: jest.fn(),
     },
     findOne: jest.fn(),
     create: jest.fn(),
@@ -64,7 +61,10 @@ describe("VendedorController", () => {
       rollback: jest.fn(),
     };
 
-    Usuario.sequelize.transaction.mockResolvedValue(mockTransaction);
+    // Reconfigurar mock de transaction após clearAllMocks
+    if (Usuario.sequelize) {
+      Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
+    }
   });
 
   describe("criarVendedor", () => {
@@ -191,9 +191,67 @@ describe("VendedorController", () => {
         },
       });
     });
+
+    it("deve retornar erro 500 quando ocorre erro interno", async () => {
+      // Arrange
+      Autopeca.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    });
+
+    it("deve retornar erro quando email tem formato inválido", async () => {
+      // Arrange
+      req.body = { nome: "João", email: "email-invalido" };
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Dados inválidos",
+        errors: {
+          email: "Formato de email inválido",
+        },
+      });
+    });
+
+    it("deve retornar erro quando nome é muito curto", async () => {
+      // Arrange
+      req.body = { nome: "A", email: "vendedor@teste.com" };
+
+      // Act
+      await VendedorController.criarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Dados inválidos",
+        errors: {
+          nome: "Nome deve ter pelo menos 2 caracteres",
+        },
+      });
+    });
   });
 
   describe("listarVendedores", () => {
+    beforeEach(() => {
+      req.user.tipo = "autopeca"; // Garantir que o tipo seja resetado
+    });
+
     it("deve listar vendedores com sucesso", async () => {
       // Arrange
       const mockAutopeca = { id: 1 };
@@ -253,6 +311,63 @@ describe("VendedorController", () => {
         message: "Acesso negado",
         errors: {
           tipo_usuario: "Esta operação é exclusiva para autopeças",
+        },
+      });
+    });
+
+    it("deve retornar erro quando autopeça não é encontrada", async () => {
+      // Arrange
+      Autopeca.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.listarVendedores(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Autopeça não encontrada",
+        errors: {
+          autopeca: "Perfil de autopeça não encontrado para este usuário",
+        },
+      });
+    });
+
+    it("deve retornar lista vazia quando não há vendedores", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findAll.mockResolvedValue([]);
+
+      // Act
+      await VendedorController.listarVendedores(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Vendedores listados com sucesso",
+        data: {
+          vendedores: [],
+          total: 0,
+        },
+      });
+    });
+
+    it("deve retornar erro 500 quando ocorre erro interno", async () => {
+      // Arrange
+      Autopeca.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await VendedorController.listarVendedores(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
         },
       });
     });
@@ -331,6 +446,24 @@ describe("VendedorController", () => {
         },
       });
     });
+
+    it("deve retornar erro 500 quando ocorre erro interno", async () => {
+      // Arrange
+      Autopeca.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await VendedorController.atualizarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    });
   });
 
   describe("inativarVendedor", () => {
@@ -405,6 +538,24 @@ describe("VendedorController", () => {
         },
       });
     });
+
+    it("deve retornar erro 500 quando ocorre erro interno", async () => {
+      // Arrange
+      Autopeca.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await VendedorController.inativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    });
   });
 
   describe("reativarVendedor", () => {
@@ -428,11 +579,13 @@ describe("VendedorController", () => {
         usuario: mockUsuario,
       };
 
-      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      // Primeira chamada: busca autopeça logada (com transaction)
+      // Segunda chamada: busca autopeça ativa para verificar conflito (sem transaction)
+      Autopeca.findOne
+        .mockResolvedValueOnce(mockAutopeca) // Primeira busca: autopeça logada
+        .mockResolvedValueOnce(null); // Segunda busca: verificar autopeca (não encontrada)
       Vendedor.findOne.mockResolvedValue(mockVendedor);
       Cliente.findOne.mockResolvedValue(null);
-      Autopeca.findOne.mockResolvedValueOnce(mockAutopeca);
-      Autopeca.findOne.mockResolvedValueOnce(null);
 
       // Act
       await VendedorController.reativarVendedor(req, res);
@@ -481,6 +634,254 @@ describe("VendedorController", () => {
         },
       });
     });
+
+    it("deve retornar erro quando email já existe como cliente", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockUsuario = {
+        id: 2,
+        email: "vendedor@teste.com",
+        ativo: false,
+        tipo_usuario: "vendedor",
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: false,
+        usuario: mockUsuario,
+      };
+      const mockCliente = {
+        id: 1,
+        usuario_id: 2,
+        usuario: {
+          id: 2,
+          ativo: true, // Cliente ativo
+        },
+      };
+
+      Autopeca.findOne
+        .mockResolvedValueOnce(mockAutopeca) // Primeira busca na reativação
+        .mockResolvedValueOnce(null); // Segunda busca para verificar autopeca (não encontrada)
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+      Cliente.findOne.mockResolvedValue(mockCliente);
+
+      // Act
+      await VendedorController.reativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Não é possível reativar o vendedor",
+        errors: {
+          conflito: "Este email já está cadastrado como cliente/autopeça. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando email já existe como autopeça", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockUsuario = {
+        id: 2,
+        email: "vendedor@teste.com",
+        ativo: false,
+        tipo_usuario: "vendedor",
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: false,
+        usuario: mockUsuario,
+      };
+      const mockOutraAutopeca = {
+        id: 2,
+        usuario_id: 2,
+        usuario: {
+          id: 2,
+          ativo: true, // Autopeça ativa
+        },
+      };
+
+      Autopeca.findOne
+        .mockResolvedValueOnce(mockAutopeca) // Primeira busca na reativação
+        .mockResolvedValueOnce(mockOutraAutopeca); // Segunda busca para verificar autopeca
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+      Cliente.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.reativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Não é possível reativar o vendedor",
+        errors: {
+          conflito: "Este email já está cadastrado como cliente/autopeça. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando autopeça não é encontrada", async () => {
+      // Arrange
+      Autopeca.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.reativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Autopeça não encontrada",
+        errors: {
+          autopeca: "Perfil de autopeça não encontrado para este usuário",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro 500 quando ocorre erro interno", async () => {
+      // Arrange
+      Autopeca.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await VendedorController.reativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    });
   });
+
+  describe("atualizarVendedor", () => {
+    beforeEach(() => {
+      req.params = { vendedorId: "1" };
+    });
+
+    it("deve retornar erro quando autopeça não é encontrada", async () => {
+      // Arrange
+      Autopeca.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.atualizarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Autopeça não encontrada",
+        errors: {
+          autopeca: "Perfil de autopeça não encontrado para este usuário",
+        },
+      });
+    });
+
+    it("deve retornar erro quando não há campos para atualizar", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "João Vendedor",
+        ativo: true,
+        usuario: {
+          id: 2,
+          email: "vendedor@teste.com",
+          tipo_usuario: "vendedor",
+          ativo: true,
+        },
+      };
+
+      req.body = {}; // Nenhum campo para atualizar
+
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+
+      // Act
+      await VendedorController.atualizarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Não há alterações a serem salvas. Os dados fornecidos são idênticos aos atuais.",
+        errors: {
+          campos: "Nenhum campo válido foi modificado.",
+        },
+      });
+    });
+  });
+
+  describe("inativarVendedor", () => {
+    beforeEach(() => {
+      req.params = { vendedorId: "1" };
+    });
+
+    it("deve retornar erro quando autopeça não é encontrada", async () => {
+      // Arrange
+      Autopeca.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.inativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Autopeça não encontrada",
+        errors: {
+          autopeca: "Perfil de autopeça não encontrado para este usuário",
+        },
+      });
+    });
+
+    it("deve retornar erro quando vendedor não pertence à autopeça", async () => {
+      // Arrange
+      const mockAutopeca = { id: 1 };
+      Autopeca.findOne.mockResolvedValue(mockAutopeca);
+      Vendedor.findOne.mockResolvedValue(null);
+
+      // Act
+      await VendedorController.inativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Vendedor não encontrado",
+        errors: {
+          vendedor: "Vendedor não encontrado ou não pertence a esta autopeça",
+        },
+      });
+    });
+
+    it("deve retornar erro 500 quando ocorre erro interno", async () => {
+      // Arrange
+      Autopeca.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await VendedorController.inativarVendedor(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    });
+  });
+
 });
 

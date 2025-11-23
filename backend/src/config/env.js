@@ -11,7 +11,10 @@ const getBaseConfig = () => {
       frontendURL: process.env.FRONTEND_URL || `https://${domain}`,
       // API pode estar no mesmo domínio (/api) ou em subdomínio (api.pecaja.cloud)
       apiURL: process.env.API_URL || `https://api.${domain}`,
-      emailFrom: process.env.EMAIL_FROM || `contato@${domain}`,
+      // EMAIL_FROM: Deve usar o domínio verificado no Resend
+      // Formato: "PeçaJá <noreply@seudominio.com>" ou "PeçaJá <contato@seudominio.com>"
+      // Se não especificado, usa contato@[domain] com nome "PeçaJá"
+      emailFrom: process.env.EMAIL_FROM || `PeçaJá <contato@${domain}>`,
     };
   }
 
@@ -21,6 +24,7 @@ const getBaseConfig = () => {
     baseURL: process.env.APP_URL || "http://localhost:3000",
     frontendURL: process.env.FRONTEND_URL || "http://localhost:5173",
     apiURL: process.env.API_URL || "http://localhost:3001/api",
+    // Em desenvolvimento, usa o domínio padrão do Resend para testes
     emailFrom: process.env.EMAIL_FROM || "PeçaJá <onboarding@resend.dev>",
   };
 };
