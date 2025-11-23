@@ -6,6 +6,7 @@ const DeleteAccountModal = ({
   onClose,
   onConfirm,
   loading = false,
+  isOAuthAccount = false, // Indica se a conta foi criada via OAuth
 }) => {
   const [confirmText, setConfirmText] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +31,8 @@ const DeleteAccountModal = ({
       return;
     }
 
-    if (!password) {
+    // Senha só é obrigatória se NÃO for conta OAuth
+    if (!isOAuthAccount && !password) {
       setError("Informe sua senha para continuar.");
       return;
     }
@@ -39,7 +41,7 @@ const DeleteAccountModal = ({
     try {
       const result = await onConfirm?.({
         confirmacao: "CONFIRMAR",
-        senha: password,
+        senha: isOAuthAccount ? undefined : password, // Não enviar senha se for OAuth
       });
 
       if (result?.success) {
@@ -92,16 +94,25 @@ const DeleteAccountModal = ({
               disabled={loading}
             />
 
-            <Input
-              label="Senha"
-              id="senha_confirmacao"
-              name="senha_confirmacao"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              disabled={loading}
-            />
+            {!isOAuthAccount && (
+              <Input
+                label="Senha"
+                id="senha_confirmacao"
+                name="senha_confirmacao"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                disabled={loading}
+              />
+            )}
+            {isOAuthAccount && (
+              <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+                <p>
+                  <strong>Conta vinculada ao Google:</strong> Como sua conta foi criada via Google OAuth, não é necessário informar senha para excluir a conta.
+                </p>
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-red-600">{error}</p>

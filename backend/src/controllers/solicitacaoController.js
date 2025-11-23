@@ -277,42 +277,268 @@ class SolicitacaoController {
 
       await transaction.commit();
 
-      // 10. Enviar notificações para autopeças da mesma cidade (assíncrono)
+      // 10. Enviar emails para autopeças e vendedores ATIVOS da mesma cidade (assíncrono)
+      // Normalizar cidade e UF para comparação (trim e uppercase)
+      const cidadeNormalizada = novaSolicitacao.cidade_atendimento.trim();
+      const ufNormalizada = novaSolicitacao.uf_atendimento.trim().toUpperCase();
+
+      console.log("📧 [NOTIFICAÇÃO] Iniciando envio de emails para nova solicitação:");
+      console.log(`   - Solicitação ID: ${novaSolicitacao.id}`);
+      console.log(`   - Cidade: ${cidadeNormalizada}`);
+      console.log(`   - UF: ${ufNormalizada}`);
+
       try {
-        // Buscar autopeças da mesma cidade
+        // Buscar autopeças ATIVAS da mesma cidade (case-insensitive usando Op.iLike)
+        // Op.iLike funciona no PostgreSQL para busca case-insensitive
+        // Excluir o cliente que criou a solicitação (caso ele também seja autopeça)
         const autopecasDaCidade = await Autopeca.findAll({
           where: {
-            endereco_cidade: novaSolicitacao.cidade_atendimento,
-            endereco_uf: novaSolicitacao.uf_atendimento,
+            [Op.and]: [
+              {
+                endereco_cidade: {
+                  [Op.iLike]: cidadeNormalizada, // Case-insensitive
+                },
+              },
+              {
+                endereco_uf: {
+                  [Op.iLike]: ufNormalizada, // Case-insensitive (mas já está uppercase)
+                },
+              },
+              // Excluir o cliente que criou a solicitação
+              {
+                usuario_id: {
+                  [Op.ne]: cliente.usuario_id,
+                },
+              },
+            ],
           },
-          include: [{ association: "usuario" }],
+          include: [
+            {
+              model: Usuario,
+              as: "usuario",
+              where: {
+                ativo: true, // Apenas usuários ativos
+              },
+              required: true,
+              attributes: ["id", "email", "ativo"],
+            },
+          ],
         });
-
-        // Enviar notificação EMAIL para cada autopeça
-        autopecasDaCidade.forEach((autopeca) => {
-          if (autopeca.usuario && autopeca.usuario.email) {
-            emailService
-              .sendNewRequestNotification(
-                autopeca.usuario.email,
-                novaSolicitacao,
-                cliente, // já disponível no contexto
-                autopeca.razao_social
-              )
-              .catch((err) => console.log("Erro ao notificar autopeça:", err));
-          }
-        });
-
-        // Criar notificações IN-APP para autopeças
-        await NotificationService.notificarAutopecasNovaSolicitacao(
-          novaSolicitacao,
-          autopecasDaCidade
-        );
 
         console.log(
-          `📧 Notificações enviadas para ${autopecasDaCidade.length} autopeças`
+          `📧 [NOTIFICAÇÃO] Encontradas ${autopecasDaCidade.length} autopeças ativas em ${cidadeNormalizada}/${ufNormalizada}`
+        );
+
+        // Enviar email para cada autopeça ATIVA com delay para respeitar rate limit
+        // Resend permite 2 requisições por segundo, então vamos usar 600ms de delay (seguro)
+        let emailsEnviados = 0;
+        let emailsFalhados = 0;
+        
+        for (let i = 0; i < autopecasDaCidade.length; i++) {
+          const autopeca = autopecasDaCidade[i];
+          
+          if (autopeca.usuario && autopeca.usuario.email) {
+            try {
+              console.log(
+                `📧 [NOTIFICAÇÃO] Enviando email para autopeça: ${autopeca.razao_social || autopeca.nome_fantasia} (${autopeca.usuario.email})`
+              );
+              
+              const result = await emailService.sendNewRequestNotification(
+                autopeca.usuario.email,
+                novaSolicitacao,
+                cliente,
+                autopeca.razao_social || autopeca.nome_fantasia || "Autopeça"
+              );
+              
+              // Verificar se houve erro no resultado
+              if (result && result.error) {
+                emailsFalhados++;
+                console.error(
+                  `❌ [NOTIFICAÇÃO] Falha ao enviar email para autopeça ${autopeca.id} (${autopeca.usuario.email}): ${result.error}`
+                );
+              } else {
+                emailsEnviados++;
+                console.log(`✅ [NOTIFICAÇÃO] Email enviado com sucesso para ${autopeca.usuario.email}`);
+              }
+              
+              // Delay entre envios para respeitar rate limit (600ms = ~1.6 req/s, abaixo do limite de 2/s)
+              // Não fazer delay após o último email
+              if (i < autopecasDaCidade.length - 1) {
+                await new Promise((resolve) => setTimeout(resolve, 600));
+              }
+            } catch (err) {
+              emailsFalhados++;
+              console.error(
+                `❌ [NOTIFICAÇÃO] Erro ao enviar email para autopeça ${autopeca.id} (${autopeca.usuario.email}):`,
+                err.message || err
+              );
+            }
+          } else {
+            console.warn(
+              `⚠️ [NOTIFICAÇÃO] Autopeça ${autopeca.id} não tem email válido associado`
+            );
+          }
+        }
+
+        // Buscar vendedores ATIVOS da mesma cidade (através da autopeça)
+        // Excluir o cliente que criou a solicitação (caso ele também seja vendedor)
+        const vendedoresDaCidade = await Vendedor.findAll({
+          where: {
+            ativo: true, // Apenas vendedores ativos
+            // Excluir o cliente que criou a solicitação
+            usuario_id: {
+              [Op.ne]: cliente.usuario_id,
+            },
+          },
+          include: [
+            {
+              model: Autopeca,
+              as: "autopeca",
+              where: {
+                [Op.and]: [
+                  {
+                    endereco_cidade: {
+                      [Op.iLike]: cidadeNormalizada, // Case-insensitive
+                    },
+                  },
+                  {
+                    endereco_uf: {
+                      [Op.iLike]: ufNormalizada, // Case-insensitive (mas já está uppercase)
+                    },
+                  },
+                ],
+              },
+              required: true,
+            },
+            {
+              model: Usuario,
+              as: "usuario",
+              where: {
+                ativo: true, // Apenas usuários ativos
+              },
+              required: true,
+              attributes: ["id", "email", "ativo"],
+            },
+          ],
+        });
+
+        console.log(
+          `📧 [NOTIFICAÇÃO] Encontrados ${vendedoresDaCidade.length} vendedores ativos em ${cidadeNormalizada}/${ufNormalizada}`
+        );
+
+        // Criar um Set com os IDs das autopeças que já foram notificadas
+        // para evitar notificar vendedores de autopeças que já receberam email
+        const autopecasNotificadasIds = new Set(
+          autopecasDaCidade.map(ap => ap.id)
+        );
+        
+        // Criar um Set com os emails que já foram notificados
+        // para evitar duplicação de emails (caso vendedor e autopeça tenham o mesmo email)
+        const emailsNotificados = new Set(
+          autopecasDaCidade
+            .filter(ap => ap.usuario && ap.usuario.email)
+            .map(ap => ap.usuario.email.toLowerCase())
+        );
+
+        // Filtrar vendedores: excluir aqueles cuja autopeça já foi notificada
+        // OU cujo email já foi notificado (evitar duplicação)
+        const vendedoresParaNotificar = vendedoresDaCidade.filter(vendedor => {
+          // Se o vendedor pertence a uma autopeça que já foi notificada, não notificar o vendedor separadamente
+          // (a autopeça já recebeu o email e pode encaminhar internamente)
+          if (vendedor.autopeca && autopecasNotificadasIds.has(vendedor.autopeca.id)) {
+            console.log(
+              `⏭️ [NOTIFICAÇÃO] Pulando vendedor ${vendedor.id} (${vendedor.nome_completo}) - autopeça ${vendedor.autopeca.id} já foi notificada`
+            );
+            return false;
+          }
+          
+          // Se o email do vendedor já foi notificado, não notificar novamente
+          if (vendedor.usuario && vendedor.usuario.email) {
+            const emailVendedor = vendedor.usuario.email.toLowerCase();
+            if (emailsNotificados.has(emailVendedor)) {
+              console.log(
+                `⏭️ [NOTIFICAÇÃO] Pulando vendedor ${vendedor.id} (${vendedor.nome_completo}) - email ${emailVendedor} já foi notificado`
+              );
+              return false;
+            }
+          }
+          
+          return true;
+        });
+
+        console.log(
+          `📧 [NOTIFICAÇÃO] Após filtrar duplicações: ${vendedoresParaNotificar.length} vendedores para notificar`
+        );
+
+        // Se não houver destinatários, apenas logar e continuar
+        if (autopecasDaCidade.length === 0 && vendedoresParaNotificar.length === 0) {
+          console.log(
+            `ℹ️ [NOTIFICAÇÃO] Nenhuma autopeça ou vendedor ativo encontrado em ${cidadeNormalizada}/${ufNormalizada} para notificar`
+          );
+        }
+
+        // Delay antes de começar a enviar para vendedores (se houver autopeças)
+        if (autopecasDaCidade.length > 0 && vendedoresParaNotificar.length > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 600));
+        }
+
+        // Enviar email para cada vendedor ATIVO (após filtrar duplicações) com delay para respeitar rate limit
+        for (let i = 0; i < vendedoresParaNotificar.length; i++) {
+          const vendedor = vendedoresParaNotificar[i];
+          
+          if (vendedor.usuario && vendedor.usuario.email) {
+            try {
+              console.log(
+                `📧 [NOTIFICAÇÃO] Enviando email para vendedor: ${vendedor.nome_completo} (${vendedor.usuario.email})`
+              );
+              
+              const result = await emailService.sendNewRequestNotification(
+                vendedor.usuario.email,
+                novaSolicitacao,
+                cliente,
+                vendedor.nome_completo
+              );
+              
+              // Adicionar email à lista de notificados para evitar duplicação em caso de retentativas
+              emailsNotificados.add(vendedor.usuario.email.toLowerCase());
+              
+              // Verificar se houve erro no resultado
+              if (result && result.error) {
+                emailsFalhados++;
+                console.error(
+                  `❌ [NOTIFICAÇÃO] Falha ao enviar email para vendedor ${vendedor.id} (${vendedor.usuario.email}): ${result.error}`
+                );
+              } else {
+                emailsEnviados++;
+                console.log(`✅ [NOTIFICAÇÃO] Email enviado com sucesso para ${vendedor.usuario.email}`);
+              }
+              
+              // Delay entre envios para respeitar rate limit (600ms = ~1.6 req/s, abaixo do limite de 2/s)
+              // Não fazer delay após o último email
+              if (i < vendedoresParaNotificar.length - 1) {
+                await new Promise((resolve) => setTimeout(resolve, 600));
+              }
+            } catch (err) {
+              emailsFalhados++;
+              console.error(
+                `❌ [NOTIFICAÇÃO] Erro ao enviar email para vendedor ${vendedor.id} (${vendedor.usuario.email}):`,
+                err.message || err
+              );
+            }
+          } else {
+            console.warn(
+              `⚠️ [NOTIFICAÇÃO] Vendedor ${vendedor.id} não tem email válido associado`
+            );
+          }
+        }
+
+        console.log(
+          `📧 [NOTIFICAÇÃO] Resumo: ${emailsEnviados} emails enviados com sucesso, ${emailsFalhados} falharam (${autopecasDaCidade.length} autopeças + ${vendedoresDaCidade.length} vendedores)`
         );
       } catch (emailError) {
-        console.log("Erro no sistema de notificações:", emailError);
+        console.error("❌ [NOTIFICAÇÃO] Erro no sistema de envio de emails:", emailError);
+        console.error("❌ [NOTIFICAÇÃO] Stack trace:", emailError.stack);
+        // Não interrompe o fluxo principal se houver erro no envio de emails
       }
 
       // 11. Log de sucesso com informações da origem dos dados

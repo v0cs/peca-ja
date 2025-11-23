@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -17,8 +17,16 @@ import { cn } from "../lib/utils";
 
 const Registro = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, updateUser } = useAuth();
   const [searchParams] = useSearchParams();
+  
+  // Verificar se veio do OAuth
+  const isOAuth = searchParams.get("novoUsuario") === "true";
+  const contaExcluida = searchParams.get("contaExcluida") === "true";
+  const oauthEmail = searchParams.get("email") || "";
+  const oauthName = searchParams.get("name") || "";
+  const oauthGoogleId = searchParams.get("googleId") || "";
+  const oauthPicture = searchParams.get("picture") || "";
   
   // Tipo inicial baseado na query string ou padrão 'cliente'
   const initialType = searchParams.get("type") === "autopeca" ? "autopeca" : "cliente";
@@ -26,17 +34,17 @@ const Registro = () => {
 
   // Estado do formulário - campos comuns
   const [formData, setFormData] = useState({
-    email: "",
+    email: isOAuth ? oauthEmail : "",
     senha: "",
     confirmarSenha: "",
     termos_aceitos: false,
     // Campos de cliente
-    nome_completo: "",
+    nome_completo: isOAuth ? oauthName : "",
     celular: "",
     cidade: "",
     uf: "",
     // Campos de autopeça
-    razao_social: "",
+    razao_social: isOAuth ? oauthName : "",
     nome_fantasia: "",
     cnpj: "",
     telefone: "",
@@ -46,11 +54,28 @@ const Registro = () => {
     endereco_bairro: "",
     endereco_cidade: "",
     endereco_uf: "",
+    // Campos OAuth
+    google_id: oauthGoogleId,
+    picture: oauthPicture,
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Atualizar estado do formulário quando os parâmetros OAuth mudarem
+  useEffect(() => {
+    if (isOAuth && oauthEmail) {
+      setFormData((prev) => ({
+        ...prev,
+        email: oauthEmail,
+        nome_completo: tipoUsuario === "cliente" ? oauthName : prev.nome_completo,
+        razao_social: tipoUsuario === "autopeca" ? oauthName : prev.razao_social,
+        google_id: oauthGoogleId,
+        picture: oauthPicture,
+      }));
+    }
+  }, [isOAuth, oauthEmail, oauthName, oauthGoogleId, oauthPicture, tipoUsuario]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -89,12 +114,15 @@ const Registro = () => {
       newErrors.email = "Email inválido";
     }
 
+    // Senha só é obrigatória se NÃO for OAuth
+    if (!isOAuth) {
     if (formData.senha.length < 6) {
       newErrors.senha = "A senha deve ter pelo menos 6 caracteres";
     }
 
     if (formData.senha !== formData.confirmarSenha) {
       newErrors.confirmarSenha = "As senhas não coincidem";
+      }
     }
 
     if (!formData.termos_aceitos) {
@@ -157,18 +185,23 @@ const Registro = () => {
         endpoint = "/auth/register";
         payload = {
           email: formData.email,
-          senha: formData.senha,
           nome_completo: formData.nome_completo,
           celular: formData.celular,
           cidade: formData.cidade,
           uf: formData.uf,
           termos_aceitos: formData.termos_aceitos,
         };
+        
+        // Adicionar senha ou google_id conforme o caso
+        if (isOAuth && formData.google_id) {
+          payload.google_id = formData.google_id;
+        } else {
+          payload.senha = formData.senha;
+        }
       } else {
         endpoint = "/auth/register-autopeca";
         payload = {
           email: formData.email,
-          senha: formData.senha,
           razao_social: formData.razao_social,
           nome_fantasia: formData.nome_fantasia || undefined,
           cnpj: formData.cnpj.replace(/\D/g, ""), // Remove formatação: apenas números
@@ -181,19 +214,47 @@ const Registro = () => {
           endereco_uf: formData.endereco_uf,
           termos_aceitos: formData.termos_aceitos,
         };
+        
+        // Adicionar senha ou google_id conforme o caso
+        if (isOAuth && formData.google_id) {
+          payload.google_id = formData.google_id;
+        } else {
+          payload.senha = formData.senha;
+        }
       }
 
       const response = await api.post(endpoint, payload);
 
       if (response.data.success) {
-        // Fazer login automático após cadastro
+        // Se for OAuth, o backend já retornou o token
+        if (isOAuth && response.data.token) {
+          // Salvar token e dados do usuário
+          localStorage.setItem("token", response.data.token);
+          if (response.data.user) {
+            localStorage.setItem("user", JSON.stringify(response.data.user));
+            updateUser(response.data.user, response.data.token);
+          }
+          
+          // Redirecionar baseado no tipo de usuário
+          const userType = response.data.user?.tipo_usuario || tipoUsuario;
+          if (userType === "cliente") {
+            navigate("/dashboard/cliente");
+          } else {
+            navigate("/dashboard/autopeca");
+          }
+        } else {
+          // Fazer login automático após cadastro (não OAuth)
         const loginResult = await login(formData.email, formData.senha);
 
         if (loginResult.success) {
-          const dashboardPath = tipoUsuario === "cliente" ? "/dashboard/cliente" : "/dashboard/autopeca";
+          // Usar o tipo_usuario retornado pelo backend ao invés da variável do formulário
+          // Isso garante que o redirecionamento seja baseado no tipo real do usuário no banco
+          const userType = loginResult.user?.tipo_usuario || tipoUsuario;
+          const dashboardPath = userType === "cliente" ? "/dashboard/cliente" : "/dashboard/autopeca";
           navigate(dashboardPath);
         } else {
           navigate("/login");
+          }
         }
       }
     } catch (err) {
@@ -218,8 +279,31 @@ const Registro = () => {
       <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold mb-2">Criar Conta</h2>
+            <h2 className="text-3xl font-bold mb-2">
+              {isOAuth ? "Complete seu Cadastro" : "Criar Conta"}
+            </h2>
+            {isOAuth && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  {contaExcluida
+                    ? "Sua conta anterior foi excluída. Complete os dados abaixo para criar uma nova conta."
+                    : "Você iniciou o cadastro com Google. Complete os dados abaixo para finalizar."}
+                </p>
+              </div>
+            )}
             <p className="text-muted-foreground">
+              {isOAuth ? (
+                <>
+                  Deseja fazer login?{" "}
+                  <Link
+                    to="/login"
+                    className="font-medium text-primary hover:text-primary/80"
+                  >
+                    Ir para login
+                  </Link>
+                </>
+              ) : (
+                <>
               Já tem uma conta?{" "}
               <Link
                 to="/login"
@@ -227,6 +311,8 @@ const Registro = () => {
               >
                 Faça login
               </Link>
+                </>
+              )}
             </p>
           </div>
 
@@ -344,10 +430,18 @@ const Registro = () => {
                       onChange={handleChange}
                       placeholder={tipoUsuario === "cliente" ? "seu@email.com" : "contato@autopeca.com"}
                       required
+                      disabled={isOAuth}
                       error={errors.email}
                     />
+                    {isOAuth && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Email vinculado à sua conta Google
+                      </p>
+                    )}
                   </div>
 
+                  {!isOAuth && (
+                    <>
                   <div>
                     <Input
                       label="Senha"
@@ -373,6 +467,15 @@ const Registro = () => {
                       error={errors.confirmarSenha}
                     />
                   </div>
+                    </>
+                  )}
+                  {isOAuth && (
+                    <div className="md:col-span-2 p-3 bg-muted/50 rounded-lg border border-border">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Autenticação via Google:</strong> Você não precisa criar uma senha. Sua conta será protegida pela autenticação do Google.
+                      </p>
+                    </div>
+                  )}
 
                   {tipoUsuario === "cliente" ? (
                     <>
@@ -564,6 +667,45 @@ const Registro = () => {
               </form>
             </CardContent>
           </Card>
+
+          {/* Botão Google OAuth - apenas se não for OAuth */}
+          {!isOAuth && (
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                    OU
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full flex items-center justify-center gap-2 mt-4"
+                onClick={() => {
+                  const apiURL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+                  window.location.href = `${apiURL}/auth/google`;
+                }}
+                disabled={loading}
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                Cadastrar com Google
+              </Button>
+            </div>
+          )}
         </div>
       </main>
 

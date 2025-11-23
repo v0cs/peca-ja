@@ -1,16 +1,14 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const AuthController = require("../../../src/controllers/authController");
-const { Usuario, Cliente, Autopeca } = require("../../../src/models");
+const { Usuario, Cliente, Autopeca, Vendedor } = require("../../../src/models");
+const config = require("../../../src/config/env");
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
   Usuario: {
     sequelize: {
-      transaction: jest.fn(() => ({
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      })),
+      transaction: jest.fn(),
     },
     findOne: jest.fn(),
     create: jest.fn(),
@@ -22,6 +20,16 @@ jest.mock("../../../src/models", () => ({
     findOne: jest.fn(),
     create: jest.fn(),
   },
+  Vendedor: {
+    findOne: jest.fn(),
+  },
+}));
+
+// Mock do config
+jest.mock("../../../src/config/env", () => ({
+  frontendURL: "http://localhost:5173",
+  JWT_SECRET: "test-secret",
+  JWT_EXPIRES_IN: "24h",
 }));
 
 // Mock do bcrypt
@@ -46,6 +54,7 @@ describe("AuthController", () => {
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
+      redirect: jest.fn(),
     };
 
     // Mock transaction
@@ -54,7 +63,10 @@ describe("AuthController", () => {
       rollback: jest.fn(),
     };
 
-    Usuario.sequelize.transaction.mockResolvedValue(mockTransaction);
+    // Reconfigurar mock de transaction após clearAllMocks
+    if (Usuario.sequelize) {
+      Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
+    }
   });
 
   describe("register", () => {
@@ -500,6 +512,573 @@ describe("AuthController", () => {
           senha: "Senha é obrigatória",
         },
       });
+    });
+  });
+
+  describe("googleCallback", () => {
+    beforeEach(() => {
+      req.user = {
+        googleId: "google-123",
+        email: "teste@teste.com",
+        name: "Teste User",
+        picture: "https://example.com/picture.jpg",
+      };
+      jwt.sign.mockReturnValue("jwt-token");
+    });
+
+    it("deve retornar erro 400 quando email não está disponível", async () => {
+      // Arrange
+      req.user = { googleId: "google-123" }; // Sem email
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Email não encontrado no perfil do Google",
+        errors: {
+          email: "Não foi possível obter o email do Google. Tente novamente.",
+        },
+      });
+    });
+
+    it("deve redirecionar para cadastro quando usuário não existe", async () => {
+      // Arrange
+      Usuario.findOne.mockResolvedValue(null);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(Usuario.findOne).toHaveBeenCalled();
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/cadastrar?email=")
+      );
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("novoUsuario=true")
+      );
+    });
+
+    it("deve redirecionar para recadastro quando usuário está inativo", async () => {
+      // Arrange
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "cliente",
+        ativo: false,
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/cadastrar?email=")
+      );
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("contaExcluida=true")
+      );
+    });
+
+    it("deve fazer login com sucesso para cliente existente", async () => {
+      // Arrange
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "cliente",
+        ativo: true,
+        google_id: null,
+        update: jest.fn(),
+        cliente: {
+          id: 1,
+          nome_completo: "Teste User",
+          celular: "(11)99999-9999",
+          cidade: "São Paulo",
+          uf: "SP",
+        },
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(mockUsuario.update).toHaveBeenCalledWith({
+        google_id: "google-123",
+      });
+      expect(jwt.sign).toHaveBeenCalled();
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?token=")
+      );
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("success=true")
+      );
+    });
+
+    it("deve fazer login com sucesso para autopeca existente", async () => {
+      // Arrange
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "autopeca",
+        ativo: true,
+        google_id: "google-123",
+        autopeca: {
+          id: 1,
+          razao_social: "Auto Peças LTDA",
+          nome_fantasia: "Auto Peças",
+          cnpj: "11222333000181",
+          telefone: "(11)99999-9999",
+          endereco_cidade: "São Paulo",
+          endereco_uf: "SP",
+        },
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(jwt.sign).toHaveBeenCalled();
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?token=")
+      );
+    });
+
+    it("deve fazer login com sucesso para vendedor existente", async () => {
+      // Arrange
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "vendedor",
+        ativo: true,
+        google_id: "google-123",
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "Vendedor Teste",
+        ativo: true,
+        autopeca_id: 1,
+        autopeca: {
+          id: 1,
+          usuario: {
+            id: 2,
+            ativo: true,
+          },
+        },
+      };
+
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(Vendedor.findOne).toHaveBeenCalled();
+      expect(jwt.sign).toHaveBeenCalled();
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?token=")
+      );
+    });
+
+    it("deve redirecionar com erro quando vendedor não está ativo", async () => {
+      // Arrange
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "vendedor",
+        ativo: true,
+        google_id: "google-123",
+      };
+
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+      Vendedor.findOne.mockResolvedValue(null);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?success=false")
+      );
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("error=")
+      );
+    });
+
+    it("deve redirecionar com erro quando autopeça do vendedor está inativa", async () => {
+      // Arrange
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "vendedor",
+        ativo: true,
+        google_id: "google-123",
+      };
+      const mockVendedor = {
+        id: 1,
+        nome_completo: "Vendedor Teste",
+        ativo: true,
+        autopeca_id: 1,
+        autopeca: {
+          id: 1,
+          usuario: {
+            id: 2,
+            ativo: false, // Autopeça inativa
+          },
+        },
+      };
+
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+      Vendedor.findOne.mockResolvedValue(mockVendedor);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?success=false")
+      );
+    });
+
+    it("deve retornar erro 500 quando JWT_SECRET não está configurado", async () => {
+      // Arrange
+      const originalJWTSecret = config.JWT_SECRET;
+      const originalEnvJWTSecret = process.env.JWT_SECRET;
+      
+      // Mock config para retornar null para JWT_SECRET
+      Object.defineProperty(config, "JWT_SECRET", {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
+      delete process.env.JWT_SECRET;
+
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "cliente",
+        ativo: true,
+        google_id: "google-123",
+        cliente: {
+          id: 1,
+          nome_completo: "Teste User",
+        },
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Configuração de segurança não encontrada",
+        errors: {
+          message: "Configuração de segurança não encontrada",
+        },
+      });
+
+      // Restore
+      Object.defineProperty(config, "JWT_SECRET", {
+        value: originalJWTSecret,
+        writable: true,
+        configurable: true,
+      });
+      if (originalEnvJWTSecret) {
+        process.env.JWT_SECRET = originalEnvJWTSecret;
+      }
+    });
+
+    it("deve redirecionar com erro quando ocorre exceção", async () => {
+      // Arrange
+      Usuario.findOne.mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await AuthController.googleCallback(req, res);
+
+      // Assert
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?success=false")
+      );
+      expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("error=")
+      );
+    });
+  });
+
+  describe("logout", () => {
+    it("deve fazer logout com sucesso", async () => {
+      // Arrange
+      req.user = { userId: 1, tipo: "cliente" };
+
+      // Act
+      await AuthController.logout(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Logout realizado com sucesso",
+        data: {
+          usuario_id: 1,
+          tipo: "cliente",
+          logout_timestamp: expect.any(String),
+        },
+      });
+    });
+
+    it("deve retornar erro 500 quando ocorre exceção", async () => {
+      // Arrange
+      req.user = { userId: 1, tipo: "cliente" };
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+      // Simular erro fazendo req.user ser undefined para causar erro no código
+      const originalUser = req.user;
+      delete req.user;
+
+      // Act
+      await AuthController.logout(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro ao fazer logout",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      
+      // Restore
+      req.user = originalUser;
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe("me", () => {
+    it("deve retornar informações do usuário cliente com sucesso", async () => {
+      // Arrange
+      req.user = { userId: 1, tipo: "cliente" };
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "cliente",
+        ativo: true,
+        termos_aceitos: true,
+        data_aceite_terms: new Date(),
+        consentimento_marketing: false,
+        google_id: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+        cliente: {
+          id: 1,
+          nome_completo: "João Silva",
+          telefone: "(11)1234-5678",
+          celular: "(11)98765-4321",
+          cidade: "São Paulo",
+          uf: "SP",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        autopeca: null,
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.me(req, res);
+
+      // Assert
+      expect(Usuario.findOne).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: [
+          {
+            model: Cliente,
+            as: "cliente",
+            required: false,
+          },
+          {
+            model: Autopeca,
+            as: "autopeca",
+            required: false,
+          },
+        ],
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Informações do usuário recuperadas com sucesso",
+        data: {
+          usuario: {
+            id: 1,
+            email: "teste@teste.com",
+            tipo_usuario: "cliente",
+            ativo: true,
+            termos_aceitos: true,
+            data_aceite_terms: mockUsuario.data_aceite_terms,
+            consentimento_marketing: false,
+            google_id: null,
+            created_at: mockUsuario.created_at,
+            updated_at: mockUsuario.updated_at,
+          },
+          cliente: {
+            id: 1,
+            nome_completo: "João Silva",
+            telefone: "(11)1234-5678",
+            celular: "(11)98765-4321",
+            cidade: "São Paulo",
+            uf: "SP",
+            created_at: mockUsuario.cliente.created_at,
+            updated_at: mockUsuario.cliente.updated_at,
+          },
+        },
+      });
+    });
+
+    it("deve retornar informações do usuário autopeca com sucesso", async () => {
+      // Arrange
+      req.user = { userId: 2, tipo: "autopeca" };
+      const mockUsuario = {
+        id: 2,
+        email: "autopeca@teste.com",
+        tipo_usuario: "autopeca",
+        ativo: true,
+        termos_aceitos: true,
+        data_aceite_terms: new Date(),
+        consentimento_marketing: true,
+        google_id: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+        cliente: null,
+        autopeca: {
+          id: 1,
+          razao_social: "Auto Peças Teste LTDA",
+          nome_fantasia: "Auto Peças Teste",
+          cnpj: "12345678000190",
+          telefone: "(11)1234-5678",
+          endereco_rua: "Rua Teste",
+          endereco_numero: "123",
+          endereco_bairro: "Centro",
+          endereco_cidade: "São Paulo",
+          endereco_uf: "SP",
+          endereco_cep: "12345678",
+          data_criacao: new Date(),
+          data_atualizacao: new Date(),
+        },
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.me(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Informações do usuário recuperadas com sucesso",
+        data: {
+          usuario: {
+            id: 2,
+            email: "autopeca@teste.com",
+            tipo_usuario: "autopeca",
+            ativo: true,
+            termos_aceitos: true,
+            data_aceite_terms: mockUsuario.data_aceite_terms,
+            consentimento_marketing: true,
+            google_id: null,
+            created_at: mockUsuario.created_at,
+            updated_at: mockUsuario.updated_at,
+          },
+          autopeca: {
+            id: 1,
+            razao_social: "Auto Peças Teste LTDA",
+            nome_fantasia: "Auto Peças Teste",
+            cnpj: "12345678000190",
+            telefone: "(11)1234-5678",
+            endereco_rua: "Rua Teste",
+            endereco_numero: "123",
+            endereco_bairro: "Centro",
+            endereco_cidade: "São Paulo",
+            endereco_uf: "SP",
+            endereco_cep: "12345678",
+            created_at: mockUsuario.autopeca.data_criacao,
+            updated_at: mockUsuario.autopeca.data_atualizacao,
+          },
+        },
+      });
+    });
+
+    it("deve retornar erro 404 quando usuário não encontrado", async () => {
+      // Arrange
+      req.user = { userId: 999, tipo: "cliente" };
+      Usuario.findOne.mockResolvedValue(null);
+
+      // Act
+      await AuthController.me(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Usuário não encontrado",
+        errors: {
+          user: "Usuário não existe no sistema",
+        },
+      });
+    });
+
+    it("deve retornar erro 403 quando conta está inativa", async () => {
+      // Arrange
+      req.user = { userId: 1, tipo: "cliente" };
+      const mockUsuario = {
+        id: 1,
+        email: "teste@teste.com",
+        tipo_usuario: "cliente",
+        ativo: false,
+        cliente: null,
+        autopeca: null,
+      };
+      Usuario.findOne.mockResolvedValue(mockUsuario);
+
+      // Act
+      await AuthController.me(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Conta inativa",
+        errors: {
+          conta: "Sua conta está inativa. Entre em contato com o suporte.",
+        },
+      });
+    });
+
+    it("deve retornar erro 500 quando ocorre exceção", async () => {
+      // Arrange
+      req.user = { userId: 1, tipo: "cliente" };
+      Usuario.findOne.mockRejectedValue(new Error("Database error"));
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+      // Act
+      await AuthController.me(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+      consoleErrorSpy.mockRestore();
     });
   });
 });

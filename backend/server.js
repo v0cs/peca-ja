@@ -1,13 +1,75 @@
+// Carregar variáveis de ambiente PRIMEIRO (antes de qualquer importação)
+// Procurar .env primeiro na raiz do projeto, depois em backend/
+const path = require("path");
+const fs = require("fs");
+
+// Tentar carregar .env da raiz do projeto primeiro, depois de backend/
+const rootEnvPath = path.join(__dirname, "..", ".env");
+const backendEnvPath = path.join(__dirname, ".env");
+
+const envPath = fs.existsSync(rootEnvPath) ? rootEnvPath : backendEnvPath;
+
+// Debug: mostrar qual arquivo está sendo carregado
+if (fs.existsSync(rootEnvPath)) {
+  console.log(`📄 Carregando .env de: ${rootEnvPath}`);
+} else if (fs.existsSync(backendEnvPath)) {
+  console.log(`📄 Carregando .env de: ${backendEnvPath}`);
+} else {
+  console.warn(`⚠️  Arquivo .env não encontrado em: ${rootEnvPath} ou ${backendEnvPath}`);
+}
+
+// CORREÇÃO: Converter arquivo UTF-16 para UTF-8 se necessário
+if (fs.existsSync(envPath)) {
+  try {
+    // Tentar ler como UTF-8 primeiro
+    let content = fs.readFileSync(envPath, "utf8");
+    
+    // Se o conteúdo parece estar em UTF-16 (tem \x00 entre caracteres), converter
+    if (content.includes("\x00")) {
+      console.log("⚠️  Arquivo .env está em UTF-16. Convertendo para UTF-8...");
+      // Ler como UTF-16LE e converter para UTF-8
+      const buffer = fs.readFileSync(envPath);
+      // Remover BOM se existir e converter
+      content = buffer.toString("utf16le").replace(/^\ufeff/, "");
+      // Salvar como UTF-8
+      fs.writeFileSync(envPath, content, "utf8");
+      console.log("✅ Arquivo .env convertido para UTF-8");
+    }
+  } catch (error) {
+    console.warn(`⚠️  Aviso ao processar .env: ${error.message}`);
+  }
+}
+
+const result = require("dotenv").config({ path: envPath });
+
+// Debug: mostrar quantas variáveis foram carregadas
+if (result.parsed) {
+  const googleVars = Object.keys(result.parsed).filter(key => key.includes("GOOGLE"));
+  console.log(`✅ ${Object.keys(result.parsed).length} variáveis carregadas do .env`);
+  if (googleVars.length > 0) {
+    console.log(`   Variáveis Google encontradas: ${googleVars.join(", ")}`);
+  }
+} else if (result.error) {
+  console.error(`❌ Erro ao carregar .env: ${result.error.message}`);
+} else {
+  console.warn(`⚠️  Nenhuma variável foi carregada do .env. Verifique o formato do arquivo (deve ser UTF-8).`);
+}
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const path = require("path");
 
 // Importar configuração centralizada
 const config = require("./src/config/env");
 
 // Importar conexão do banco de dados
 const { sequelize } = require("./src/config/database");
+
+// Importar e inicializar Passport para OAuth
+require("./src/config/passport");
+
+// Importar middlewares
+const { generalRateLimiter } = require("./src/middleware");
 
 // Importar todas as rotas organizadas
 const routes = require("./src/routes");
@@ -23,7 +85,31 @@ app.use(
     crossOriginEmbedderPolicy: false,
   })
 );
-app.use(cors());
+
+// Configurar CORS dinamicamente baseado em ambiente
+const corsOptions = {
+  origin: config.isProduction
+    ? [
+        `https://${config.domain}`,
+        `https://www.${config.domain}`,
+        config.frontendURL,
+      ].filter(Boolean)
+    : [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:3001",
+      ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// Aplicar rate limiting global ANTES de processar o body
+// Isso evita processamento desnecessário em caso de rate limit excedido
+app.use(generalRateLimiter);
+
 app.use(express.json());
 
 // Configurar todas as rotas com prefixo /api
@@ -60,10 +146,19 @@ app.listen(PORT, async () => {
   }
 
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📋 Rotas disponíveis:`);
+  console.log(`\n🛡️  Rate Limiting Global Ativo:`);
+  console.log(`   Geral: ${config.RATE_LIMIT_MAX_REQUESTS} requisições / ${config.RATE_LIMIT_WINDOW_MS / 1000 / 60} minutos`);
+  console.log(`   Autenticação: ${config.RATE_LIMIT_AUTH_MAX} tentativas / 15 minutos`);
+  console.log(`   API: ${config.RATE_LIMIT_API_MAX} requisições / 15 minutos`);
+  console.log(`   Upload: ${config.RATE_LIMIT_UPLOAD_MAX} uploads / hora`);
+  console.log(`   Solicitações: ${config.RATE_LIMIT_SOLICITATION_MAX} criações / hora`);
+  console.log(`   Cadastro Vendedores: ${config.RATE_LIMIT_VENDEDOR_MAX} cadastros / dia`);
+  console.log(`\n📋 Rotas disponíveis:`);
   console.log(`   GET  /api/health`);
   console.log(`   POST /api/auth/register`);
   console.log(`   POST /api/auth/login`);
+  console.log(`   GET  /api/auth/google`);
+  console.log(`   GET  /api/auth/google/callback`);
   console.log(`   GET  /api/auth/me`);
   console.log(`   POST /api/solicitacoes`);
   console.log(`   GET  /api/solicitacoes`);

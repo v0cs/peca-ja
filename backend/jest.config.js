@@ -7,7 +7,7 @@ module.exports = {
     "!src/**/*.spec.js",
   ],
   coverageDirectory: "coverage",
-  coverageReporters: ["text", "lcov", "html"],
+  coverageReporters: ["text", "text-summary", "lcov", "html"],
   setupFilesAfterEnv: ["<rootDir>/tests/setup.js"],
   testTimeout: 30000,
   verbose: true,

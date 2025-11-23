@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const config = require("../config/env");
 const {
   Usuario,
   Cliente,
@@ -113,16 +114,23 @@ class AuthController {
 
     try {
       // 1. Validar campos obrigatórios
-      const { nome_completo, email, senha, celular, cidade, uf } = req.body;
+      const { nome_completo, email, senha, celular, cidade, uf, google_id } = req.body;
+
+      // Verificar se é registro via OAuth
+      const isOAuth = !!google_id;
 
       const camposObrigatorios = {
         nome_completo,
         email,
-        senha,
         celular,
         cidade,
         uf,
       };
+
+      // Senha só é obrigatória se NÃO for OAuth
+      if (!isOAuth) {
+        camposObrigatorios.senha = senha;
+      }
 
       // Verificar se todos os campos obrigatórios foram fornecidos
       const camposFaltando = Object.entries(camposObrigatorios)
@@ -155,9 +163,11 @@ class AuthController {
         errors.email = "Formato de email inválido";
       }
 
-      // Validar senha (mínimo 6 caracteres)
-      if (senha.length < 6) {
+      // Validar senha (mínimo 6 caracteres) - só se não for OAuth
+      if (!isOAuth) {
+        if (!senha || senha.length < 6) {
         errors.senha = "A senha deve ter pelo menos 6 caracteres";
+        }
       }
 
       // Validar celular (formato brasileiro)
@@ -259,21 +269,33 @@ class AuthController {
 
         // Se o email existe mas a conta está inativa, reativar e atualizar dados
         // Isso preserva histórico (solicitações, notificações, etc.) e permite reuso seguro
-        const saltRounds = 12;
-        const senhaHash = await bcrypt.hash(senha, saltRounds);
-
-        // Reativar usuário e atualizar senha
-        await emailExistente.update(
-          {
+        const updateData = {
             ativo: true,
-            senha_hash: senhaHash,
             termos_aceitos: true,
             data_aceite_terms: new Date(),
             tipo_usuario: "cliente",
             senha_temporaria: false,
-          },
-          { transaction }
-        );
+        };
+
+        // Se for OAuth, atualizar google_id, senão atualizar senha
+        if (isOAuth && google_id) {
+          updateData.google_id = google_id;
+          // Para OAuth, podemos deixar senha_hash como está ou gerar um hash aleatório
+          // Vamos manter a senha_hash existente se houver, senão gerar uma aleatória
+          if (!emailExistente.senha_hash) {
+            const saltRounds = 12;
+            updateData.senha_hash = await bcrypt.hash(
+              crypto.randomBytes(32).toString("hex"),
+              saltRounds
+            );
+          }
+        } else {
+          const saltRounds = 12;
+          updateData.senha_hash = await bcrypt.hash(senha, saltRounds);
+        }
+
+        // Reativar usuário e atualizar dados
+        await emailExistente.update(updateData, { transaction });
 
         // Se havia autopeça associada, mantemos como registro histórico,
         // mas garantimos que não esteja ativa após a conversão.
@@ -292,8 +314,8 @@ class AuthController {
           await emailExistente.cliente.update(
             {
               nome_completo: nome_completo.trim(),
-              telefone: formatarTelefoneBanco(celular) || celularFormatado,
-              celular: celularFormatado,
+            telefone: formatarTelefoneBanco(celular) || celularFormatado,
+            celular: celularFormatado,
               cidade: cidade.trim(),
               uf: uf.toUpperCase().trim(),
               data_exclusao_pedida: null, // Limpar data de exclusão se existir
@@ -306,8 +328,8 @@ class AuthController {
             {
               usuario_id: emailExistente.id,
               nome_completo: nome_completo.trim(),
-              telefone: formatarTelefoneBanco(celular) || celularFormatado,
-              celular: celularFormatado,
+            telefone: formatarTelefoneBanco(celular) || celularFormatado,
+            celular: celularFormatado,
               cidade: cidade.trim(),
               uf: uf.toUpperCase().trim(),
             },
@@ -371,23 +393,33 @@ class AuthController {
         });
       }
 
-      // 4. Fazer hash da senha com bcryptjs (cost 12)
-      const saltRounds = 12;
-      const senhaHash = await bcrypt.hash(senha, saltRounds);
-
-      // 5. Criar registro na tabela Usuarios
-      const novoUsuario = await Usuario.create(
-        {
+      // 4. Preparar dados do usuário
+      const usuarioData = {
           email: email.toLowerCase().trim(),
-          senha_hash: senhaHash,
           tipo_usuario: "cliente",
           termos_aceitos: true,
           data_aceite_terms: new Date(),
           ativo: true,
           consentimento_marketing: false,
-        },
-        { transaction }
-      );
+      };
+
+      // Se for OAuth, adicionar google_id e gerar senha_hash aleatória
+      // Se não for OAuth, fazer hash da senha normalmente
+      if (isOAuth && google_id) {
+        usuarioData.google_id = google_id;
+        // Gerar senha_hash aleatória (não será usada, mas o campo é obrigatório)
+        const saltRounds = 12;
+        usuarioData.senha_hash = await bcrypt.hash(
+          crypto.randomBytes(32).toString("hex"),
+          saltRounds
+        );
+      } else {
+        const saltRounds = 12;
+        usuarioData.senha_hash = await bcrypt.hash(senha, saltRounds);
+      }
+
+      // 5. Criar registro na tabela Usuarios
+      const novoUsuario = await Usuario.create(usuarioData, { transaction });
 
       // 6. Criar registro na tabela Clientes
       const novoCliente = await Cliente.create(
@@ -417,8 +449,24 @@ class AuthController {
         console.log("Erro no envio de email:", emailError);
       }
 
-      // 9. Retornar sucesso (201)
-      return res.status(201).json({
+      // 9. Gerar token JWT se for OAuth (para login automático)
+      let token = null;
+      if (isOAuth && google_id) {
+        const jwtSecret = config.JWT_SECRET || process.env.JWT_SECRET;
+        if (jwtSecret) {
+          token = jwt.sign(
+            {
+              userId: novoUsuario.id,
+              tipo: novoUsuario.tipo_usuario,
+            },
+            jwtSecret,
+            { expiresIn: "7d" }
+          );
+        }
+      }
+
+      // 10. Retornar sucesso (201)
+      const responseData = {
         success: true,
         message: "Cliente registrado com sucesso",
         data: {
@@ -438,7 +486,19 @@ class AuthController {
             uf: novoCliente.uf,
           },
         },
-      });
+      };
+
+      // Adicionar token e dados completos do usuário se for OAuth
+      if (token) {
+        responseData.token = token;
+        responseData.user = {
+          ...responseData.data.usuario,
+          cliente: responseData.data.cliente,
+          perfil: responseData.data.cliente,
+        };
+      }
+
+      return res.status(201).json(responseData);
     } catch (error) {
       // Rollback da transação em caso de erro
       await transaction.rollback();
@@ -544,7 +604,11 @@ class AuthController {
         endereco_cidade,
         endereco_uf,
         endereco_cep,
+        google_id,
       } = req.body;
+
+      // Verificar se é registro via OAuth
+      const isOAuth = !!google_id;
 
       if (process.env.NODE_ENV === "development") {
         console.log("Campos extraídos:", {
@@ -554,12 +618,12 @@ class AuthController {
           telefone,
           endereco_cidade,
           endereco_uf,
+          isOAuth,
         });
       }
 
       const camposObrigatorios = {
         email,
-        senha,
         razao_social,
         cnpj,
         telefone,
@@ -570,6 +634,11 @@ class AuthController {
         endereco_uf,
         endereco_cep,
       };
+
+      // Senha só é obrigatória se NÃO for OAuth
+      if (!isOAuth) {
+        camposObrigatorios.senha = senha;
+      }
 
       // Verificar se todos os campos obrigatórios foram fornecidos
       const camposFaltando = Object.entries(camposObrigatorios)
@@ -602,9 +671,11 @@ class AuthController {
         errors.email = "Formato de email inválido";
       }
 
-      // Validar senha (mínimo 6 caracteres)
-      if (senha.length < 6) {
+      // Validar senha (mínimo 6 caracteres) - só se não for OAuth
+      if (!isOAuth) {
+        if (!senha || senha.length < 6) {
         errors.senha = "A senha deve ter pelo menos 6 caracteres";
+        }
       }
 
       // Validar CNPJ (formato e algoritmo)
@@ -667,6 +738,11 @@ class AuthController {
             as: "autopeca",
             required: false,
           },
+          {
+            model: Cliente,
+            as: "cliente",
+            required: false,
+          },
         ],
         transaction,
       });
@@ -724,19 +800,45 @@ class AuthController {
           );
         }
 
-        const saltRounds = 12;
-        const senhaHash = await bcrypt.hash(senha, saltRounds);
+        // Preparar dados de atualização
+        const updateData = {
+          ativo: true,
+          termos_aceitos: true,
+          data_aceite_terms: new Date(),
+          tipo_usuario: "autopeca", // Atualizar tipo para autopeca
+          senha_temporaria: false,
+        };
 
-        // Reativar usuário e atualizar senha
-        await emailExistente.update(
-          {
-            ativo: true,
-            senha_hash: senhaHash,
-            termos_aceitos: true,
-            data_aceite_terms: new Date(),
-          },
-          { transaction }
-        );
+        // Se for OAuth, atualizar google_id, senão atualizar senha
+        if (isOAuth && google_id) {
+          updateData.google_id = google_id;
+          // Para OAuth, podemos deixar senha_hash como está ou gerar um hash aleatório
+          if (!emailExistente.senha_hash) {
+        const saltRounds = 12;
+            updateData.senha_hash = await bcrypt.hash(
+              crypto.randomBytes(32).toString("hex"),
+              saltRounds
+            );
+          }
+        } else {
+          const saltRounds = 12;
+          updateData.senha_hash = await bcrypt.hash(senha, saltRounds);
+        }
+
+        // Se havia cliente associado, marcar para exclusão
+        // pois estamos convertendo para autopeça
+        if (emailExistente.cliente) {
+          await emailExistente.cliente.update(
+            {
+              data_exclusao_pedida:
+                emailExistente.cliente.data_exclusao_pedida || new Date(),
+            },
+            { transaction }
+          );
+        }
+
+        // Reativar usuário e atualizar dados
+        await emailExistente.update(updateData, { transaction });
 
         // Atualizar dados da autopeça
         if (emailExistente.autopeca) {
@@ -871,12 +973,34 @@ class AuthController {
         console.log("CNPJ disponível");
       }
 
-      // 5. Fazer hash da senha com bcryptjs (cost 12)
+      // 5. Preparar dados do usuário
       if (process.env.NODE_ENV === "development") {
-        console.log("Fazendo hash da senha...");
+        console.log("Preparando dados do usuário...");
       }
+      const dadosUsuario = {
+        email: email.toLowerCase().trim(),
+        tipo_usuario: "autopeca",
+        termos_aceitos: true,
+        data_aceite_terms: new Date(),
+        ativo: true,
+        consentimento_marketing: false,
+      };
+
+      // Se for OAuth, adicionar google_id e gerar senha_hash aleatória
+      // Se não for OAuth, fazer hash da senha normalmente
+      if (isOAuth && google_id) {
+        dadosUsuario.google_id = google_id;
+        // Gerar senha_hash aleatória (não será usada, mas o campo é obrigatório)
       const saltRounds = 12;
-      const senhaHash = await bcrypt.hash(senha, saltRounds);
+        dadosUsuario.senha_hash = await bcrypt.hash(
+          crypto.randomBytes(32).toString("hex"),
+          saltRounds
+        );
+      } else {
+        const saltRounds = 12;
+        dadosUsuario.senha_hash = await bcrypt.hash(senha, saltRounds);
+      }
+
       if (process.env.NODE_ENV === "development") {
         console.log("Hash da senha concluído");
       }
@@ -885,15 +1009,6 @@ class AuthController {
       if (process.env.NODE_ENV === "development") {
         console.log("Criando usuário...");
       }
-      const dadosUsuario = {
-        email: email.toLowerCase().trim(),
-        senha_hash: senhaHash,
-        tipo_usuario: "autopeca",
-        termos_aceitos: true,
-        data_aceite_terms: new Date(),
-        ativo: true,
-        consentimento_marketing: false,
-      };
       if (process.env.NODE_ENV === "development") {
         console.log("Dados do usuário:", {
           ...dadosUsuario,
@@ -955,8 +1070,24 @@ class AuthController {
         console.log("Erro no envio de email:", emailError);
       }
 
-      // 10. Retornar sucesso (201)
-      return res.status(201).json({
+      // 10. Gerar token JWT se for OAuth (para login automático)
+      let token = null;
+      if (isOAuth && google_id) {
+        const jwtSecret = config.JWT_SECRET || process.env.JWT_SECRET;
+        if (jwtSecret) {
+          token = jwt.sign(
+            {
+              userId: novoUsuario.id,
+              tipo: novoUsuario.tipo_usuario,
+            },
+            jwtSecret,
+            { expiresIn: "7d" }
+          );
+        }
+      }
+
+      // 11. Retornar sucesso (201)
+      const responseData = {
         success: true,
         message: "Autopeça registrada com sucesso",
         data: {
@@ -982,7 +1113,19 @@ class AuthController {
             endereco_cep: novaAutopeca.endereco_cep,
           },
         },
-      });
+      };
+
+      // Adicionar token e dados completos do usuário se for OAuth
+      if (token) {
+        responseData.token = token;
+        responseData.user = {
+          ...responseData.data.usuario,
+          autopeca: responseData.data.autopeca,
+          perfil: responseData.data.autopeca,
+        };
+      }
+
+      return res.status(201).json(responseData);
     } catch (error) {
       // Rollback da transação em caso de erro
       if (process.env.NODE_ENV === "development") {
@@ -1337,6 +1480,236 @@ class AuthController {
   }
 
   /**
+   * Callback do Google OAuth 2.0
+   * GET /api/auth/google/callback
+   * 
+   * Opção 1: OAuth apenas para login (usuários que já têm conta)
+   * Se email não existe → retorna flag para frontend escolher tipo de cadastro
+   * Se email existe → faz login normalmente
+   *
+   * @param {Object} req - Request object (com user do Passport)
+   * @param {Object} res - Response object
+   */
+  static async googleCallback(req, res) {
+    try {
+      console.log("🔵 Google OAuth Callback recebido");
+      console.log("📦 Dados do usuário (req.user):", req.user);
+      
+      // Dados do usuário retornados pela estratégia do Passport
+      const { googleId, email, name, picture } = req.user || {};
+
+      if (!email) {
+        console.error("❌ Email não encontrado no perfil do Google");
+        return res.status(400).json({
+          success: false,
+          message: "Email não encontrado no perfil do Google",
+          errors: {
+            email: "Não foi possível obter o email do Google. Tente novamente.",
+          },
+        });
+      }
+
+      console.log("✅ Email encontrado:", email);
+      console.log("✅ Google ID:", googleId);
+
+      // Buscar usuário por email ou google_id
+      const { Op } = require("sequelize");
+      const usuario = await Usuario.findOne({
+        where: {
+          [Op.or]: [
+            { email: email.toLowerCase().trim() },
+            { google_id: googleId },
+          ],
+        },
+        include: [
+          {
+            model: Cliente,
+            as: "cliente",
+            required: false,
+          },
+          {
+            model: Autopeca,
+            as: "autopeca",
+            required: false,
+          },
+        ],
+      });
+
+      // Se usuário não existe → retornar flag para frontend escolher tipo
+      if (!usuario) {
+        console.log("🆕 Usuário não encontrado - redirecionando para cadastro OAuth");
+        
+        // Redirecionar para frontend com dados do Google e flag de novo usuário
+        const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+        const redirectURL = `${frontendURL}/cadastrar?email=${encodeURIComponent(
+          email
+        )}&name=${encodeURIComponent(name || "")}&googleId=${encodeURIComponent(
+          googleId
+        )}&picture=${encodeURIComponent(picture || "")}&novoUsuario=true`;
+        
+        console.log("🔄 Redirecionando para:", redirectURL);
+        console.log("📧 Email:", email);
+        console.log("👤 Nome:", name);
+        console.log("🔑 Google ID:", googleId);
+        
+        return res.redirect(redirectURL);
+      }
+
+      console.log("✅ Usuário encontrado - ID:", usuario.id);
+      console.log("📊 Status do usuário - Ativo:", usuario.ativo);
+
+      // Se usuário existe mas está inativo (conta excluída)
+      // Permitir recadastro com novo tipo de usuário
+      if (!usuario.ativo) {
+        console.log("⚠️ Usuário inativo (conta excluída) - redirecionando para recadastro");
+        
+        const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+        const redirectURL = `${frontendURL}/cadastrar?email=${encodeURIComponent(
+          email
+        )}&name=${encodeURIComponent(name || "")}&googleId=${encodeURIComponent(
+          googleId
+        )}&picture=${encodeURIComponent(picture || "")}&novoUsuario=true&contaExcluida=true`;
+        
+        console.log("🔄 Redirecionando para recadastro:", redirectURL);
+        return res.redirect(redirectURL);
+      }
+
+      // Atualizar google_id se não tiver
+      if (!usuario.google_id) {
+        await usuario.update({ google_id: googleId });
+      }
+
+      // Gerar JWT (reutilizando lógica do login normal)
+      const jwtSecret = config.JWT_SECRET || process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        return res.status(500).json({
+          success: false,
+          message: "Configuração de segurança não encontrada",
+          errors: {
+            message: "Configuração de segurança não encontrada",
+          },
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          userId: usuario.id,
+          tipo: usuario.tipo_usuario,
+        },
+        jwtSecret,
+        { expiresIn: config.JWT_EXPIRES_IN || "24h" }
+      );
+
+      // Preparar resposta (reutilizando lógica do login)
+      const responseData = {
+        token,
+        usuario: {
+          id: usuario.id,
+          email: usuario.email,
+          tipo_usuario: usuario.tipo_usuario,
+          ativo: usuario.ativo,
+          termos_aceitos: usuario.termos_aceitos,
+          data_aceite_terms: usuario.data_aceite_terms,
+        },
+      };
+
+      // Adicionar dados específicos baseados no tipo de usuário
+      if (usuario.tipo_usuario === "cliente" && usuario.cliente) {
+        responseData.cliente = {
+          id: usuario.cliente.id,
+          nome_completo: usuario.cliente.nome_completo,
+          celular: usuario.cliente.celular,
+          cidade: usuario.cliente.cidade,
+          uf: usuario.cliente.uf,
+        };
+      }
+
+      if (usuario.tipo_usuario === "autopeca" && usuario.autopeca) {
+        responseData.autopeca = {
+          id: usuario.autopeca.id,
+          razao_social: usuario.autopeca.razao_social,
+          nome_fantasia: usuario.autopeca.nome_fantasia,
+          cnpj: usuario.autopeca.cnpj,
+          telefone: usuario.autopeca.telefone,
+          endereco_cidade: usuario.autopeca.endereco_cidade,
+          endereco_uf: usuario.autopeca.endereco_uf,
+        };
+      }
+
+      // Para vendedores, buscar dados adicionais
+      if (usuario.tipo_usuario === "vendedor") {
+        const vendedorAtivo = await Vendedor.findOne({
+          where: {
+            usuario_id: usuario.id,
+            ativo: true,
+          },
+          include: [
+            {
+              model: Autopeca,
+              as: "autopeca",
+              required: true,
+              include: [
+                {
+                  model: Usuario,
+                  as: "usuario",
+                  required: true,
+                },
+              ],
+            },
+          ],
+        });
+
+        if (vendedorAtivo) {
+          if (
+            !vendedorAtivo.autopeca ||
+            !vendedorAtivo.autopeca.usuario ||
+            !vendedorAtivo.autopeca.usuario.ativo
+          ) {
+            const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+            return res.redirect(
+              `${frontendURL}/auth/oauth-callback?success=false&error=${encodeURIComponent(
+                "A autopeça vinculada à sua conta foi desativada. Entre em contato com o suporte."
+              )}`
+            );
+          }
+
+          responseData.vendedor = {
+            id: vendedorAtivo.id,
+            nome_completo: vendedorAtivo.nome_completo,
+            ativo: vendedorAtivo.ativo,
+            autopeca_id: vendedorAtivo.autopeca_id,
+          };
+        } else {
+          const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+          return res.redirect(
+            `${frontendURL}/auth/oauth-callback?success=false&error=${encodeURIComponent(
+              "Sua conta de vendedor está inativa. Entre em contato com o administrador da autopeça."
+            )}`
+          );
+        }
+      }
+
+      // Redirecionar para frontend com token (usando fragment para segurança)
+      const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+      return res.redirect(
+        `${frontendURL}/auth/oauth-callback?token=${encodeURIComponent(
+          token
+        )}&success=true`
+      );
+    } catch (error) {
+      console.error("Erro no callback do Google OAuth:", error);
+
+      // Redirecionar para frontend com erro
+      const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+      return res.redirect(
+        `${frontendURL}/auth/oauth-callback?success=false&error=${encodeURIComponent(
+          "Erro ao processar login com Google. Tente novamente."
+        )}`
+      );
+    }
+  }
+
+  /**
    * Recuperação de senha
    * POST /api/auth/forgot-password
    *
@@ -1644,6 +2017,7 @@ class AuthController {
           termos_aceitos: usuario.termos_aceitos,
           data_aceite_terms: usuario.data_aceite_terms,
           consentimento_marketing: usuario.consentimento_marketing,
+          google_id: usuario.google_id || null, // Incluir google_id para verificar se é OAuth
           created_at: usuario.created_at,
           updated_at: usuario.updated_at,
         },

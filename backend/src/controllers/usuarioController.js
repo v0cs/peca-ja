@@ -279,19 +279,7 @@ class UsuarioController {
         });
       }
 
-      // Validar senha
-      if (!senha) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Senha obrigatória",
-          errors: {
-            senha: "Senha é obrigatória para excluir a conta",
-          },
-        });
-      }
-
-      // Buscar usuário existente
+      // Buscar usuário existente primeiro para verificar se é OAuth
       const usuario = await Usuario.findOne({
         where: { id: userId },
         include: [
@@ -320,19 +308,36 @@ class UsuarioController {
         });
       }
 
-      // Verificar senha
-      const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
-      if (!senhaCorreta) {
+      // Verificar se é conta OAuth (tem google_id)
+      const isOAuthAccount = !!usuario.google_id;
+
+      // Validar senha - só é obrigatória se NÃO for conta OAuth
+      if (!isOAuthAccount && !senha) {
         await transaction.rollback();
-        // Retornar 400 (Bad Request) ao invés de 401 (Unauthorized) para evitar logout automático
-        // Este é um erro de validação de entrada, não um problema de autenticação
         return res.status(400).json({
           success: false,
-          message: "Senha incorreta",
+          message: "Senha obrigatória",
           errors: {
-            senha: "Senha incorreta. Por favor, verifique sua senha e tente novamente.",
+            senha: "Senha é obrigatória para excluir a conta",
           },
         });
+      }
+
+      // Verificar senha - só verificar se NÃO for conta OAuth ou se senha foi fornecida
+      if (!isOAuthAccount && senha) {
+        const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
+        if (!senhaCorreta) {
+          await transaction.rollback();
+          // Retornar 400 (Bad Request) ao invés de 401 (Unauthorized) para evitar logout automático
+          // Este é um erro de validação de entrada, não um problema de autenticação
+          return res.status(400).json({
+            success: false,
+            message: "Senha incorreta",
+            errors: {
+              senha: "Senha incorreta. Por favor, verifique sua senha e tente novamente.",
+            },
+          });
+        }
       }
 
       // Verificar se a conta já foi marcada para exclusão

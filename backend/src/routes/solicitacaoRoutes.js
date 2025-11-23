@@ -5,6 +5,8 @@ const {
   authMiddleware,
   consultaVeicularSolicitacoesMiddleware,
   logConsultaVeicularMiddleware,
+  solicitationRateLimiter,
+  uploadRateLimiter,
 } = require("../middleware");
 const { uploadMiddleware } = require("../middleware/uploadMiddleware");
 
@@ -12,9 +14,11 @@ const { uploadMiddleware } = require("../middleware/uploadMiddleware");
 router.use(authMiddleware);
 
 // POST /api/solicitacoes - Criar nova solicitação (com upload de imagens e consulta veicular)
-// Ordem: auth → upload → consultaVeicular → controller
+// Ordem: auth → rateLimit → upload → consultaVeicular → controller
 router.post(
   "/",
+  solicitationRateLimiter, // Rate limiting específico para criação de solicitações
+  uploadRateLimiter, // Rate limiting para upload de arquivos
   uploadMiddleware,
   consultaVeicularSolicitacoesMiddleware,
   logConsultaVeicularMiddleware,
@@ -28,15 +32,21 @@ router.get("/", solicitacaoController.list);
 router.get("/:id", solicitacaoController.getById);
 
 // PUT /api/solicitacoes/:id - Atualizar solicitação (com suporte a upload de imagens)
-router.put("/:id", uploadMiddleware, solicitacaoController.update);
+router.put(
+  "/:id",
+  uploadRateLimiter, // Rate limiting para upload de arquivos
+  uploadMiddleware,
+  solicitacaoController.update
+);
 
 // DELETE /api/solicitacoes/:id - Cancelar solicitação
 router.delete("/:id", solicitacaoController.cancel);
 
 // POST /api/solicitacoes/:id/imagens - Adicionar imagens a solicitação existente
-// Ordem: auth → upload → consultaVeicular → controller
+// Ordem: auth → rateLimit → upload → consultaVeicular → controller
 router.post(
   "/:id/imagens",
+  uploadRateLimiter, // Rate limiting para upload de arquivos
   uploadMiddleware,
   consultaVeicularSolicitacoesMiddleware,
   logConsultaVeicularMiddleware,

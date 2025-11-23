@@ -58,17 +58,6 @@ router.put(
 );
 
 /**
- * @route   DELETE /api/notificacoes/:id
- * @desc    Deletar notificação
- * @access  Private (apenas dono da notificação)
- */
-router.delete(
-  "/:id",
-  authMiddleware,
-  NotificationController.deletarNotificacao
-);
-
-/**
  * @route   DELETE /api/notificacoes/lidas
  * @desc    Deletar todas as notificações lidas
  * @access  Private (qualquer usuário autenticado)
@@ -77,6 +66,17 @@ router.delete(
   "/lidas",
   authMiddleware,
   NotificationController.deletarTodasLidas
+);
+
+/**
+ * @route   DELETE /api/notificacoes/:id
+ * @desc    Deletar notificação
+ * @access  Private (apenas dono da notificação)
+ */
+router.delete(
+  "/:id",
+  authMiddleware,
+  NotificationController.deletarNotificacao
 );
 
 module.exports = router;

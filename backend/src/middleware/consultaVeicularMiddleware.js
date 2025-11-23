@@ -23,14 +23,15 @@ const consultaVeicularMiddleware = async (req, res, next) => {
 
     console.log(`🔍 Middleware: Consultando API veicular para placa: ${placa}`);
 
+    // Obter IP do cliente para rate limiting (definir antes do try para garantir que está disponível no catch)
+    const clientIp =
+      req.ip ||
+      (req.connection && req.connection.remoteAddress) ||
+      (req.socket && req.socket.remoteAddress) ||
+      "127.0.0.1";
+    console.log(`🌐 Middleware: IP do cliente: ${clientIp}`);
+
     try {
-      // Obter IP do cliente para rate limiting
-      const clientIp =
-        req.ip ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        "127.0.0.1";
-      console.log(`🌐 Middleware: IP do cliente: ${clientIp}`);
 
       // Consultar API veicular com rate limiting
       const dadosVeiculo = await apiVeicularService.consultarVeiculoPorPlaca(

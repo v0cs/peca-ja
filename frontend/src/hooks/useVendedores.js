@@ -82,10 +82,23 @@ export const useVendedores = (autoFetch = true) => {
         }
       } catch (err) {
         console.error("Erro ao criar vendedor:", err);
-        const errorMessage =
-          err.response?.data?.message ||
-          err.message ||
-          "Erro ao cadastrar vendedor";
+        
+        // Extrair mensagem de erro - priorizar errors.conflito se existir (erro 409)
+        let errorMessage = err.response?.data?.message || err.message || "Erro ao cadastrar vendedor";
+        const errors = err.response?.data?.errors;
+        
+        // Se houver erro de conflito (409), usar a mensagem específica do erro
+        if (errors?.conflito) {
+          errorMessage = errors.conflito;
+        } else if (errors && typeof errors === 'object') {
+          // Se houver outros erros, tentar pegar a primeira mensagem
+          const firstError = Object.values(errors)[0];
+          if (typeof firstError === 'string') {
+            errorMessage = firstError;
+          } else if (Array.isArray(firstError) && firstError.length > 0) {
+            errorMessage = firstError[0];
+          }
+        }
 
         setError(errorMessage);
 
@@ -223,17 +236,30 @@ export const useVendedores = (autoFetch = true) => {
         }
       } catch (err) {
         console.error("Erro ao reativar vendedor:", err);
-        const errorMessage =
-          err.response?.data?.message ||
-          err.message ||
-          "Erro ao reativar vendedor";
+        
+        // Extrair mensagem de erro - priorizar errors.conflito se existir (erro 409)
+        let errorMessage = err.response?.data?.message || err.message || "Erro ao reativar vendedor";
+        const errors = err.response?.data?.errors;
+        
+        // Se houver erro de conflito (409), usar a mensagem específica do erro
+        if (errors?.conflito) {
+          errorMessage = errors.conflito;
+        } else if (errors && typeof errors === 'object') {
+          // Se houver outros erros, tentar pegar a primeira mensagem
+          const firstError = Object.values(errors)[0];
+          if (typeof firstError === 'string') {
+            errorMessage = firstError;
+          } else if (Array.isArray(firstError) && firstError.length > 0) {
+            errorMessage = firstError[0];
+          }
+        }
 
         setError(errorMessage);
 
         return {
           success: false,
           message: errorMessage,
-          errors: err.response?.data?.errors,
+          errors: errors,
         };
       } finally {
         setLoading(false);

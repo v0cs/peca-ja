@@ -243,11 +243,11 @@ const DashboardAutopeca = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Dashboard da Autopeça</h2>
-            <p className="text-muted-foreground">
-              Gerencie solicitações de clientes da sua cidade e sua equipe de vendedores
-            </p>
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Dashboard da Autopeça</h2>
+              <p className="text-muted-foreground">
+                Gerencie solicitações de clientes da sua cidade e sua equipe de vendedores
+              </p>
           </div>
         </div>
 

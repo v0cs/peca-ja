@@ -25,13 +25,21 @@ services:
     build: ./backend
     ports:
       - "3001:3001"
+    # Carrega variáveis de ambiente do arquivo .env (se existir)
+    env_file:
+      - .env
     environment:
-      NODE_ENV: development
+      # Valores padrão se .env não existir
+      NODE_ENV: ${NODE_ENV:-development}
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: pecaja
-      DB_USER: postgres
-      DB_PASSWORD: banco123
+      DB_NAME: ${DB_NAME:-pecaja}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-banco123}
+      # Variáveis do domínio e email (podem vir do .env)
+      DOMAIN: ${DOMAIN:-pecaja.cloud}
+      EMAIL_FROM: ${EMAIL_FROM:-PeçaJá <noreply@pecaja.cloud>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

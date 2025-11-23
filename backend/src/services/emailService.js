@@ -1,53 +1,108 @@
 const { Resend } = require("resend");
+const config = require("../config/env");
 
 class EmailService {
   constructor() {
-    this.resend = new Resend(
-      process.env.RESEND_API_KEY || "re_mU2nKnP6_ESPokZgH4y3FB7XJSvAPwu1r"
-    );
+    this.resend = new Resend(config.RESEND_API_KEY);
+    this.config = config;
   }
 
   /**
-   * Enviar email genérico via Resend
+   * Função auxiliar para delay (sleep)
    */
-  async sendEmail(to, subject, html, text = null) {
-    try {
-      console.log(`📧 Tentando enviar email para: ${to}`);
-      console.log(`📝 Assunto: ${subject}`);
+  sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
-      const result = await this.resend.emails.send({
-        from: process.env.EMAIL_FROM || "PeçaJá <onboarding@resend.dev>",
-        to: to,
-        subject: subject,
-        html: html,
-        text: text || this.htmlToText(html),
-      });
+  /**
+   * Enviar email genérico via Resend com retry automático para rate limits
+   */
+  async sendEmail(to, subject, html, text = null, retries = 3) {
+    const maxRetries = retries;
+    let attempt = 0;
 
-      // Debug: Log da resposta completa
-      console.log(
-        "📦 Resposta Resend (estrutura completa):",
-        JSON.stringify(result, null, 2)
-      );
+    while (attempt < maxRetries) {
+      try {
+        if (attempt > 0) {
+          console.log(`🔄 [RETRY] Tentativa ${attempt + 1}/${maxRetries} para ${to}`);
+        }
 
-      // Tentar diferentes caminhos para o ID
-      const emailId =
-        result.id || result.data?.id || result.data || "ID não disponível";
+        const result = await this.resend.emails.send({
+          from: this.config.emailFrom,
+          to: to,
+          subject: subject,
+          html: html,
+          text: text || this.htmlToText(html),
+        });
 
-      console.log("✅ Email enviado via Resend. ID:", emailId);
+        // Verificar se há erro na resposta (Resend retorna erro no objeto, não como exception)
+        if (result && result.error) {
+          const error = result.error;
+          
+          // Se for rate limit, fazer retry com backoff
+          if (error.statusCode === 429 || error.name === "rate_limit_exceeded") {
+            const retryAfter = parseInt(result.headers?.["retry-after"] || "1", 10) * 1000;
+            const waitTime = Math.min(retryAfter, 2000); // Máximo 2 segundos
 
-      return result;
-    } catch (error) {
-      console.error("❌ Erro ao enviar email via Resend:", error);
-      console.error("📋 Detalhes do erro:", {
-        message: error.message,
-        code: error.code,
-        statusCode: error.statusCode,
-        response: error?.response?.data,
-      });
+            if (attempt < maxRetries - 1) {
+              console.log(
+                `⏳ [RATE LIMIT] Rate limit atingido. Aguardando ${waitTime}ms antes de tentar novamente...`
+              );
+              await this.sleep(waitTime);
+              attempt++;
+              continue;
+            } else {
+              console.error("❌ [RATE LIMIT] Número máximo de tentativas atingido para rate limit");
+              return { error: error.message, details: error, rateLimit: true };
+            }
+          }
 
-      // Não throw error para não quebrar o fluxo principal
-      return { error: error.message, details: error };
+          // Outros erros não são retriáveis
+          console.error("❌ Erro na resposta do Resend:", error);
+          return { error: error.message, details: error };
+        }
+
+        // Sucesso
+        const emailId = result.data?.id || result.id || "ID não disponível";
+        if (attempt > 0) {
+          console.log(`✅ [RETRY SUCCESS] Email enviado após ${attempt + 1} tentativas. ID: ${emailId}`);
+        } else {
+          console.log(`✅ Email enviado via Resend. ID: ${emailId}`);
+        }
+
+        return result;
+      } catch (error) {
+        // Erro de rate limit capturado como exception
+        if (error.statusCode === 429 || error.name === "rate_limit_exceeded") {
+          const retryAfter = parseInt(error.response?.headers?.["retry-after"] || "1", 10) * 1000;
+          const waitTime = Math.min(retryAfter, 2000);
+
+          if (attempt < maxRetries - 1) {
+            console.log(
+              `⏳ [RATE LIMIT] Rate limit atingido (exception). Aguardando ${waitTime}ms antes de tentar novamente...`
+            );
+            await this.sleep(waitTime);
+            attempt++;
+            continue;
+          } else {
+            console.error("❌ [RATE LIMIT] Número máximo de tentativas atingido para rate limit");
+            return { error: error.message, details: error, rateLimit: true };
+          }
+        }
+
+        // Outros erros não são retriáveis
+        console.error("❌ Erro ao enviar email via Resend:", error);
+        console.error("📋 Detalhes do erro:", {
+          message: error.message,
+          code: error.code,
+          statusCode: error.statusCode,
+        });
+
+        return { error: error.message, details: error };
+      }
     }
+
+    return { error: "Número máximo de tentativas excedido", details: null };
   }
 
   /**
@@ -80,7 +135,7 @@ class EmailService {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.APP_URL || "http://localhost:3000"}" 
+          <a href="${this.config.frontendURL}" 
              style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
             Acessar Minha Conta
           </a>
@@ -135,7 +190,7 @@ class EmailService {
           </div>
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.APP_URL || "http://localhost:3000"}/login"
+            <a href="${this.config.frontendURL}/login"
                style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Acessar minha conta
             </a>
@@ -193,67 +248,79 @@ class EmailService {
   }
 
   /**
-   * Notificação de nova solicitação para autopeças da mesma cidade
+   * Notificação de nova solicitação para autopeças e vendedores da mesma cidade
    */
   async sendNewRequestNotification(
-    autopecaEmail,
+    email,
     solicitacao,
     cliente,
-    autopecaNome
+    nomeDestinatario
   ) {
-    const subject = `🔔 Nova solicitação em ${solicitacao.cidade_atendimento} - ${solicitacao.descricao_peca}`;
+    // Formatar data/hora
+    const dataHora = new Date(solicitacao.created_at || new Date()).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const subject = `🚨 Nova Solicitação de Peça em ${solicitacao.cidade_atendimento}!`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-        <div style="text-align: center; padding: 20px 0; background: #f0f9ff; border-radius: 8px 8px 0 0;">
-          <h1 style="color: #2563eb; margin: 0;">🚗 Nova Solicitação no PeçaJá!</h1>
-          <p style="color: #0369a1; margin: 5px 0;">Oportunidade de negócio na sua cidade</p>
+        <div style="text-align: center; padding: 20px 0;">
+          <h1 style="color: #2563eb; margin: 0;">PeçaJá</h1>
+          <p style="color: #6b7280; margin: 5px 0;">Marketplace de Peças Automotivas</p>
         </div>
         
         <div style="padding: 20px;">
-          <h2 style="color: #1e40af;">Detalhes da Solicitação:</h2>
+          <h2 style="color: #2563eb;">Olá ${nomeDestinatario}! 👋</h2>
           
-          <div style="background: #f8fafc; padding: 15px; border-radius: 6px; margin: 15px 0;">
-            <p><strong>📋 Peça Solicitada:</strong> ${
-              solicitacao.descricao_peca
-            }</p>
-            <p><strong>🚙 Veículo:</strong> ${solicitacao.marca} ${
-      solicitacao.modelo
-    } (${solicitacao.ano_fabricacao})</p>
-            <p><strong>📍 Localização:</strong> ${
-              solicitacao.cidade_atendimento
-            }, ${solicitacao.uf_atendimento}</p>
-            <p><strong>👤 Cliente:</strong> ${cliente.nome_completo}</p>
-            <p><strong>📱 Contato:</strong> ${cliente.celular}</p>
-          </div>
-
-          <div style="background: #ecfdf5; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #10b981;">
-            <h3 style="color: #047857; margin-top: 0;">💡 Dica Rápida:</h3>
-            <p style="color: #065f46; margin: 0;">
-              Clientes costumam responder rapidamente nos primeiros 30 minutos. 
-              Seja o primeiro a entrar em contato!
-            </p>
+          <p>Acabou de chegar uma nova solicitação de peça na sua cidade:</p>
+          
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <p style="margin: 10px 0;"><strong>📋 Solicitação:</strong> ${solicitacao.descricao_peca}</p>
+            <p style="margin: 10px 0;"><strong>🚗 Veículo:</strong> ${solicitacao.marca} ${solicitacao.modelo} ${solicitacao.ano_fabricacao} - Placa: ${solicitacao.placa}</p>
+            <p style="margin: 10px 0;"><strong>📍 Localização:</strong> ${solicitacao.cidade_atendimento}, ${solicitacao.uf_atendimento}</p>
+            <p style="margin: 10px 0;"><strong>🕒 Data:</strong> ${dataHora}</p>
           </div>
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${
-              process.env.APP_URL || "http://localhost:3000"
-            }/autopeca/solicitacoes" 
-               style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-              👀 Ver Todas as Solicitações
+            <a href="${this.config.frontendURL}/dashboard/autopeca" 
+               style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+              Acesse seu dashboard para ver detalhes e atender
             </a>
           </div>
 
-          <p style="color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-            Esta notificação foi enviada para <strong>${autopecaNome}</strong> porque sua autopeça está localizada em <strong>${
-      solicitacao.cidade_atendimento
-    }</strong>.
-          </p>
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 14px;">
+            <p style="margin-top: 20px;">
+              Atenciosamente,<br>
+              <strong>Equipe PeçaJá</strong>
+            </p>
+          </div>
         </div>
       </div>
     `;
 
-    return this.sendEmail(autopecaEmail, subject, html);
+    const text = `
+Olá ${nomeDestinatario}!
+
+Acabou de chegar uma nova solicitação de peça na sua cidade:
+
+📋 Solicitação: ${solicitacao.descricao_peca}
+🚗 Veículo: ${solicitacao.marca} ${solicitacao.modelo} ${solicitacao.ano_fabricacao} - Placa: ${solicitacao.placa}
+📍 Localização: ${solicitacao.cidade_atendimento}, ${solicitacao.uf_atendimento}
+🕒 Data: ${dataHora}
+
+Acesse seu dashboard para ver detalhes e atender:
+${this.config.frontendURL}/dashboard/autopeca
+
+Atenciosamente,
+Equipe PeçaJá
+    `.trim();
+
+    return this.sendEmail(email, subject, html, text);
   }
 
   /**
@@ -300,7 +367,7 @@ class EmailService {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.APP_URL || "http://localhost:3000"}/login" 
+          <a href="${this.config.frontendURL}/login" 
              style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
             Fazer Primeiro Login
           </a>
@@ -380,9 +447,7 @@ class EmailService {
    * Email de recuperação de senha
    */
   async sendPasswordResetEmail(usuario, resetToken) {
-    const resetLink = `${
-      process.env.APP_URL || "http://localhost:3000"
-    }/reset-password?token=${resetToken}`;
+    const resetLink = `${this.config.frontendURL}/reset-password?token=${resetToken}`;
     const subject = "🔐 Redefinição de Senha - PeçaJá";
 
     const html = `

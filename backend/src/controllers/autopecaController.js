@@ -281,8 +281,8 @@ class AutopecaController {
             typeof dadosAtualizacao[campo] === "string"
           ) {
             dadosAtualizacao[campo] = dadosAtualizacao[campo].trim();
-          }
         }
+      }
       );
 
       // Se há erros de validação, retornar 400

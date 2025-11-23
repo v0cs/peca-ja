@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button, Input } from "../ui";
-import { validarEmail, formatarCelular } from "../../utils/validators";
+import { validarEmail } from "../../utils/validators";
 
 /**
  * Formulário para cadastro e edição de vendedores
@@ -17,7 +17,6 @@ const VendedorForm = ({ vendedor, onSubmit, onCancel, loading = false }) => {
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    telefone: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -28,24 +27,16 @@ const VendedorForm = ({ vendedor, onSubmit, onCancel, loading = false }) => {
       setFormData({
         nome: vendedor.nome_completo || "",
         email: vendedor.usuario?.email || "",
-        telefone: "",
       });
     }
   }, [vendedor, isEdicao]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    let formattedValue = value;
-
-    // Formatação automática (mesma lógica dos outros formulários)
-    if (name === "telefone") {
-      formattedValue = formatarCelular(value);
-    }
 
     setFormData((prev) => ({
       ...prev,
-      [name]: formattedValue,
+      [name]: value,
     }));
 
     // Limpar erro do campo ao digitar
@@ -67,24 +58,14 @@ const VendedorForm = ({ vendedor, onSubmit, onCancel, loading = false }) => {
       newErrors.nome = "Nome deve ter pelo menos 2 caracteres";
     }
 
-    // Validar email (apenas em cadastro, não permite edição)
-    if (!isEdicao) {
-      if (!formData.email.trim()) {
-        newErrors.email = "Email é obrigatório";
-      } else if (!validarEmail(formData.email)) {
-        newErrors.email = "Email inválido";
-      }
-
-      // Validar telefone (mesmo padrão dos outros formulários)
-      if (!formData.telefone.trim()) {
-        newErrors.telefone = "Telefone é obrigatório";
-      } else {
-        const telefoneRegex = /^\([0-9]{2}\)[0-9]{4,5}-[0-9]{4}$/;
-        if (!telefoneRegex.test(formData.telefone)) {
-          newErrors.telefone = "Formato inválido. Use: (11)99999-9999";
+      // Validar email (apenas em cadastro, não permite edição)
+      if (!isEdicao) {
+        if (!formData.email.trim()) {
+          newErrors.email = "Email é obrigatório";
+        } else if (!validarEmail(formData.email)) {
+          newErrors.email = "Email inválido";
         }
       }
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -98,14 +79,18 @@ const VendedorForm = ({ vendedor, onSubmit, onCancel, loading = false }) => {
     }
 
     // Preparar dados para envio
-    const dadosParaEnvio = {
-      nome: formData.nome.trim(),
-    };
+    // Backend espera "nome" no cadastro e "nome_completo" na edição
+    const dadosParaEnvio = isEdicao
+      ? {
+          nome_completo: formData.nome.trim(), // Edição usa nome_completo
+        }
+      : {
+          nome: formData.nome.trim(), // Cadastro usa nome
+        };
 
-    // Se não é edição, incluir email e telefone
+    // Se não é edição, incluir email
     if (!isEdicao) {
       dadosParaEnvio.email = formData.email.toLowerCase().trim();
-      dadosParaEnvio.telefone = formData.telefone.trim();
       // Senha sempre gerada automaticamente pelo backend
     }
 
@@ -174,23 +159,6 @@ const VendedorForm = ({ vendedor, onSubmit, onCancel, loading = false }) => {
                 O email não pode ser alterado
               </p>
             </div>
-          )}
-
-          {/* Telefone (apenas em cadastro) */}
-          {!isEdicao && (
-            <Input
-              label="Telefone"
-              id="telefone"
-              name="telefone"
-              type="text"
-              value={formData.telefone}
-              onChange={handleChange}
-              error={errors.telefone}
-              placeholder="(11)99999-9999"
-              maxLength={15}
-              disabled={loading}
-              required
-            />
           )}
 
           {/* Informação sobre senha (apenas em cadastro) */}
