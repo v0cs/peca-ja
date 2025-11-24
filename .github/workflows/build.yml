@@ -41,9 +41,18 @@ jobs:
       # Executar testes do Backend com coverage
       - name: Run Backend Tests
         working-directory: ./backend
-        run: npm test -- --coverage --coverageReporters=lcov --watchAll=false
+        run: |
+          # Limpar cache completamente
+          npx jest --clearCache || echo "Cache cleared or not needed"
+          # Remover cache do node_modules se existir
+          if (Test-Path "node_modules/.cache") { Remove-Item -Recurse -Force "node_modules/.cache" }
+          # Executar testes com workers limitados e sem cache
+          npm test -- --coverage --coverageReporters=lcov --watchAll=false --no-cache --maxWorkers=2 --forceExit
         env:
           CI: true
+          NODE_ENV: test
+          # Garantir que não haja problemas com encoding e memory
+          NODE_OPTIONS: "--no-warnings --max-old-space-size=4096"
         continue-on-error: true
 
       # Executar testes do Frontend com coverage

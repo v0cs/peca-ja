@@ -1,33 +1,22 @@
-const VendedorController = require("../../../src/controllers/vendedorController");
-const { Vendedor, Usuario, Autopeca, Cliente } = require("../../../src/models");
-const bcrypt = require("bcryptjs");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockVendedor = createModelMock();
+const mockUsuario = createModelMock();
+const mockAutopeca = createModelMock();
+const mockCliente = createModelMock();
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Vendedor: {
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-  },
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
+  Vendedor: mockVendedor,
+  Usuario: mockUsuario,
+  Autopeca: mockAutopeca,
+  Cliente: mockCliente,
 }));
 
 // Mock do bcrypt
 jest.mock("bcryptjs");
+const bcrypt = require("bcryptjs");
 
 // Mock do emailService
 jest.mock("../../../src/services", () => ({
@@ -36,11 +25,27 @@ jest.mock("../../../src/services", () => ({
   },
 }));
 
+// Importar após os mocks
+const VendedorController = require("../../../src/controllers/vendedorController");
+const { Vendedor, Usuario, Autopeca, Cliente } = require("../../../src/models");
+
 describe("VendedorController", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Vendedor.findOne.mockClear();
+    Vendedor.findAll.mockClear();
+    Vendedor.create.mockClear();
+    Vendedor.update.mockClear();
+    Usuario.findOne.mockClear();
+    Usuario.create.mockClear();
+    Usuario.update.mockClear();
+    Autopeca.findOne.mockClear();
+    Cliente.findOne.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(Usuario);
 
     req = {
       user: {
@@ -56,6 +61,7 @@ describe("VendedorController", () => {
       json: jest.fn().mockReturnThis(),
     };
 
+    // Manter referência para compatibilidade
     mockTransaction = {
       commit: jest.fn(),
       rollback: jest.fn(),

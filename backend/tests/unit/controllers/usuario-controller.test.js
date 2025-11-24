@@ -1,188 +1,179 @@
-const UsuarioController = require("../../../src/controllers/usuarioController");
-const { Usuario, Cliente, Autopeca, Vendedor, Solicitacao } = require("../../../src/models");
-const bcrypt = require("bcryptjs");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks ANTES de importar
+const mockUsuario = createModelMock();
+const mockBcryptHash = jest.fn();
+const mockBcryptCompare = jest.fn();
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Vendedor: {
-    findAll: jest.fn(),
-    update: jest.fn(),
-  },
-  Solicitacao: {
-    findAll: jest.fn(),
-    update: jest.fn(),
-  },
-}));
-
-// Mock do emailService
-jest.mock("../../../src/services", () => ({
-  emailService: {
-    sendSecurityNotification: jest.fn().mockResolvedValue({}),
-    sendAccountDeletionEmail: jest.fn().mockResolvedValue({}),
+  Usuario: mockUsuario,
+  Cliente: {},
+  Autopeca: {},
+  Vendedor: {},
+  sequelize: {
+    transaction: jest.fn(),
   },
 }));
 
 // Mock do bcrypt
-jest.mock("bcryptjs");
+jest.mock("bcryptjs", () => ({
+  hash: mockBcryptHash,
+  compare: mockBcryptCompare,
+  genSalt: jest.fn(),
+}));
+
+// Importar APÓS os mocks
+const UsuarioController = require("../../../src/controllers/usuarioController");
+const { Usuario } = require("../../../src/models");
+const bcrypt = require("bcryptjs");
 
 describe("UsuarioController", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-
+    // Limpar mocks individuais
+    mockUsuario.findOne.mockClear();
+    mockBcryptHash.mockClear();
+    mockBcryptCompare.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(mockUsuario);
+    
     req = {
-      user: {
-        userId: 1,
-        tipo: "cliente",
-      },
+      user: { userId: 1, tipo: "cliente" },
       body: {},
     };
-
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    // Reconfigurar mock de transaction após clearAllMocks
-    if (Usuario.sequelize) {
-      Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
-    }
   });
 
   describe("updateProfile", () => {
-    it("deve atualizar email com sucesso", async () => {
-      // Arrange
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
-        tipo_usuario: "cliente",
-        ativo: true,
-        reload: jest.fn().mockImplementation(function() {
-          this.email = "novoemail@teste.com";
-          return Promise.resolve(this);
-        }),
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      req.body = { email: "novoemail@teste.com" };
-
-      Usuario.findOne
-        .mockResolvedValueOnce(mockUsuario) // Buscar usuário atual
-        .mockResolvedValueOnce(null); // Verificar se email já existe
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: "Email atualizado com sucesso",
-        data: {
-          usuario: expect.objectContaining({
-            id: 1,
-            email: "novoemail@teste.com",
-          }),
-        },
-      });
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("deve atualizar senha com sucesso", async () => {
-      // Arrange
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
-        tipo_usuario: "cliente",
-        ativo: true,
-        reload: jest.fn().mockResolvedValue(true),
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      req.body = {
-        senha_atual: "123456",
-        nova_senha: "novaSenha123",
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-      bcrypt.hash.mockResolvedValue("newHashedPassword");
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: "Senha atualizada com sucesso",
-        data: {
-          usuario: expect.objectContaining({
-            id: 1,
-          }),
-        },
-      });
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 400 quando nenhum campo é fornecido", async () => {
-      // Arrange
+    it("deve retornar erro quando nenhum campo válido é fornecido", async () => {
       req.body = {};
 
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: "Nenhum campo válido para atualização",
         errors: {
-          campos: expect.stringContaining("Forneça 'email'"),
+          campos:
+            "Forneça 'email' para atualizar email ou 'senha_atual' e 'nova_senha' para atualizar senha",
         },
       });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando email tem formato inválido", async () => {
-      // Arrange
-      req.body = { email: "email-invalido" };
+    it("deve retornar erro quando usuário não é encontrado", async () => {
+      req.body = { email: "novo@email.com" };
+      mockUsuario.findOne.mockResolvedValue(null);
 
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        ativo: true,
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Usuário não encontrado",
+        errors: {
+          usuario: "Usuário não encontrado no sistema",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando conta está inativa", async () => {
+      req.body = { email: "novo@email.com" };
+      const mockUsuarioInativo = {
+        id: 1,
+        email: "test@test.com",
+        ativo: false,
+      };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioInativo);
+
+      await UsuarioController.updateProfile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Conta inativa",
+        errors: {
+          conta: "Sua conta está inativa. Entre em contato com o suporte.",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve atualizar email com sucesso", async () => {
+      req.body = { email: "novo@email.com" };
+      const mockUsuarioAtual = {
+        id: 1,
+        email: "antigo@email.com",
+        ativo: true,
+        update: jest.fn().mockResolvedValue(true),
+        reload: jest.fn().mockResolvedValue(true),
+      };
+      mockUsuario.findOne
+        .mockResolvedValueOnce(mockUsuarioAtual)
+        .mockResolvedValueOnce(null); // Email não existe
+
+      await UsuarioController.updateProfile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Email atualizado com sucesso",
+        data: expect.objectContaining({
+          usuario: expect.objectContaining({
+            id: 1,
+          }),
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando email já está em uso", async () => {
+      req.body = { email: "existente@email.com" };
+      const mockUsuarioAtual = {
+        id: 1,
+        email: "antigo@email.com",
+        ativo: true,
+      };
+      const mockUsuarioExistente = {
+        id: 2,
+        email: "existente@email.com",
+      };
+      mockUsuario.findOne
+        .mockResolvedValueOnce(mockUsuarioAtual)
+        .mockResolvedValueOnce(mockUsuarioExistente);
+
+      await UsuarioController.updateProfile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Dados inválidos",
+        errors: {
+          email: "Este email já está sendo usado por outro usuário",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando formato de email é inválido", async () => {
+      req.body = { email: "email-invalido" };
+      const mockUsuarioAtual = {
+        id: 1,
+        email: "antigo@email.com",
+        ativo: true,
+      };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioAtual);
+
+      await UsuarioController.updateProfile(req, res);
+
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -194,57 +185,49 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando email já está em uso", async () => {
-      // Arrange
-      req.body = { email: "emailusado@teste.com" };
-
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        ativo: true,
+    it("deve atualizar senha com sucesso", async () => {
+      req.body = {
+        senha_atual: "senha123",
+        nova_senha: "novaSenha456",
       };
-
-      const mockUsuarioComEmail = {
-        id: 2,
-        email: "emailusado@teste.com",
-      };
-
-      Usuario.findOne
-        .mockResolvedValueOnce(mockUsuario)
-        .mockResolvedValueOnce(mockUsuarioComEmail);
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Dados inválidos",
-        errors: {
-          email: "Este email já está sendo usado por outro usuário",
-        },
-      });
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 400 quando senha atual não é fornecida", async () => {
-      // Arrange
-      req.body = { nova_senha: "novaSenha123" };
-
-      const mockUsuario = {
+      const mockUsuarioAtual = {
         id: 1,
-        email: "cliente@teste.com",
+        email: "test@test.com",
         senha_hash: "hashedPassword",
         ativo: true,
+        update: jest.fn().mockResolvedValue(true),
+        reload: jest.fn().mockResolvedValue(true),
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioAtual);
+      mockBcryptCompare.mockResolvedValue(true);
+      mockBcryptHash.mockResolvedValue("newHashedPassword");
 
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Senha atualizada com sucesso",
+        data: expect.objectContaining({
+          usuario: expect.objectContaining({
+            id: 1,
+          }),
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando senha_atual não é fornecida", async () => {
+      req.body = { nova_senha: "novaSenha456" };
+      const mockUsuarioAtual = {
+        id: 1,
+        email: "test@test.com",
+        ativo: true,
+      };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioAtual);
+
+      await UsuarioController.updateProfile(req, res);
+
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -256,27 +239,22 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando senha atual está incorreta", async () => {
-      // Arrange
+    it("deve retornar erro quando senha_atual está incorreta", async () => {
       req.body = {
         senha_atual: "senhaErrada",
-        nova_senha: "novaSenha123",
+        nova_senha: "novaSenha456",
       };
-
-      const mockUsuario = {
+      const mockUsuarioAtual = {
         id: 1,
-        email: "cliente@teste.com",
+        email: "test@test.com",
         senha_hash: "hashedPassword",
         ativo: true,
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioAtual);
+      mockBcryptCompare.mockResolvedValue(false);
 
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(false);
-
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -288,27 +266,22 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando nova senha é muito curta", async () => {
-      // Arrange
+    it("deve retornar erro quando nova_senha é muito curta", async () => {
       req.body = {
-        senha_atual: "123456",
-        nova_senha: "12345",
+        senha_atual: "senha123",
+        nova_senha: "123",
       };
-
-      const mockUsuario = {
+      const mockUsuarioAtual = {
         id: 1,
-        email: "cliente@teste.com",
+        email: "test@test.com",
         senha_hash: "hashedPassword",
         ativo: true,
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioAtual);
+      mockBcryptCompare.mockResolvedValue(true);
 
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -320,70 +293,52 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 404 quando usuário não é encontrado", async () => {
-      // Arrange
-      req.body = { email: "novoemail@teste.com" };
-      Usuario.findOne.mockResolvedValue(null);
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 403 quando conta está inativa", async () => {
-      // Arrange
-      req.body = { email: "novoemail@teste.com" };
-
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        ativo: false,
+    it("deve atualizar email e senha simultaneamente", async () => {
+      req.body = {
+        email: "novo@email.com",
+        senha_atual: "senha123",
+        nova_senha: "novaSenha456",
       };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 500 quando ocorre erro interno", async () => {
-      // Arrange
-      req.body = { email: "novoemail@teste.com" };
-      Usuario.findOne.mockRejectedValue(new Error("Database error"));
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 400 quando não há alteração detectada (email igual)", async () => {
-      // Arrange
-      const mockUsuario = {
+      const mockUsuarioAtual = {
         id: 1,
-        email: "cliente@teste.com",
+        email: "antigo@email.com",
         senha_hash: "hashedPassword",
-        tipo_usuario: "cliente",
+        ativo: true,
+        update: jest.fn().mockResolvedValue(true),
+        reload: jest.fn().mockResolvedValue(true),
+      };
+      mockUsuario.findOne
+        .mockResolvedValueOnce(mockUsuarioAtual)
+        .mockResolvedValueOnce(null);
+      mockBcryptCompare.mockResolvedValue(true);
+      mockBcryptHash.mockResolvedValue("newHashedPassword");
+
+      await UsuarioController.updateProfile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Email e senha atualizados com sucesso",
+        data: expect.objectContaining({
+          usuario: expect.objectContaining({
+            id: 1,
+          }),
+        }),
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando email é igual ao atual", async () => {
+      req.body = { email: "test@test.com" };
+      const mockUsuarioAtual = {
+        id: 1,
+        email: "test@test.com",
         ativo: true,
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioAtual);
 
-      req.body = { email: "cliente@teste.com" };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -395,77 +350,23 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve atualizar email e senha juntos com sucesso", async () => {
-      // Arrange
-      const mockUsuario = {
+    it("deve tratar erro de validação do Sequelize", async () => {
+      req.body = { email: "novo@email.com" };
+      const mockUsuarioAtual = {
         id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
-        tipo_usuario: "cliente",
-        ativo: true,
-        reload: jest.fn().mockImplementation(function() {
-          this.email = "novoemail@teste.com";
-          return Promise.resolve(this);
-        }),
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      req.body = {
-        email: "novoemail@teste.com",
-        senha_atual: "123456",
-        nova_senha: "novaSenha123",
-      };
-
-      Usuario.findOne
-        .mockResolvedValueOnce(mockUsuario) // Buscar usuário atual
-        .mockResolvedValueOnce(null); // Verificar se email já existe
-
-      bcrypt.compare.mockResolvedValue(true);
-      bcrypt.hash.mockResolvedValue("newHashedPassword");
-
-      // Act
-      await UsuarioController.updateProfile(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: "Email e senha atualizados com sucesso",
-        data: {
-          usuario: expect.objectContaining({
-            id: 1,
-          }),
-        },
-      });
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 400 quando ocorre SequelizeValidationError", async () => {
-      // Arrange
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
-        tipo_usuario: "cliente",
+        email: "antigo@email.com",
         ativo: true,
         update: jest.fn().mockRejectedValue({
           name: "SequelizeValidationError",
-          errors: [
-            { path: "email", message: "Email inválido" },
-          ],
+          errors: [{ path: "email", message: "Email inválido" }],
         }),
       };
-
-      req.body = { email: "novoemail@teste.com" };
-
-      Usuario.findOne
-        .mockResolvedValueOnce(mockUsuario)
+      mockUsuario.findOne
+        .mockResolvedValueOnce(mockUsuarioAtual)
         .mockResolvedValueOnce(null);
 
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -477,29 +378,22 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 409 quando ocorre SequelizeUniqueConstraintError", async () => {
-      // Arrange
-      const mockUsuario = {
+    it("deve tratar erro de unique constraint", async () => {
+      req.body = { email: "novo@email.com" };
+      const mockUsuarioAtual = {
         id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
-        tipo_usuario: "cliente",
+        email: "antigo@email.com",
         ativo: true,
         update: jest.fn().mockRejectedValue({
           name: "SequelizeUniqueConstraintError",
         }),
       };
-
-      req.body = { email: "novoemail@teste.com" };
-
-      Usuario.findOne
-        .mockResolvedValueOnce(mockUsuario)
+      mockUsuario.findOne
+        .mockResolvedValueOnce(mockUsuarioAtual)
         .mockResolvedValueOnce(null);
 
-      // Act
       await UsuarioController.updateProfile(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -510,151 +404,105 @@ describe("UsuarioController", () => {
       });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
+
+    it("deve retornar erro 500 quando ocorre erro genérico", async () => {
+      req.body = { email: "novo@email.com" };
+      mockUsuario.findOne.mockRejectedValue(new Error("Database error"));
+
+      await UsuarioController.updateProfile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
   });
 
   describe("deleteAccount", () => {
-    it("deve excluir conta de cliente com sucesso", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
+    it("deve retornar erro quando confirmação não é fornecida", async () => {
+      req.body = { senha: "123456" };
 
-      const mockCliente = {
-        id: 1,
-        nome_completo: "João Silva",
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        tipo_usuario: "cliente",
-        senha_hash: "hashedPassword",
-        google_id: null,
-        ativo: true,
-        cliente: mockCliente,
-        autopeca: null,
-        update: jest.fn().mockImplementation(function(dados) {
-          if (dados.ativo !== undefined) {
-            this.ativo = dados.ativo;
-          }
-          return Promise.resolve(this);
-        }),
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-      Solicitacao.findAll.mockResolvedValue([]);
-
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: "Conta excluída com sucesso",
-        data: {
-          usuario: expect.objectContaining({
-            id: 1,
-            ativo: false,
-          }),
+        success: false,
+        message: "Confirmação inválida",
+        errors: {
+          confirmacao: 'Para excluir sua conta, você deve digitar "CONFIRMAR" no campo de confirmação',
         },
       });
-      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve excluir conta OAuth sem senha", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-      };
+    it("deve retornar erro quando confirmação está incorreta", async () => {
+      req.body = { confirmacao: "EXCLUIR", senha: "123456" };
 
-      const mockCliente = {
-        id: 1,
-        nome_completo: "João Silva",
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        tipo_usuario: "cliente",
-        google_id: "google123",
-        ativo: true,
-        cliente: mockCliente,
-        autopeca: null,
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      Solicitacao.findAll.mockResolvedValue([]);
-
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Confirmação inválida",
+        errors: {
+          confirmacao: 'Para excluir sua conta, você deve digitar "CONFIRMAR" no campo de confirmação',
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 403 quando usuário é vendedor", async () => {
-      // Arrange
+    it("deve retornar erro quando tipo é vendedor", async () => {
       req.user.tipo = "vendedor";
-      req.body = {
-        confirmacao: "CONFIRMAR",
-      };
+      req.body = { confirmacao: "CONFIRMAR", senha: "123456" };
 
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: "Operação não permitida",
         errors: {
-          conta: expect.stringContaining("Vendedores não podem excluir"),
+          conta: "Vendedores não podem excluir a própria conta. Solicite ao administrador da autopeça.",
         },
       });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando confirmação é inválida", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "INVALIDO",
-      };
+    it("deve retornar erro quando usuário não é encontrado", async () => {
+      req.body = { confirmacao: "CONFIRMAR", senha: "123456" };
+      mockUsuario.findOne.mockResolvedValue(null);
 
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Usuário não encontrado",
+        errors: {
+          usuario: "Usuário não encontrado no sistema",
+        },
+      });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando senha não é fornecida (não OAuth)", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-      };
-
-      const mockUsuario = {
+    it("deve retornar erro quando senha não é fornecida para conta não-OAuth", async () => {
+      req.body = { confirmacao: "CONFIRMAR" };
+      const mockUsuarioData = {
         id: 1,
-        email: "cliente@teste.com",
+        email: "test@test.com",
+        senha_hash: "hashed_password",
         google_id: null,
-        cliente: null,
-        autopeca: null,
+        ativo: true,
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioData);
 
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
@@ -666,286 +514,72 @@ describe("UsuarioController", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando senha está incorreta", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "senhaErrada",
-      };
-
-      const mockUsuario = {
+    it("deve retornar erro quando senha está incorreta", async () => {
+      req.body = { confirmacao: "CONFIRMAR", senha: "senhaErrada" };
+      const mockUsuarioData = {
         id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
+        email: "test@test.com",
+        senha_hash: "hashed_password",
         google_id: null,
         ativo: true,
-        cliente: null,
-        autopeca: null,
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioData);
+      mockBcryptCompare.mockResolvedValue(false);
 
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(false);
-
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message: "Senha incorreta",
         errors: {
-          senha: expect.stringContaining("Senha incorreta"),
+          senha: "Senha incorreta. Por favor, verifique sua senha e tente novamente.",
         },
       });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro 400 quando conta já está desativada", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
-
-      const mockUsuario = {
+    it("deve retornar erro quando conta já está inativa", async () => {
+      req.body = { confirmacao: "CONFIRMAR", senha: "senha123" };
+      const mockUsuarioData = {
         id: 1,
-        email: "cliente@teste.com",
-        senha_hash: "hashedPassword",
+        email: "test@test.com",
+        senha_hash: "hashed_password",
         google_id: null,
         ativo: false,
-        cliente: null,
-        autopeca: null,
       };
+      mockUsuario.findOne.mockResolvedValue(mockUsuarioData);
+      mockBcryptCompare.mockResolvedValue(true);
 
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Conta já desativada",
+        errors: {
+          conta: "Sua conta já está desativada",
+        },
+      });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve cancelar solicitações ativas ao excluir conta de cliente", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
 
-      const mockCliente = {
-        id: 1,
-        nome_completo: "João Silva",
-        update: jest.fn().mockResolvedValue(true),
-      };
+    it("deve retornar erro 500 quando ocorre erro na exclusão", async () => {
+      req.body = { confirmacao: "CONFIRMAR", senha: "senha123" };
+      mockUsuario.findOne.mockRejectedValue(new Error("Database error"));
 
-      const mockSolicitacoes = [
-        {
-          id: 1,
-          cliente_id: 1,
-          status_cliente: "ativa",
-        },
-        {
-          id: 2,
-          cliente_id: 1,
-          status_cliente: "ativa",
-        },
-      ];
-
-      const mockUsuario = {
-        id: 1,
-        email: "cliente@teste.com",
-        tipo_usuario: "cliente",
-        senha_hash: "hashedPassword",
-        google_id: null,
-        ativo: true,
-        cliente: mockCliente,
-        autopeca: null,
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-      Solicitacao.findAll.mockResolvedValue(mockSolicitacoes);
-      Solicitacao.update.mockResolvedValue([2]);
-
-      // Act
       await UsuarioController.deleteAccount(req, res);
 
-      // Assert
-      expect(Solicitacao.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status_cliente: "cancelada",
-        }),
-        expect.any(Object)
-      );
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 404 quando usuário não é encontrado", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
-
-      Usuario.findOne.mockResolvedValue(null);
-
-      // Act
-      await UsuarioController.deleteAccount(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("deve retornar erro 500 quando ocorre erro interno", async () => {
-      // Arrange
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
-
-      Usuario.findOne.mockRejectedValue(new Error("Database error"));
-
-      // Act
-      await UsuarioController.deleteAccount(req, res);
-
-      // Assert
       expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
       expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("deve excluir conta de autopeça com sucesso e desativar vendedores", async () => {
-      // Arrange
-      req.user.tipo = "autopeca";
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
-
-      const mockVendedor1 = {
-        id: 1,
-        ativo: true,
-        usuario: {
-          id: 10,
-          ativo: true,
-          update: jest.fn().mockResolvedValue(true),
-        },
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      const mockVendedor2 = {
-        id: 2,
-        ativo: true,
-        usuario: {
-          id: 11,
-          ativo: true,
-          update: jest.fn().mockResolvedValue(true),
-        },
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      const mockAutopeca = {
-        id: 1,
-        razao_social: "Auto Peças LTDA",
-        nome_fantasia: "Auto Peças Silva",
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      const mockUsuario = {
-        id: 1,
-        email: "autopeca@teste.com",
-        tipo_usuario: "autopeca",
-        senha_hash: "hashedPassword",
-        google_id: null,
-        ativo: true,
-        cliente: null,
-        autopeca: mockAutopeca,
-        update: jest.fn().mockImplementation(function(dados) {
-          if (dados.ativo !== undefined) {
-            this.ativo = dados.ativo;
-          }
-          return Promise.resolve(this);
-        }),
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-      Vendedor.findAll.mockResolvedValue([mockVendedor1, mockVendedor2]);
-
-      // Act
-      await UsuarioController.deleteAccount(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(mockTransaction.commit).toHaveBeenCalled();
-      expect(Vendedor.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            autopeca_id: 1,
-            ativo: true,
-          }),
-          include: expect.any(Array),
-          transaction: expect.any(Object),
-        })
-      );
-      expect(mockVendedor1.update).toHaveBeenCalledWith(
-        { ativo: false },
-        expect.any(Object)
-      );
-      expect(mockVendedor2.update).toHaveBeenCalledWith(
-        { ativo: false },
-        expect.any(Object)
-      );
-    });
-
-    it("deve excluir conta de autopeça sem vendedores vinculados", async () => {
-      // Arrange
-      req.user.tipo = "autopeca";
-      req.body = {
-        confirmacao: "CONFIRMAR",
-        senha: "123456",
-      };
-
-      const mockAutopeca = {
-        id: 1,
-        razao_social: "Auto Peças LTDA",
-        nome_fantasia: "Auto Peças Silva",
-        update: jest.fn().mockResolvedValue(true),
-      };
-
-      const mockUsuario = {
-        id: 1,
-        email: "autopeca@teste.com",
-        tipo_usuario: "autopeca",
-        senha_hash: "hashedPassword",
-        google_id: null,
-        ativo: true,
-        cliente: null,
-        autopeca: mockAutopeca,
-        update: jest.fn().mockImplementation(function(dados) {
-          if (dados.ativo !== undefined) {
-            this.ativo = dados.ativo;
-          }
-          return Promise.resolve(this);
-        }),
-      };
-
-      Usuario.findOne.mockResolvedValue(mockUsuario);
-      bcrypt.compare.mockResolvedValue(true);
-      Vendedor.findAll.mockResolvedValue([]);
-
-      // Act
-      await UsuarioController.deleteAccount(req, res);
-
-      // Assert
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(mockTransaction.commit).toHaveBeenCalled();
     });
   });
 });
-

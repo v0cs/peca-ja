@@ -1,28 +1,22 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const AuthController = require("../../../src/controllers/authController");
-const { Usuario, Cliente, Autopeca, Vendedor } = require("../../../src/models");
-const config = require("../../../src/config/env");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks ANTES de tudo
+const mockUsuario = createModelMock();
+const mockCliente = createModelMock();
+const mockAutopeca = createModelMock();
+const mockVendedor = createModelMock();
+
+const mockBcryptHash = jest.fn();
+const mockBcryptCompare = jest.fn();
+const mockJwtSign = jest.fn();
+const mockJwtVerify = jest.fn();
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    create: jest.fn(),
-  },
-  Cliente: {
-    create: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-    create: jest.fn(),
-  },
-  Vendedor: {
-    findOne: jest.fn(),
-  },
+  Usuario: mockUsuario,
+  Cliente: mockCliente,
+  Autopeca: mockAutopeca,
+  Vendedor: mockVendedor,
 }));
 
 // Mock do config
@@ -33,17 +27,42 @@ jest.mock("../../../src/config/env", () => ({
 }));
 
 // Mock do bcrypt
-jest.mock("bcryptjs");
+jest.mock("bcryptjs", () => ({
+  hash: mockBcryptHash,
+  compare: mockBcryptCompare,
+}));
 
 // Mock do jwt
-jest.mock("jsonwebtoken");
+jest.mock("jsonwebtoken", () => ({
+  sign: mockJwtSign,
+  verify: mockJwtVerify,
+}));
+
+// Importar APÓS os mocks
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const AuthController = require("../../../src/controllers/authController");
+const { Usuario, Cliente, Autopeca, Vendedor } = require("../../../src/models");
+const config = require("../../../src/config/env");
 
 describe("AuthController", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    mockUsuario.findOne.mockClear();
+    mockUsuario.create.mockClear();
+    mockCliente.create.mockClear();
+    mockAutopeca.findOne.mockClear();
+    mockAutopeca.create.mockClear();
+    mockVendedor.findOne.mockClear();
+    mockBcryptHash.mockClear();
+    mockBcryptCompare.mockClear();
+    mockJwtSign.mockClear();
+    mockJwtVerify.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(mockUsuario);
 
     // Mock request
     req = {
@@ -56,17 +75,6 @@ describe("AuthController", () => {
       json: jest.fn().mockReturnThis(),
       redirect: jest.fn(),
     };
-
-    // Mock transaction
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    // Reconfigurar mock de transaction após clearAllMocks
-    if (Usuario.sequelize) {
-      Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
-    }
   });
 
   describe("register", () => {
@@ -860,6 +868,132 @@ describe("AuthController", () => {
       req.user = originalUser;
       consoleErrorSpy.mockRestore();
     });
+  });
+
+  describe("forgotPassword", () => {
+    it("deve retornar erro quando email não é fornecido", async () => {
+      req.body = {};
+
+      await AuthController.forgotPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Email é obrigatório",
+        errors: {
+          email: "Email é obrigatório",
+        },
+      });
+    });
+
+    it("deve retornar erro quando formato de email é inválido", async () => {
+      req.body = { email: "email-invalido" };
+
+      await AuthController.forgotPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Formato de email inválido",
+        errors: {
+          email: "Formato de email inválido",
+        },
+      });
+    });
+
+    it("deve retornar sucesso quando email não existe (segurança)", async () => {
+      req.body = { email: "naoexiste@test.com" };
+      mockUsuario.findOne.mockResolvedValue(null);
+
+      await AuthController.forgotPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Se o email estiver cadastrado, você receberá instruções para redefinir sua senha",
+      });
+    });
+
+
+    it("deve retornar erro 500 quando ocorre erro", async () => {
+      req.body = { email: "test@test.com" };
+      mockUsuario.findOne.mockRejectedValue(new Error("Database error"));
+
+      await AuthController.forgotPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Erro interno do servidor",
+        errors: {
+          message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        },
+      });
+    });
+  });
+
+  describe("resetPassword", () => {
+    const mockTokenRecuperacao = {
+      id: 1,
+      token: "valid-token",
+      data_expiracao: new Date(Date.now() + 3600000),
+      utilizado: false,
+      usuario: {
+        id: 1,
+        email: "test@test.com",
+        update: jest.fn().mockResolvedValue(true),
+      },
+      update: jest.fn().mockResolvedValue(true),
+    };
+
+    it("deve retornar erro quando token não é fornecido", async () => {
+      req.body = { nova_senha: "novaSenha123" };
+
+      await AuthController.resetPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Token e nova senha são obrigatórios",
+        errors: expect.objectContaining({
+          token: "Token é obrigatório",
+        }),
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando nova_senha não é fornecida", async () => {
+      req.body = { token: "valid-token" };
+
+      await AuthController.resetPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Token e nova senha são obrigatórios",
+        errors: expect.objectContaining({
+          nova_senha: "Nova senha é obrigatória",
+        }),
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("deve retornar erro quando nova_senha é muito curta", async () => {
+      req.body = { token: "valid-token", nova_senha: "123" };
+
+      await AuthController.resetPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "A nova senha deve ter pelo menos 6 caracteres",
+        errors: {
+          nova_senha: "A senha deve ter pelo menos 6 caracteres",
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
   });
 
   describe("me", () => {

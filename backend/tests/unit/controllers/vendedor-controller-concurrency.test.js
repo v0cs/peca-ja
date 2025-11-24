@@ -1,34 +1,16 @@
-const VendedorController = require("../../../src/controllers/vendedorController");
-const {
-  Vendedor,
-  Usuario,
-  Autopeca,
-  Cliente,
-} = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockVendedor = createModelMock();
+const mockUsuario = createModelMock();
+const mockAutopeca = createModelMock();
+const mockCliente = createModelMock();
 
 jest.mock("../../../src/models", () => ({
-  Vendedor: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    create: jest.fn(),
-    findOne: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
+  Vendedor: mockVendedor,
+  Usuario: mockUsuario,
+  Autopeca: mockAutopeca,
+  Cliente: mockCliente,
   Op: {
     and: Symbol("Op.and"),
     or: Symbol("Op.or"),
@@ -50,35 +32,34 @@ jest.mock("../../../src/services", () => ({
   },
 }));
 
+// Importar após os mocks
+const VendedorController = require("../../../src/controllers/vendedorController");
+const { Vendedor, Usuario, Autopeca, Cliente } = require("../../../src/models");
+
 describe("VendedorController - Testes de Concorrência", () => {
   let req1, req2, res1, res2, mockTransaction1, mockTransaction2;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Vendedor.create.mockClear();
+    Vendedor.findAll.mockClear();
+    Vendedor.findOne.mockClear();
+    Vendedor.update.mockClear();
+    Usuario.create.mockClear();
+    Usuario.findOne.mockClear();
+    Autopeca.findOne.mockClear();
+    Cliente.findOne.mockClear();
 
-    // Reconfigurar mocks principais após clearAllMocks
-    const { Autopeca, Cliente, Usuario, Vendedor } = require("../../../src/models");
-    if (Autopeca && !Autopeca.findOne || typeof Autopeca.findOne !== 'function') {
-      Autopeca.findOne = jest.fn();
-    }
-    if (Cliente && (!Cliente.findOne || typeof Cliente.findOne !== 'function')) {
-      Cliente.findOne = jest.fn();
-    }
-    if (Usuario && Usuario.sequelize) {
-      Usuario.sequelize.transaction = jest.fn();
-    }
-    if (Vendedor && (!Vendedor.findOne || typeof Vendedor.findOne !== 'function')) {
-      Vendedor.findOne = jest.fn();
-    }
-    if (Usuario && (!Usuario.findOne || typeof Usuario.findOne !== 'function')) {
-      Usuario.findOne = jest.fn();
-    }
-    if (Usuario && (!Usuario.create || typeof Usuario.create !== 'function')) {
-      Usuario.create = jest.fn();
-    }
-    if (Vendedor && (!Vendedor.create || typeof Vendedor.create !== 'function')) {
-      Vendedor.create = jest.fn();
-    }
+    // Configurar transactions separadas para testes de concorrência
+    mockTransaction1 = {
+      commit: jest.fn().mockResolvedValue(undefined),
+      rollback: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockTransaction2 = {
+      commit: jest.fn().mockResolvedValue(undefined),
+      rollback: jest.fn().mockResolvedValue(undefined),
+    };
 
     req1 = {
       user: { userId: 1, tipo: "autopeca" },
@@ -98,16 +79,6 @@ describe("VendedorController - Testes de Concorrência", () => {
     res2 = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
-    };
-
-    mockTransaction1 = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    mockTransaction2 = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
     };
   });
 

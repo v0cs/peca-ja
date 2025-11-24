@@ -1,20 +1,21 @@
-const ApiVeicularService = require("../../../src/services/apiVeicularService");
-const axios = require("axios");
-const NodeCache = require("node-cache");
+// Criar mock de axios ANTES de qualquer import
+const mockAxiosInstance = {
+  get: jest.fn(),
+  interceptors: {
+    request: {
+      use: jest.fn(),
+    },
+    response: {
+      use: jest.fn(),
+    },
+  },
+};
+
+const mockAxiosCreate = jest.fn(() => mockAxiosInstance);
 
 // Mock do axios
 jest.mock("axios", () => ({
-  create: jest.fn(() => ({
-    get: jest.fn(),
-    interceptors: {
-      request: {
-        use: jest.fn(),
-      },
-      response: {
-        use: jest.fn(),
-      },
-    },
-  })),
+  create: mockAxiosCreate,
 }));
 
 // Mock do NodeCache
@@ -34,25 +35,19 @@ jest.mock("../../../src/config/env", () => ({
   NODE_ENV: "test",
 }));
 
+// Importar após os mocks
+const ApiVeicularService = require("../../../src/services/apiVeicularService");
+const axios = require("axios");
+const NodeCache = require("node-cache");
+
 describe("ApiVeicularService", () => {
   let apiVeicularService;
-  let mockAxiosInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Não usar jest.restoreAllMocks() aqui pois remove os mocks configurados
-    mockAxiosInstance = {
-      get: jest.fn(),
-      interceptors: {
-        request: {
-          use: jest.fn(),
-        },
-        response: {
-          use: jest.fn(),
-        },
-      },
-    };
-    axios.create.mockReturnValue(mockAxiosInstance);
+    // Limpar apenas as chamadas, não as implementações
+    mockAxiosInstance.get.mockClear();
+    mockAxiosCreate.mockClear();
+    
     // ApiVeicularService é exportado como instância única (singleton)
     apiVeicularService = ApiVeicularService;
   });

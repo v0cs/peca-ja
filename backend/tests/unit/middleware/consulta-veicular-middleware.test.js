@@ -1,16 +1,20 @@
+// Criar mock do apiVeicularService ANTES de importar
+const mockConsultarVeiculoPorPlaca = jest.fn();
+
+// Mock do apiVeicularService
+jest.mock("../../../src/services", () => ({
+  apiVeicularService: {
+    consultarVeiculoPorPlaca: mockConsultarVeiculoPorPlaca,
+  },
+}));
+
+// Importar APÓS os mocks
 const {
   consultaVeicularMiddleware,
   consultaVeicularSolicitacoesMiddleware,
   logConsultaVeicularMiddleware,
 } = require("../../../src/middleware/consultaVeicularMiddleware");
 const { apiVeicularService } = require("../../../src/services");
-
-// Mock do apiVeicularService
-jest.mock("../../../src/services", () => ({
-  apiVeicularService: {
-    consultarVeiculoPorPlaca: jest.fn(),
-  },
-}));
 
 describe("consultaVeicularMiddleware", () => {
   let req, res, next;
@@ -21,7 +25,7 @@ describe("consultaVeicularMiddleware", () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
     jest.spyOn(console, "error").mockImplementation(() => {});
     // Limpar apenas o mock do apiVeicularService
-    apiVeicularService.consultarVeiculoPorPlaca.mockClear();
+    mockConsultarVeiculoPorPlaca.mockClear();
 
     req = {
       method: "POST",

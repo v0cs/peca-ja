@@ -1,3 +1,25 @@
+// Criar mocks ANTES de importar
+const mockNotificacaoCreate = jest.fn();
+const mockAutopecaFindByPk = jest.fn();
+const mockVendedorFindAll = jest.fn();
+const mockVendedorFindByPk = jest.fn();
+
+// Mock dos modelos
+jest.mock("../../../src/models", () => ({
+  Notificacao: {
+    create: mockNotificacaoCreate,
+  },
+  Autopeca: {
+    findByPk: mockAutopecaFindByPk,
+  },
+  Usuario: jest.fn(),
+  Vendedor: {
+    findAll: mockVendedorFindAll,
+    findByPk: mockVendedorFindByPk,
+  },
+}));
+
+// Importar APÓS os mocks
 const NotificationService = require("../../../src/services/notificationService");
 const {
   Notificacao,
@@ -6,24 +28,13 @@ const {
   Vendedor,
 } = require("../../../src/models");
 
-// Mock dos modelos
-jest.mock("../../../src/models", () => ({
-  Notificacao: {
-    create: jest.fn(),
-  },
-  Autopeca: {
-    findByPk: jest.fn(),
-  },
-  Usuario: jest.fn(), // Modelo usado em includes
-  Vendedor: {
-    findAll: jest.fn(),
-    findByPk: jest.fn(),
-  },
-}));
-
 describe("NotificationService", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar apenas os mocks individuais
+    mockNotificacaoCreate.mockClear();
+    mockAutopecaFindByPk.mockClear();
+    mockVendedorFindAll.mockClear();
+    mockVendedorFindByPk.mockClear();
     // Mock console.log e console.error para não poluir os testes
     jest.spyOn(console, "log").mockImplementation(() => {});
     jest.spyOn(console, "error").mockImplementation(() => {});
