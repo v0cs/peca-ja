@@ -1,27 +1,33 @@
-const NotificationController = require("../../../src/controllers/notificationController");
-const { Notificacao } = require("../../../src/models");
+const { createModelMock } = require("../../helpers/mockFactory");
+
+// Criar mock do model com sequelize functions ANTES de importar o controller
+const mockNotificacao = createModelMock({
+  sequelize: {
+    fn: jest.fn((fn, col) => ({ fn, col })),
+    col: jest.fn((col) => col),
+  },
+});
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Notificacao: {
-    findAndCountAll: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-    count: jest.fn(),
-    findAll: jest.fn(),
-    destroy: jest.fn(),
-    sequelize: {
-      fn: jest.fn((fn, col) => ({ fn, col })),
-      col: jest.fn((col) => col),
-    },
-  },
+  Notificacao: mockNotificacao,
 }));
+
+// Importar após os mocks
+const NotificationController = require("../../../src/controllers/notificationController");
+const { Notificacao } = require("../../../src/models");
 
 describe("NotificationController", () => {
   let req, res;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Notificacao.findAndCountAll.mockClear();
+    Notificacao.findOne.mockClear();
+    Notificacao.update.mockClear();
+    Notificacao.count.mockClear();
+    Notificacao.findAll.mockClear();
+    Notificacao.destroy.mockClear();
 
     req = {
       user: {

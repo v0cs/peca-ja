@@ -1,43 +1,23 @@
-const AutopecaController = require("../../../src/controllers/autopecaController");
-const {
-  Autopeca,
-  Usuario,
-  Solicitacao,
-  SolicitacoesAtendimento,
-  ImagemSolicitacao,
-} = require("../../../src/models");
-const { Op } = require("sequelize");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockAutopeca = createModelMock();
+const mockUsuario = createModelMock();
+const mockSolicitacao = createModelMock();
+const mockSolicitacoesAtendimento = createModelMock();
+const mockImagemSolicitacao = createModelMock();
+const mockCliente = createModelMock();
+const mockVendedor = createModelMock();
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Autopeca: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Usuario: {
-    findOne: jest.fn(),
-  },
-  Solicitacao: {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-  },
-  SolicitacoesAtendimento: {
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-    create: jest.fn(),
-  },
-  ImagemSolicitacao: {
-    findAll: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
-  Vendedor: {
-    findAll: jest.fn(),
-  },
+  Autopeca: mockAutopeca,
+  Usuario: mockUsuario,
+  Solicitacao: mockSolicitacao,
+  SolicitacoesAtendimento: mockSolicitacoesAtendimento,
+  ImagemSolicitacao: mockImagemSolicitacao,
+  Cliente: mockCliente,
+  Vendedor: mockVendedor,
   Op: {
     and: jest.fn(),
     iLike: jest.fn(),
@@ -51,11 +31,30 @@ jest.mock("../../../src/services/notificationService", () => ({
   notificarClienteSolicitacaoAtendida: jest.fn(),
 }));
 
+// Importar após os mocks
+const AutopecaController = require("../../../src/controllers/autopecaController");
+const { Autopeca, Usuario, Solicitacao, SolicitacoesAtendimento, ImagemSolicitacao, Cliente, Vendedor, Op } = require("../../../src/models");
+const { Op: SeqOp } = require("sequelize");
+
 describe("AutopecaController", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Autopeca.findOne.mockClear();
+    Autopeca.update.mockClear();
+    Usuario.findOne.mockClear();
+    Solicitacao.findAll.mockClear();
+    Solicitacao.findOne.mockClear();
+    SolicitacoesAtendimento.findOne.mockClear();
+    SolicitacoesAtendimento.findAll.mockClear();
+    SolicitacoesAtendimento.create.mockClear();
+    ImagemSolicitacao.findAll.mockClear();
+    Cliente.findOne.mockClear();
+    Vendedor.findAll.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(Autopeca);
 
     req = {
       user: {
@@ -71,12 +70,7 @@ describe("AutopecaController", () => {
       json: jest.fn().mockReturnThis(),
     };
 
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    // Reconfigurar mock de transaction após clearAllMocks
+    // Reconfigurar mock de transaction após clearAllMocks (mantido para compatibilidade)
     if (Autopeca.sequelize) {
       Autopeca.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
     }

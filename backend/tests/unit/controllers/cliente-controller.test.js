@@ -1,26 +1,44 @@
-const ClienteController = require("../../../src/controllers/clienteController");
-const { Cliente, Usuario } = require("../../../src/models");
-const bcrypt = require("bcryptjs");
+const { setupTransactionMock } = require("../../helpers/mockFactory");
 
-// Mock dos modelos
-jest.mock("../../../src/models", () => ({
-  Cliente: {
+// Mock dos modelos - DEVE vir antes de importar o controller
+jest.mock("../../../src/models", () => {
+  const createModelMock = (additionalMethods = {}) => ({
+    findOne: jest.fn(),
+    findAll: jest.fn(),
+    findByPk: jest.fn(),
+    findAndCountAll: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+    count: jest.fn(),
+    bulkCreate: jest.fn(),
     sequelize: {
       transaction: jest.fn(),
     },
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Usuario: {
-    findOne: jest.fn(),
-  },
-}));
+    ...additionalMethods,
+  });
+
+  return {
+    Cliente: createModelMock(),
+    Usuario: createModelMock(),
+  };
+});
+
+// Importar após definir os mocks
+const ClienteController = require("../../../src/controllers/clienteController");
+const { Cliente, Usuario } = require("../../../src/models");
 
 describe("ClienteController", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar apenas os mocks, não recriar
+    Cliente.findOne.mockClear();
+    Cliente.update.mockClear();
+    Usuario.findOne.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(Cliente);
 
     req = {
       user: {
@@ -34,16 +52,6 @@ describe("ClienteController", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    // Reconfigurar mock de transaction após clearAllMocks
-    if (Cliente.sequelize) {
-      Cliente.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
-    }
   });
 
   describe("getProfile", () => {

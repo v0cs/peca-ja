@@ -1,47 +1,23 @@
-const SolicitacaoController = require("../../../src/controllers/solicitacaoController");
-const {
-  Solicitacao,
-  Cliente,
-  Usuario,
-  ImagemSolicitacao,
-  SolicitacoesAtendimento,
-} = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockSolicitacao = createModelMock();
+const mockCliente = createModelMock();
+const mockUsuario = createModelMock();
+const mockImagemSolicitacao = createModelMock();
+const mockSolicitacoesAtendimento = createModelMock();
+const mockAutopeca = createModelMock();
+const mockVendedor = createModelMock();
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Solicitacao: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findByPk: jest.fn(),
-    findOne: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
-  Usuario: {
-    findOne: jest.fn(),
-  },
-  ImagemSolicitacao: {
-    create: jest.fn(),
-    count: jest.fn(),
-    findAll: jest.fn(),
-    destroy: jest.fn(),
-  },
-  Autopeca: {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-  },
-  Vendedor: {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-  },
-  SolicitacoesAtendimento: {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-  },
+  Solicitacao: mockSolicitacao,
+  Cliente: mockCliente,
+  Usuario: mockUsuario,
+  ImagemSolicitacao: mockImagemSolicitacao,
+  SolicitacoesAtendimento: mockSolicitacoesAtendimento,
+  Autopeca: mockAutopeca,
+  Vendedor: mockVendedor,
   Op: {
     and: Symbol("Op.and"),
     iLike: Symbol("Op.iLike"),
@@ -77,6 +53,10 @@ jest.mock("path", () => ({
   }),
   join: jest.fn((...args) => args.join("/")),
 }));
+
+// Importar após os mocks
+const SolicitacaoController = require("../../../src/controllers/solicitacaoController");
+const { Solicitacao, Cliente, Usuario, ImagemSolicitacao, SolicitacoesAtendimento, Autopeca, Vendedor } = require("../../../src/models");
 
 describe("SolicitacaoController - Testes de Segurança", () => {
   let req, res, mockTransaction;

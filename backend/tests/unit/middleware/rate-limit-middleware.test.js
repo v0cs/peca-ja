@@ -139,5 +139,90 @@ describe("Rate Limit Middleware", () => {
       expect(next).toHaveBeenCalled();
     });
   });
+
+  describe("Rate Limiter - Cenários Avançados", () => {
+    it("generalRateLimiter deve aceitar usuário autenticado", () => {
+      req.user = { userId: 1, tipo: "cliente" };
+      generalRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("authRateLimiter deve aceitar requisições de autenticação", () => {
+      authRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("apiRateLimiter deve aceitar requisições de API", () => {
+      apiRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("uploadRateLimiter deve aceitar requisições de upload", () => {
+      uploadRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("solicitationRateLimiter deve aceitar requisições de solicitação", () => {
+      solicitationRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("vendedorCreationRateLimiter deve aceitar requisições de criação de vendedor", () => {
+      vendedorCreationRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("deve funcionar com diferentes IPs", () => {
+      req.ip = "192.168.1.1";
+      generalRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("deve funcionar com headers X-Forwarded-For", () => {
+      req.headers["x-forwarded-for"] = "10.0.0.1";
+      generalRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("deve funcionar com header X-Real-IP", () => {
+      req.headers["x-real-ip"] = "172.16.0.1";
+      generalRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("deve funcionar sem IP definido", () => {
+      delete req.ip;
+      generalRateLimiter(req, res, next);
+      expect(next).toHaveBeenCalled();
+    });
+  });
+
+  describe("Todos os Rate Limiters - Validação de Funcionamento", () => {
+    const limiters = [
+      { name: "generalRateLimiter", limiter: generalRateLimiter },
+      { name: "authRateLimiter", limiter: authRateLimiter },
+      { name: "apiRateLimiter", limiter: apiRateLimiter },
+      { name: "uploadRateLimiter", limiter: uploadRateLimiter },
+      { name: "solicitationRateLimiter", limiter: solicitationRateLimiter },
+      { name: "vendedorCreationRateLimiter", limiter: vendedorCreationRateLimiter },
+    ];
+
+    limiters.forEach(({ name, limiter }) => {
+      it(`${name} deve ser uma função`, () => {
+        expect(typeof limiter).toBe("function");
+      });
+
+      it(`${name} deve chamar next() quando requisição é válida`, () => {
+        limiter(req, res, next);
+        expect(next).toHaveBeenCalled();
+      });
+
+      it(`${name} deve definir rateLimit no req`, () => {
+        limiter(req, res, next);
+        expect(req.rateLimit).toBeDefined();
+        expect(req.rateLimit.limit).toBeDefined();
+      });
+    });
+  });
 });
 

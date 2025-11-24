@@ -1,21 +1,21 @@
-const AuthController = require("../../../src/controllers/authController");
-const { Usuario, Cliente, Autopeca } = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockUsuario = createModelMock();
+const mockCliente = createModelMock();
+const mockAutopeca = createModelMock();
+const mockVendedor = createModelMock();
+
+const mockBcryptHash = jest.fn();
+const mockBcryptCompare = jest.fn();
+const mockJwtSign = jest.fn();
+const mockJwtVerify = jest.fn();
 
 jest.mock("../../../src/models", () => ({
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    create: jest.fn(),
-  },
-  Cliente: {
-    create: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-    create: jest.fn(),
-  },
+  Usuario: mockUsuario,
+  Cliente: mockCliente,
+  Autopeca: mockAutopeca,
+  Vendedor: mockVendedor,
 }));
 
 jest.mock("../../../src/config/env", () => ({
@@ -24,24 +24,46 @@ jest.mock("../../../src/config/env", () => ({
   JWT_EXPIRES_IN: "24h",
 }));
 
-jest.mock("bcryptjs");
-jest.mock("jsonwebtoken");
+jest.mock("bcryptjs", () => ({
+  hash: mockBcryptHash,
+  compare: mockBcryptCompare,
+  genSalt: jest.fn(),
+}));
+
+jest.mock("jsonwebtoken", () => ({
+  sign: mockJwtSign,
+  verify: mockJwtVerify,
+}));
+
+// Importar após os mocks
+const AuthController = require("../../../src/controllers/authController");
+const { Usuario, Cliente, Autopeca } = require("../../../src/models");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 describe("AuthController - Validações Auxiliares", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    mockUsuario.findOne.mockClear();
+    mockUsuario.create.mockClear();
+    mockCliente.create.mockClear();
+    mockAutopeca.findOne.mockClear();
+    mockAutopeca.create.mockClear();
+    mockBcryptHash.mockClear();
+    mockBcryptCompare.mockClear();
+    mockJwtSign.mockClear();
+    mockJwtVerify.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(mockUsuario);
+    
     req = { body: {} };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-    Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
   });
 
   describe("Validação de UF", () => {

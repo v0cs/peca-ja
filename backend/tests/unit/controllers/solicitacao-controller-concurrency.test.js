@@ -1,57 +1,22 @@
-const SolicitacaoController = require("../../../src/controllers/solicitacaoController");
-const {
-  Solicitacao,
-  Cliente,
-  Usuario,
-  ImagemSolicitacao,
-  SolicitacoesAtendimento,
-  Autopeca,
-  Vendedor,
-} = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockSolicitacao = createModelMock();
+const mockCliente = createModelMock();
+const mockUsuario = createModelMock();
+const mockImagemSolicitacao = createModelMock();
+const mockSolicitacoesAtendimento = createModelMock();
+const mockAutopeca = createModelMock();
+const mockVendedor = createModelMock();
 
 jest.mock("../../../src/models", () => ({
-  Solicitacao: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findByPk: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    create: jest.fn(),
-    findOne: jest.fn(),
-  },
-  ImagemSolicitacao: {
-    create: jest.fn(),
-    count: jest.fn(),
-    findAll: jest.fn(),
-    destroy: jest.fn(),
-  },
-  Autopeca: {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-  },
-  Vendedor: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-  },
-  SolicitacoesAtendimento: {
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    create: jest.fn(),
-  },
+  Solicitacao: mockSolicitacao,
+  Cliente: mockCliente,
+  Usuario: mockUsuario,
+  ImagemSolicitacao: mockImagemSolicitacao,
+  SolicitacoesAtendimento: mockSolicitacoesAtendimento,
+  Autopeca: mockAutopeca,
+  Vendedor: mockVendedor,
   Op: {
     and: Symbol("Op.and"),
     iLike: Symbol("Op.iLike"),
@@ -90,6 +55,10 @@ jest.mock("path", () => ({
   }),
   join: jest.fn((...args) => args.join("/")),
 }));
+
+// Importar após os mocks
+const SolicitacaoController = require("../../../src/controllers/solicitacaoController");
+const { Solicitacao, Cliente, Usuario, ImagemSolicitacao, SolicitacoesAtendimento, Autopeca, Vendedor } = require("../../../src/models");
 
 describe("SolicitacaoController - Testes de Concorrência", () => {
   let req1, req2, res1, res2, mockTransaction1, mockTransaction2;

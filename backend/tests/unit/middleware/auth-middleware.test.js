@@ -1,20 +1,31 @@
-const authMiddleware = require("../../../src/middleware/authMiddleware");
-const jwt = require("jsonwebtoken");
-const config = require("../../../src/config/env");
+// Criar mocks ANTES de importar
+const mockJwtVerify = jest.fn();
+const mockJwtSign = jest.fn();
 
-// Mock do jwt
-jest.mock("jsonwebtoken");
+// Mock do jwt com implementação padrão
+jest.mock("jsonwebtoken", () => ({
+  verify: mockJwtVerify,
+  sign: mockJwtSign,
+}));
 
 // Mock do config
 jest.mock("../../../src/config/env", () => ({
   JWT_SECRET: "test-secret-key",
 }));
 
+// Importar após os mocks
+const authMiddleware = require("../../../src/middleware/authMiddleware");
+const jwt = require("jsonwebtoken");
+const config = require("../../../src/config/env");
+
 describe("authMiddleware", () => {
   let req, res, next;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar apenas as chamadas, não as implementações
+    mockJwtVerify.mockClear();
+    mockJwtSign.mockClear();
+    
     req = {
       headers: {},
     };

@@ -1,43 +1,20 @@
-const VendedorOperacoesController = require("../../../src/controllers/vendedorOperacoesController");
-const {
-  Vendedor,
-  Usuario,
-  Autopeca,
-  Solicitacao,
-  SolicitacoesAtendimento,
-} = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockVendedor = createModelMock();
+const mockUsuario = createModelMock();
+const mockAutopeca = createModelMock();
+const mockSolicitacao = createModelMock();
+const mockSolicitacoesAtendimento = createModelMock();
+const mockImagemSolicitacao = createModelMock();
 
 jest.mock("../../../src/models", () => ({
-  Vendedor: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-  },
-  Usuario: {
-    findOne: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-  },
-  Solicitacao: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-  },
-  SolicitacoesAtendimento: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-    create: jest.fn(),
-    findAll: jest.fn(),
-  },
-  ImagemSolicitacao: {
-    findAll: jest.fn(),
-  },
+  Vendedor: mockVendedor,
+  Usuario: mockUsuario,
+  Autopeca: mockAutopeca,
+  Solicitacao: mockSolicitacao,
+  SolicitacoesAtendimento: mockSolicitacoesAtendimento,
+  ImagemSolicitacao: mockImagemSolicitacao,
   Op: {
     and: Symbol("Op.and"),
     or: Symbol("Op.or"),
@@ -60,6 +37,10 @@ jest.mock("../../../src/services/notificationService", () => ({
   notificarAutopecaVendedorAtendeu: jest.fn(),
   notificarOutrosVendedoresPerderam: jest.fn(),
 }));
+
+// Importar após os mocks
+const VendedorOperacoesController = require("../../../src/controllers/vendedorOperacoesController");
+const { Vendedor, Usuario, Autopeca, Solicitacao, SolicitacoesAtendimento, ImagemSolicitacao } = require("../../../src/models");
 
 describe("VendedorOperacoesController - Testes de Concorrência", () => {
   let req1, req2, res1, res2, mockTransaction1, mockTransaction2;

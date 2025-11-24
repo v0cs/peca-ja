@@ -1,29 +1,44 @@
+// Mock do serviço ANTES de importar o controller
+const mockApiVeicularService = {
+  consultarVeiculoPorPlaca: jest.fn(),
+  obterEstatisticasCache: jest.fn(),
+  verificarConfiguracao: jest.fn(),
+  obterEstatisticasRateLimit: jest.fn(),
+  obterStatusCircuitBreaker: jest.fn(),
+  forcarAberturaCircuitBreaker: jest.fn(),
+  forcarFechamentoCircuitBreaker: jest.fn(),
+  resetarMetricasCircuitBreaker: jest.fn(),
+  limparCachePlaca: jest.fn(),
+  limparRateLimit: jest.fn(),
+  limparRateLimitCompleto: jest.fn(),
+  limparCache: jest.fn(),
+};
+
+jest.mock("../../../src/services", () => ({
+  apiVeicularService: mockApiVeicularService,
+}));
+
+// Importar após os mocks
 const VehicleController = require("../../../src/controllers/vehicleController");
 const { apiVeicularService } = require("../../../src/services");
-
-// Mock do serviço
-jest.mock("../../../src/services", () => ({
-  apiVeicularService: {
-    consultarVeiculoPorPlaca: jest.fn(),
-    obterEstatisticasCache: jest.fn(),
-    verificarConfiguracao: jest.fn(),
-    obterEstatisticasRateLimit: jest.fn(),
-    obterStatusCircuitBreaker: jest.fn(),
-    forcarAberturaCircuitBreaker: jest.fn(),
-    forcarFechamentoCircuitBreaker: jest.fn(),
-    resetarMetricasCircuitBreaker: jest.fn(),
-    limparCachePlaca: jest.fn(),
-    limparRateLimit: jest.fn(),
-    limparRateLimitCompleto: jest.fn(),
-    limparCache: jest.fn(),
-  },
-}));
 
 describe("VehicleController", () => {
   let req, res;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar apenas os mocks chamados, não as implementações
+    apiVeicularService.consultarVeiculoPorPlaca.mockClear();
+    apiVeicularService.obterEstatisticasCache.mockClear();
+    apiVeicularService.verificarConfiguracao.mockClear();
+    apiVeicularService.obterEstatisticasRateLimit.mockClear();
+    apiVeicularService.obterStatusCircuitBreaker.mockClear();
+    apiVeicularService.forcarAberturaCircuitBreaker.mockClear();
+    apiVeicularService.forcarFechamentoCircuitBreaker.mockClear();
+    apiVeicularService.resetarMetricasCircuitBreaker.mockClear();
+    apiVeicularService.limparCachePlaca.mockClear();
+    apiVeicularService.limparRateLimit.mockClear();
+    apiVeicularService.limparRateLimitCompleto.mockClear();
+    apiVeicularService.limparCache.mockClear();
 
     req = {
       user: {

@@ -1,35 +1,39 @@
-const VendedorController = require("../../../src/controllers/vendedorController");
-const { Vendedor, Usuario, Cliente } = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockVendedor = createModelMock();
+const mockUsuario = createModelMock();
+const mockCliente = createModelMock();
+const mockAutopeca = createModelMock();
 
 jest.mock("../../../src/models", () => ({
-  Vendedor: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    create: jest.fn(),
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-    update: jest.fn(),
-  },
-  Usuario: {
-    sequelize: {
-      transaction: jest.fn(),
-    },
-    findOne: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-  },
+  Vendedor: mockVendedor,
+  Usuario: mockUsuario,
+  Cliente: mockCliente,
+  Autopeca: mockAutopeca,
 }));
+
+// Importar após os mocks
+const VendedorController = require("../../../src/controllers/vendedorController");
+const { Vendedor, Usuario, Cliente, Autopeca } = require("../../../src/models");
 
 describe("VendedorController - Testes Simples", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Vendedor.create.mockClear();
+    Vendedor.findOne.mockClear();
+    Vendedor.findAll.mockClear();
+    Vendedor.update.mockClear();
+    Usuario.findOne.mockClear();
+    Cliente.findOne.mockClear();
+    Autopeca.findOne.mockClear();
+    
+    // Reconfigurar transactions
+    mockTransaction = setupTransactionMock(Vendedor);
+    Usuario.sequelize.transaction = Vendedor.sequelize.transaction;
+    
     req = {
       user: { userId: 1, tipo: "autopeca" },
       body: {},
@@ -39,12 +43,6 @@ describe("VendedorController - Testes Simples", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-    Vendedor.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
-    Usuario.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
   });
 
   describe("criarVendedor", () => {

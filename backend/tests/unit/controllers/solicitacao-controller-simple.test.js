@@ -1,35 +1,65 @@
-const SolicitacaoController = require("../../../src/controllers/solicitacaoController");
-const { Solicitacao, Cliente } = require("../../../src/models");
+const { setupTransactionMock } = require("../../helpers/mockFactory");
 
-jest.mock("../../../src/models", () => ({
-  Solicitacao: {
+// Mock dos modelos - DEVE ser definido antes de importar o controller
+jest.mock("../../../src/models", () => {
+  const createModelMock = (additionalMethods = {}) => ({
+    findOne: jest.fn(),
+    findAll: jest.fn(),
+    findByPk: jest.fn(),
+    findAndCountAll: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+    count: jest.fn(),
+    bulkCreate: jest.fn(),
     sequelize: {
       transaction: jest.fn(),
     },
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
-  Usuario: {},
-}));
+    ...additionalMethods,
+  });
+
+  return {
+    Solicitacao: createModelMock(),
+    Cliente: createModelMock(),
+    Usuario: createModelMock(),
+    Autopeca: createModelMock(),
+    Vendedor: createModelMock(),
+    ImagemSolicitacao: createModelMock(),
+    SolicitacoesAtendimento: createModelMock(),
+    sequelize: {
+      transaction: jest.fn(),
+    },
+  };
+});
 
 jest.mock("../../../src/services", () => ({
   emailService: {
     sendEmail: jest.fn(),
+    sendNewRequestNotification: jest.fn(),
   },
 }));
 
 jest.mock("../../../src/services/notificationService", () => ({
   createNotification: jest.fn(),
+  notificarAutopecasNovaSolicitacao: jest.fn(),
 }));
+
+// Importar os mocks após a definição do jest.mock
+const SolicitacaoController = require("../../../src/controllers/solicitacaoController");
+const { Solicitacao, Cliente } = require("../../../src/models");
 
 describe("SolicitacaoController - Testes Simples", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Solicitacao.findOne.mockClear();
+    Solicitacao.findAll.mockClear();
+    Cliente.findOne.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(Solicitacao);
+    
     req = {
       user: { userId: 1, tipo: "cliente" },
       body: {},
@@ -40,11 +70,6 @@ describe("SolicitacaoController - Testes Simples", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-    Solicitacao.sequelize.transaction = jest.fn(() => Promise.resolve(mockTransaction));
   });
 
   describe("create", () => {

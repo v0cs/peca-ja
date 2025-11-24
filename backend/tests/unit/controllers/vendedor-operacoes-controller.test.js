@@ -1,45 +1,23 @@
-const VendedorOperacoesController = require("../../../src/controllers/vendedorOperacoesController");
-const {
-  Vendedor,
-  Usuario,
-  Autopeca,
-  Solicitacao,
-  Cliente,
-  SolicitacoesAtendimento,
-  ImagemSolicitacao,
-} = require("../../../src/models");
+const { createModelMock, setupTransactionMock } = require("../../helpers/mockFactory");
+
+// Criar mocks dos models ANTES de importar o controller
+const mockVendedor = createModelMock();
+const mockUsuario = createModelMock();
+const mockAutopeca = createModelMock();
+const mockSolicitacao = createModelMock();
+const mockCliente = createModelMock();
+const mockSolicitacoesAtendimento = createModelMock();
+const mockImagemSolicitacao = createModelMock();
 
 // Mock dos modelos
 jest.mock("../../../src/models", () => ({
-  Vendedor: {
-    findOne: jest.fn(),
-    sequelize: {
-      transaction: jest.fn(),
-    },
-  },
-  Usuario: {
-    findOne: jest.fn(),
-  },
-  Autopeca: {
-    findOne: jest.fn(),
-  },
-  Solicitacao: {
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-  },
-  Cliente: {
-    findOne: jest.fn(),
-  },
-  SolicitacoesAtendimento: {
-    findOne: jest.fn(),
-    findAll: jest.fn(),
-    create: jest.fn(),
-    count: jest.fn(),
-    destroy: jest.fn(),
-  },
-  ImagemSolicitacao: {
-    findOne: jest.fn(),
-  },
+  Vendedor: mockVendedor,
+  Usuario: mockUsuario,
+  Autopeca: mockAutopeca,
+  Solicitacao: mockSolicitacao,
+  Cliente: mockCliente,
+  SolicitacoesAtendimento: mockSolicitacoesAtendimento,
+  ImagemSolicitacao: mockImagemSolicitacao,
 }));
 
 // Mock do NotificationService
@@ -49,11 +27,31 @@ jest.mock("../../../src/services/notificationService", () => ({
   notificarOutrosVendedoresPerderam: jest.fn(),
 }));
 
+// Importar após os mocks
+const VendedorOperacoesController = require("../../../src/controllers/vendedorOperacoesController");
+const { Vendedor, Usuario, Autopeca, Solicitacao, Cliente, SolicitacoesAtendimento, ImagemSolicitacao } = require("../../../src/models");
+
 describe("VendedorOperacoesController", () => {
   let req, res, mockTransaction;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Limpar mocks individuais
+    Vendedor.findOne.mockClear();
+    Usuario.findOne.mockClear();
+    Autopeca.findOne.mockClear();
+    Solicitacao.findOne.mockClear();
+    Solicitacao.findAll.mockClear();
+    Cliente.findOne.mockClear();
+    SolicitacoesAtendimento.findOne.mockClear();
+    SolicitacoesAtendimento.findAll.mockClear();
+    SolicitacoesAtendimento.create.mockClear();
+    SolicitacoesAtendimento.count.mockClear();
+    SolicitacoesAtendimento.destroy.mockClear();
+    ImagemSolicitacao.findOne.mockClear();
+    
+    // Reconfigurar transaction
+    mockTransaction = setupTransactionMock(Vendedor);
+    
     jest.spyOn(console, "error").mockImplementation(() => {});
 
     req = {
