@@ -39,6 +39,7 @@ describe("VendedorController", () => {
     Vendedor.create.mockClear();
     Vendedor.update.mockClear();
     Usuario.findOne.mockClear();
+    Usuario.findByPk.mockClear();
     Usuario.create.mockClear();
     Usuario.update.mockClear();
     Autopeca.findOne.mockClear();
@@ -584,14 +585,24 @@ describe("VendedorController", () => {
         ativo: false,
         usuario: mockUsuario,
       };
+      const mockUsuarioAtual = {
+        id: 2,
+        ativo: false,
+        tipo_usuario: "vendedor",
+      };
 
-      // Primeira chamada: busca autopeça logada (com transaction)
-      // Segunda chamada: busca autopeça ativa para verificar conflito (sem transaction)
-      Autopeca.findOne
-        .mockResolvedValueOnce(mockAutopeca) // Primeira busca: autopeça logada
-        .mockResolvedValueOnce(null); // Segunda busca: verificar autopeca (não encontrada)
+      // Mock da busca de autopeça logada (primeira chamada)
+      Autopeca.findOne.mockResolvedValueOnce(mockAutopeca);
+      // Mock da busca de vendedor
       Vendedor.findOne.mockResolvedValue(mockVendedor);
+      // Mock da busca de usuário atual (para verificar conflitos)
+      Usuario.findByPk.mockResolvedValue(mockUsuarioAtual); // Usuário inativo = sem conflito
+      // Mock da busca de perfis conflitantes (não encontrados)
       Cliente.findOne.mockResolvedValue(null);
+      Autopeca.findOne.mockResolvedValueOnce(null); // Para verificar conflito (não encontrada)
+      // Mock das atualizações
+      Vendedor.update.mockResolvedValue([1]);
+      Usuario.update.mockResolvedValue([1]);
 
       // Act
       await VendedorController.reativarVendedor(req, res);
@@ -620,12 +631,36 @@ describe("VendedorController", () => {
       const mockAutopeca = { id: 1 };
       const mockVendedor = {
         id: 1,
+        nome_completo: "João Vendedor",
         ativo: true,
-        usuario: { id: 2, ativo: true, tipo_usuario: "vendedor" },
+        usuario: { 
+          id: 2, 
+          email: "vendedor@teste.com",
+          ativo: true, 
+          tipo_usuario: "vendedor" 
+        },
       };
 
-      Autopeca.findOne.mockResolvedValue(mockAutopeca);
-      Vendedor.findOne.mockResolvedValue(mockVendedor);
+      // IMPORTANTE: Resetar mocks antes de configurar para evitar interferência de outros testes
+      Autopeca.findOne.mockReset();
+      Vendedor.findOne.mockReset();
+
+      // Mock da busca de autopeça logada (via validarAcessoAutopeca)
+      // Esta chamada usa where: { usuario_id: userId } (userId = 1 do req.user)
+      // Usar mockImplementation para garantir que retorna a autopeça quando chamado com transaction
+      Autopeca.findOne.mockImplementation((options) => {
+        // Se tiver transaction e where.usuario_id === req.user.userId, é a chamada de validarAcessoAutopeca
+        if (options && options.transaction && options.where && options.where.usuario_id === req.user.userId) {
+          return Promise.resolve(mockAutopeca);
+        }
+        // Qualquer outra chamada retorna null (não há verificação de conflitos quando vendedor já está ativo)
+        return Promise.resolve(null);
+      });
+      
+      // Mock da busca de vendedor
+      // Vendedor.findOne sempre retorna o vendedor quando chamado
+      // Usar mockImplementation para garantir que sempre retorna o vendedor
+      Vendedor.findOne.mockImplementation(() => Promise.resolve(mockVendedor));
 
       // Act
       await VendedorController.reativarVendedor(req, res);
@@ -641,13 +676,13 @@ describe("VendedorController", () => {
       });
     });
 
-    it("deve retornar erro quando email já existe como cliente", async () => {
+    it("deve retornar erro quando email já existe como cliente ativo", async () => {
       // Arrange
       const mockAutopeca = { id: 1 };
       const mockUsuario = {
         id: 2,
         email: "vendedor@teste.com",
-        ativo: false,
+        ativo: true, // Usuário está ativo
         tipo_usuario: "vendedor",
       };
       const mockVendedor = {
@@ -655,6 +690,11 @@ describe("VendedorController", () => {
         nome_completo: "João Vendedor",
         ativo: false,
         usuario: mockUsuario,
+      };
+      const mockUsuarioAtual = {
+        id: 2,
+        ativo: true, // Usuário ativo no banco
+        tipo_usuario: "vendedor",
       };
       const mockCliente = {
         id: 1,
@@ -665,10 +705,24 @@ describe("VendedorController", () => {
         },
       };
 
-      Autopeca.findOne
-        .mockResolvedValueOnce(mockAutopeca) // Primeira busca na reativação
-        .mockResolvedValueOnce(null); // Segunda busca para verificar autopeca (não encontrada)
+      // Mock da busca de autopeça logada (via validarAcessoAutopeca)
+      // Esta chamada usa where: { usuario_id: userId } (userId = 1 do req.user)
+      Autopeca.findOne.mockImplementation((options) => {
+        if (options && options.where && options.where.usuario_id === req.user.userId) {
+          return Promise.resolve(mockAutopeca);
+        }
+        // Segunda chamada: busca autopeca para verificar conflito (where: { usuario_id: usuarioId })
+        // usuarioId = 2 (do vendedor.usuario.id)
+        if (options && options.where && options.where.usuario_id === 2) {
+          return Promise.resolve(null); // Não encontrada
+        }
+        return Promise.resolve(null);
+      });
+      // Mock da busca de vendedor (usa where: { id: vendedorId, autopeca_id: autopeca.id })
       Vendedor.findOne.mockResolvedValue(mockVendedor);
+      // Mock da busca de usuário atual (para verificar conflitos)
+      Usuario.findByPk.mockResolvedValue(mockUsuarioAtual); // Usuário ativo = verificar conflito
+      // Mock da busca de perfis conflitantes (em paralelo)
       Cliente.findOne.mockResolvedValue(mockCliente);
 
       // Act
@@ -680,19 +734,19 @@ describe("VendedorController", () => {
         success: false,
         message: "Não é possível reativar o vendedor",
         errors: {
-          conflito: "Este email já está cadastrado como cliente/autopeça. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+          conflito: "Este email já está cadastrado como cliente/autopeça ativo. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
         },
       });
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("deve retornar erro quando email já existe como autopeça", async () => {
+    it("deve retornar erro quando email já existe como autopeça ativa", async () => {
       // Arrange
       const mockAutopeca = { id: 1 };
       const mockUsuario = {
         id: 2,
         email: "vendedor@teste.com",
-        ativo: false,
+        ativo: true, // Usuário está ativo
         tipo_usuario: "vendedor",
       };
       const mockVendedor = {
@@ -700,6 +754,11 @@ describe("VendedorController", () => {
         nome_completo: "João Vendedor",
         ativo: false,
         usuario: mockUsuario,
+      };
+      const mockUsuarioAtual = {
+        id: 2,
+        ativo: true, // Usuário ativo no banco
+        tipo_usuario: "vendedor",
       };
       const mockOutraAutopeca = {
         id: 2,
@@ -711,9 +770,10 @@ describe("VendedorController", () => {
       };
 
       Autopeca.findOne
-        .mockResolvedValueOnce(mockAutopeca) // Primeira busca na reativação
-        .mockResolvedValueOnce(mockOutraAutopeca); // Segunda busca para verificar autopeca
+        .mockResolvedValueOnce(mockAutopeca) // Primeira busca: autopeça logada
+        .mockResolvedValueOnce(mockOutraAutopeca); // Segunda busca: verificar autopeca (encontrada e ativa)
       Vendedor.findOne.mockResolvedValue(mockVendedor);
+      Usuario.findByPk.mockResolvedValue(mockUsuarioAtual); // Usuário ativo = verificar conflito
       Cliente.findOne.mockResolvedValue(null);
 
       // Act
@@ -725,7 +785,7 @@ describe("VendedorController", () => {
         success: false,
         message: "Não é possível reativar o vendedor",
         errors: {
-          conflito: "Este email já está cadastrado como cliente/autopeça. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+          conflito: "Este email já está cadastrado como cliente/autopeça ativo. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
         },
       });
       expect(mockTransaction.rollback).toHaveBeenCalled();

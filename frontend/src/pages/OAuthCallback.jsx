@@ -3,12 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { LoadingSpinner } from "../components/ui";
+import { USER_TYPES, OAUTH_STATUS, DASHBOARD_ROUTES } from "../constants";
 
 const OAuthCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { updateUser } = useAuth();
-  const [status, setStatus] = useState("processando");
+  const [status, setStatus] = useState(OAUTH_STATUS.PROCESSANDO);
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
@@ -18,7 +19,7 @@ const OAuthCallback = () => {
 
       // Se houve erro no callback
       if (success === "false" || error) {
-        setStatus("erro");
+        setStatus(OAUTH_STATUS.ERRO);
         setTimeout(() => {
           navigate("/login", {
             state: { error: error || "Erro ao fazer login com Google" },
@@ -29,7 +30,7 @@ const OAuthCallback = () => {
 
       // Se não tem token na URL
       if (!tokenFromURL) {
-        setStatus("erro");
+        setStatus(OAUTH_STATUS.ERRO);
         setTimeout(() => {
           navigate("/login", {
             state: { error: "Token não recebido. Tente novamente." },
@@ -63,24 +64,25 @@ const OAuthCallback = () => {
           updateUser(fullUserData, tokenFromURL);
           localStorage.setItem("user", JSON.stringify(fullUserData));
 
-          setStatus("sucesso");
+          setStatus(OAUTH_STATUS.SUCESSO);
 
           // Redirecionar imediatamente para dashboard baseado no tipo de usuário
           // Usar setTimeout mínimo apenas para garantir que o React processou a atualização do estado
           const tipoUsuario = userData.usuario.tipo_usuario;
           
+          // Mapear tipo de usuário para rota
+          const routeMap = {
+            [USER_TYPES.CLIENTE]: DASHBOARD_ROUTES.CLIENTE,
+            [USER_TYPES.AUTOPECA]: DASHBOARD_ROUTES.AUTOPECA,
+            [USER_TYPES.VENDEDOR]: DASHBOARD_ROUTES.VENDEDOR,
+          };
+          
+          const targetRoute = routeMap[tipoUsuario] || "/";
+          
           // Usar requestAnimationFrame para garantir que o DOM foi atualizado
           requestAnimationFrame(() => {
             setTimeout(() => {
-              if (tipoUsuario === "cliente") {
-                navigate("/dashboard/cliente", { replace: true });
-              } else if (tipoUsuario === "autopeca") {
-                navigate("/dashboard/autopeca", { replace: true });
-              } else if (tipoUsuario === "vendedor") {
-                navigate("/vendedor/dashboard", { replace: true });
-              } else {
-                navigate("/", { replace: true });
-              }
+              navigate(targetRoute, { replace: true });
             }, 50); // Delay mínimo para garantir que o Header re-renderizou
           });
         } else {
@@ -88,7 +90,7 @@ const OAuthCallback = () => {
         }
       } catch (error) {
         console.error("Erro no callback OAuth:", error);
-        setStatus("erro");
+        setStatus(OAUTH_STATUS.ERRO);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
 
@@ -110,7 +112,7 @@ const OAuthCallback = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="text-center">
-        {status === "processando" && (
+        {status === OAUTH_STATUS.PROCESSANDO && (
           <>
             <LoadingSpinner size="lg" />
             <h2 className="mt-4 text-xl font-semibold text-gray-800">
@@ -120,7 +122,7 @@ const OAuthCallback = () => {
           </>
         )}
 
-        {status === "sucesso" && (
+        {status === OAUTH_STATUS.SUCESSO && (
           <>
             <div className="mb-4">
               <svg
@@ -144,7 +146,7 @@ const OAuthCallback = () => {
           </>
         )}
 
-        {status === "erro" && (
+        {status === OAUTH_STATUS.ERRO && (
           <>
             <div className="mb-4">
               <svg

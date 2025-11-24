@@ -16,6 +16,7 @@ import VendedorActions from "./components/VendedorActions";
 import VendedorFilterBar from "./components/VendedorFilterBar";
 import VendedorStats from "./components/VendedorStats";
 import { Filter, RefreshCw, CheckCircle2 } from "lucide-react";
+import { SOLICITACAO_STATUS, RADIX_DECIMAL } from "../../constants";
 
 const filtrosIniciais = {
   palavraChave: "",
@@ -27,7 +28,7 @@ const filtrosIniciais = {
 
 const DashboardVendedor = () => {
   const { user } = useAuth();
-  const [filtroAtivo, setFiltroAtivo] = useState("disponiveis");
+  const [filtroAtivo, setFiltroAtivo] = useState(SOLICITACAO_STATUS.DISPONIVEIS);
   const [filtrosBusca, setFiltrosBusca] = useState(filtrosIniciais);
   const [acaoEmProgresso, setAcaoEmProgresso] = useState(null);
   const [sucesso, setSucesso] = useState(null);
@@ -55,17 +56,17 @@ const DashboardVendedor = () => {
   const {
     solicitacoes: solicitacoesDisponiveis,
     refetch: refetchDisponiveis,
-  } = useVendedorSolicitacoes("disponiveis", filtroAtivo === "disponiveis");
+  } = useVendedorSolicitacoes(SOLICITACAO_STATUS.DISPONIVEIS, filtroAtivo === SOLICITACAO_STATUS.DISPONIVEIS);
 
   const {
     solicitacoes: solicitacoesAtendidas,
     refetch: refetchAtendidas,
-  } = useVendedorSolicitacoes("atendidas", filtroAtivo === "atendidas");
+  } = useVendedorSolicitacoes(SOLICITACAO_STATUS.ATENDIDAS, filtroAtivo === SOLICITACAO_STATUS.ATENDIDAS);
 
   const {
     solicitacoes: solicitacoesVistas,
     refetch: refetchVistas,
-  } = useVendedorSolicitacoes("vistas", filtroAtivo === "vistas");
+  } = useVendedorSolicitacoes(SOLICITACAO_STATUS.VISTAS, filtroAtivo === SOLICITACAO_STATUS.VISTAS);
 
   const carregarDashboard = useCallback(async () => {
     try {
@@ -99,13 +100,13 @@ const DashboardVendedor = () => {
 
   const atualizarDados = useCallback(() => {
     refetch();
-    if (filtroAtivo !== "disponiveis") {
+    if (filtroAtivo !== SOLICITACAO_STATUS.DISPONIVEIS) {
       refetchDisponiveis();
     }
-    if (filtroAtivo !== "atendidas") {
+    if (filtroAtivo !== SOLICITACAO_STATUS.ATENDIDAS) {
       refetchAtendidas();
     }
-    if (filtroAtivo !== "vistas") {
+    if (filtroAtivo !== SOLICITACAO_STATUS.VISTAS) {
       refetchVistas();
     }
     carregarDashboard();
@@ -145,7 +146,7 @@ const DashboardVendedor = () => {
     return {
       marcas: Array.from(marcas).sort(),
       modelos: Array.from(modelos).sort(),
-      anos: Array.from(anos).sort((a, b) => parseInt(b, 10) - parseInt(a, 10)),
+      anos: Array.from(anos).sort((a, b) => parseInt(b, RADIX_DECIMAL) - parseInt(a, RADIX_DECIMAL)),
       categorias: Array.from(categorias).sort(),
     };
   }, [solicitacoes]);
