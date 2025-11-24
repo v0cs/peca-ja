@@ -1,0 +1,398 @@
+{
+  "paging": {
+    "pageIndex": 1,
+    "pageSize": 100,
+    "total": 14
+  },
+  "hotspots": [
+    {
+      "key": "AZqAuogutQTP-ryctKaJ",
+      "component": "v0cs_peca-ja:backend/src/config/config.json",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "auth",
+      "vulnerabilityProbability": "HIGH",
+      "status": "TO_REVIEW",
+      "line": 4,
+      "message": "\"password\" detected here, make sure this is not a hard-coded credential.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-09-18T15:28:05+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 4,
+        "endLine": 4,
+        "startOffset": 16,
+        "endOffset": 26
+      },
+      "flows": [],
+      "ruleKey": "json:S2068"
+    },
+    {
+      "key": "AZqAuogutQTP-ryctKaK",
+      "component": "v0cs_peca-ja:backend/src/config/config.json",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "auth",
+      "vulnerabilityProbability": "HIGH",
+      "status": "TO_REVIEW",
+      "line": 13,
+      "message": "\"password\" detected here, make sure this is not a hard-coded credential.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-09-18T15:28:05+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 13,
+        "endLine": 13,
+        "startOffset": 16,
+        "endOffset": 26
+      },
+      "flows": [],
+      "ruleKey": "json:S2068"
+    },
+    {
+      "key": "AZqAuogdtQTP-ryctKZz",
+      "component": "v0cs_peca-ja:backend/src/controllers/authController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 161,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-09-18T15:28:05+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 161,
+        "endLine": 161,
+        "startOffset": 25,
+        "endOffset": 53
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuogdtQTP-ryctKZ7",
+      "component": "v0cs_peca-ja:backend/src/controllers/authController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 669,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-09-28T23:37:41+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 669,
+        "endLine": 669,
+        "startOffset": 25,
+        "endOffset": 53
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuogdtQTP-ryctKaD",
+      "component": "v0cs_peca-ja:backend/src/controllers/authController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 1735,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-10-04T03:58:01+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 1735,
+        "endLine": 1735,
+        "startOffset": 25,
+        "endOffset": 53
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuofFtQTP-ryctKYs",
+      "component": "v0cs_peca-ja:backend/src/controllers/usuarioController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 73,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-10-19T21:35:47+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 73,
+        "endLine": 73,
+        "startOffset": 27,
+        "endOffset": 55
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuof_tQTP-ryctKZe",
+      "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 66,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-10-04T03:58:01+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 66,
+        "endLine": 66,
+        "startOffset": 25,
+        "endOffset": 53
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuoestQTP-ryctKYV",
+      "component": "v0cs_peca-ja:backend/src/services/emailService.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 504,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-10-04T03:58:01+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 504,
+        "endLine": 504,
+        "startOffset": 15,
+        "endOffset": 25
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuolNtQTP-ryctKex",
+      "component": "v0cs_peca-ja:frontend/src/pages/RecuperarSenha.jsx",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 14,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-11-14T03:30:22+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 14,
+        "endLine": 14,
+        "startOffset": 23,
+        "endOffset": 51
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqAuomntQTP-ryctKf1",
+      "component": "v0cs_peca-ja:frontend/src/utils/validators.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "dos",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 4,
+      "message": "Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-11-08T17:14:19+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 4,
+        "endLine": 4,
+        "startOffset": 16,
+        "endOffset": 44
+      },
+      "flows": [],
+      "ruleKey": "javascript:S5852"
+    },
+    {
+      "key": "AZqyBh89hQidkNqdlpr_",
+      "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "weak-cryptography",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 209,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-11-20T04:40:43+0000",
+      "updateDate": "2025-11-20T04:42:36+0000",
+      "textRange": {
+        "startLine": 209,
+        "endLine": 209,
+        "startOffset": 35,
+        "endOffset": 48
+      },
+      "flows": [],
+      "ruleKey": "javascript:S2245"
+    },
+    {
+      "key": "AZqyBh89hQidkNqdlpsA",
+      "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "weak-cryptography",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 231,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-11-20T04:40:43+0000",
+      "updateDate": "2025-11-20T04:42:36+0000",
+      "textRange": {
+        "startLine": 231,
+        "endLine": 231,
+        "startOffset": 36,
+        "endOffset": 49
+      },
+      "flows": [],
+      "ruleKey": "javascript:S2245"
+    },
+    {
+      "key": "AZqAuog1tQTP-ryctKaN",
+      "component": "v0cs_peca-ja:backend/src/middleware/uploadMiddleware.js",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "weak-cryptography",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 19,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-09-21T01:02:38+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 19,
+        "endLine": 19,
+        "startOffset": 36,
+        "endOffset": 49
+      },
+      "flows": [],
+      "ruleKey": "javascript:S2245"
+    },
+    {
+      "key": "AZqAuojbtQTP-ryctKcl",
+      "component": "v0cs_peca-ja:frontend/src/components/forms/ImageUpload.jsx",
+      "project": "v0cs_peca-ja",
+      "securityCategory": "weak-cryptography",
+      "vulnerabilityProbability": "MEDIUM",
+      "status": "TO_REVIEW",
+      "line": 8,
+      "message": "Make sure that using this pseudorandom number generator is safe here.",
+      "assignee": "AZpbyFclPpopNqCUtzhG",
+      "author": "vitorcelestinosilva@gmail.com",
+      "creationDate": "2025-11-08T17:14:19+0000",
+      "updateDate": "2025-11-14T04:57:14+0000",
+      "textRange": {
+        "startLine": 8,
+        "endLine": 8,
+        "startOffset": 32,
+        "endOffset": 45
+      },
+      "flows": [],
+      "ruleKey": "javascript:S2245"
+    }
+  ],
+  "components": [
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:backend/src/controllers/authController.js",
+      "qualifier": "FIL",
+      "name": "authController.js",
+      "longName": "backend/src/controllers/authController.js",
+      "path": "backend/src/controllers/authController.js"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:backend/src/services/emailService.js",
+      "qualifier": "FIL",
+      "name": "emailService.js",
+      "longName": "backend/src/services/emailService.js",
+      "path": "backend/src/services/emailService.js"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:frontend/src/pages/RecuperarSenha.jsx",
+      "qualifier": "FIL",
+      "name": "RecuperarSenha.jsx",
+      "longName": "frontend/src/pages/RecuperarSenha.jsx",
+      "path": "frontend/src/pages/RecuperarSenha.jsx"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:frontend/src/utils/validators.js",
+      "qualifier": "FIL",
+      "name": "validators.js",
+      "longName": "frontend/src/utils/validators.js",
+      "path": "frontend/src/utils/validators.js"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:frontend/src/components/forms/ImageUpload.jsx",
+      "qualifier": "FIL",
+      "name": "ImageUpload.jsx",
+      "longName": "frontend/src/components/forms/ImageUpload.jsx",
+      "path": "frontend/src/components/forms/ImageUpload.jsx"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:backend/src/config/config.json",
+      "qualifier": "FIL",
+      "name": "config.json",
+      "longName": "backend/src/config/config.json",
+      "path": "backend/src/config/config.json"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:backend/src/controllers/usuarioController.js",
+      "qualifier": "FIL",
+      "name": "usuarioController.js",
+      "longName": "backend/src/controllers/usuarioController.js",
+      "path": "backend/src/controllers/usuarioController.js"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja",
+      "qualifier": "TRK",
+      "name": "Peça Já",
+      "longName": "Peça Já"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+      "qualifier": "FIL",
+      "name": "vendedorController.js",
+      "longName": "backend/src/controllers/vendedorController.js",
+      "path": "backend/src/controllers/vendedorController.js"
+    },
+    {
+      "organization": "v0cs",
+      "key": "v0cs_peca-ja:backend/src/middleware/uploadMiddleware.js",
+      "qualifier": "FIL",
+      "name": "uploadMiddleware.js",
+      "longName": "backend/src/middleware/uploadMiddleware.js",
+      "path": "backend/src/middleware/uploadMiddleware.js"
+    }
+  ]
+}

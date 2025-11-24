@@ -9,6 +9,7 @@ const {
   TokenRecuperacaoSenha,
   Vendedor,
 } = require("../models");
+const { isValidEmail } = require("../utils/email");
 
 /**
  * Função auxiliar para validar CNPJ real
@@ -158,8 +159,7 @@ class AuthController {
       const errors = {};
 
       // Validar email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         errors.email = "Formato de email inválido";
       }
 
@@ -666,8 +666,7 @@ class AuthController {
       const errors = {};
 
       // Validar email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         errors.email = "Formato de email inválido";
       }
 
@@ -1732,8 +1731,7 @@ class AuthController {
       }
 
       // Validar formato do email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         return res.status(400).json({
           success: false,
           message: "Formato de email inválido",

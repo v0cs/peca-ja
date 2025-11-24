@@ -3,17 +3,13 @@ import { Link } from "react-router-dom";
 import { Header, Footer } from "../components/layout";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "../components/ui";
 import api from "../services/api";
+import { validarEmail } from "../utils/validators";
 
 const RecuperarSenha = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -26,7 +22,7 @@ const RecuperarSenha = () => {
     }
 
     // Validar formato do email
-    if (!validateEmail(email.trim())) {
+    if (!validarEmail(email.trim())) {
       setError("Por favor, informe um email válido.");
       return;
     }

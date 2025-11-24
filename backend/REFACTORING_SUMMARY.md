@@ -128,3 +128,4 @@ Para alcançar 75% de cobertura:
 
 O projeto está completamente livre de dependências de snapshots e Babel nos testes, garantindo funcionamento estável no GitHub Actions.
 
+

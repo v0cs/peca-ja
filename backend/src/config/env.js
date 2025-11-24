@@ -31,6 +31,45 @@ const getBaseConfig = () => {
 
 const baseConfig = getBaseConfig();
 
+// Valores padrão inseguros (apenas para desenvolvimento)
+const DEFAULT_JWT_SECRET = "pecaja-super-secret-jwt-key-change-this-in-production-2024";
+const DEFAULT_DB_PASSWORD = "banco123";
+const DEFAULT_RESEND_API_KEY = "re_mU2nKnP6_ESPokZgH4y3FB7XJSvAPwu1r";
+
+// Validação de variáveis críticas em produção
+if (isProduction) {
+  const jwtSecret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
+  const dbPassword = process.env.DB_PASSWORD || DEFAULT_DB_PASSWORD;
+  const resendApiKey = process.env.RESEND_API_KEY || DEFAULT_RESEND_API_KEY;
+
+  const errors = [];
+
+  if (jwtSecret === DEFAULT_JWT_SECRET) {
+    errors.push(
+      "❌ JWT_SECRET: Deve ser alterado em produção! Use: openssl rand -base64 64"
+    );
+  }
+
+  if (dbPassword === DEFAULT_DB_PASSWORD) {
+    errors.push(
+      "❌ DB_PASSWORD: Deve ser alterado em produção! Use uma senha forte."
+    );
+  }
+
+  if (resendApiKey === DEFAULT_RESEND_API_KEY || !resendApiKey) {
+    errors.push(
+      "❌ RESEND_API_KEY: Deve ser configurado em produção! Obtenha em: https://resend.com/api-keys"
+    );
+  }
+
+  if (errors.length > 0) {
+    console.error("\n🚨 ERRO: Variáveis de ambiente não configuradas corretamente para produção:\n");
+    errors.forEach((error) => console.error(`  ${error}`));
+    console.error("\n📖 Consulte CONFIGURACAO-AMBIENTE.md para mais informações.\n");
+    process.exit(1);
+  }
+}
+
 module.exports = {
   // Server Configuration
   NODE_ENV: process.env.NODE_ENV || "development",
@@ -45,12 +84,10 @@ module.exports = {
   DB_PORT: process.env.DB_PORT || 5432,
   DB_NAME: process.env.DB_NAME || "pecaja",
   DB_USER: process.env.DB_USER || "postgres",
-  DB_PASSWORD: process.env.DB_PASSWORD || "banco123",
+  DB_PASSWORD: process.env.DB_PASSWORD || DEFAULT_DB_PASSWORD,
 
   // JWT Configuration
-  JWT_SECRET:
-    process.env.JWT_SECRET ||
-    "pecaja-super-secret-jwt-key-change-this-in-production-2024",
+  JWT_SECRET: process.env.JWT_SECRET || DEFAULT_JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "24h",
 
   // File Upload Configuration
@@ -76,8 +113,7 @@ module.exports = {
   API_VEICULAR_CACHE_TTL: 86400, // 24 hours
 
   // Email Configuration (Resend)
-  RESEND_API_KEY:
-    process.env.RESEND_API_KEY || "re_mU2nKnP6_ESPokZgH4y3FB7XJSvAPwu1r",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || DEFAULT_RESEND_API_KEY,
 
   // Google OAuth 2.0 Configuration
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",

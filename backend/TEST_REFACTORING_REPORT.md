@@ -124,3 +124,4 @@ Para alcançar 75% de cobertura:
 
 O projeto está pronto para rodar no GitHub Actions sem problemas relacionados a Babel ou snapshots.
 
+

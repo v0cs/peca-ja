@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const { Usuario, Cliente, Autopeca, Vendedor } = require("../models");
+const { isValidEmail } = require("../utils/email");
 
 /**
  * Controller de Usuario
@@ -70,8 +71,7 @@ class UsuarioController {
       // === ATUALIZAÇÃO DE EMAIL ===
       if (email) {
         // Validar formato do email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!isValidEmail(email)) {
           errors.email = "Formato de email inválido";
         } else {
           // Verificar se o email já está em uso por outro usuário
