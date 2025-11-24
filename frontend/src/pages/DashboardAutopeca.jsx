@@ -7,23 +7,24 @@ import { Button, StatsCard, EmptyState, Card, CardContent, CardHeader, CardTitle
 import SolicitacaoCard from "../components/SolicitacaoCard";
 import { Clock, CheckCircle, RefreshCw, CheckCircle2, Filter, Eye, Search, X as XIcon } from "lucide-react";
 import api from "../services/api";
+import { SOLICITACAO_STATUS, RADIX_DECIMAL } from "../constants";
 
 const DashboardAutopeca = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [filtroAtivo, setFiltroAtivo] = useState("disponiveis"); // "disponiveis", "atendidas" ou "vistas"
+  const [filtroAtivo, setFiltroAtivo] = useState(SOLICITACAO_STATUS.DISPONIVEIS);
   const { solicitacoes, loading, error, atenderSolicitacao, marcarComoLida, desmarcarComoVista, refetch } = useSolicitacoesDisponiveis(filtroAtivo);
   
   // Buscar estatísticas separadamente para os cards (evitar duplicação com filtro ativo)
-  const { solicitacoes: solicitacoesDisponiveis, refetch: refetchDisponiveis } = useSolicitacoesDisponiveis("disponiveis", filtroAtivo === "disponiveis");
-  const { solicitacoes: solicitacoesAtendidas, refetch: refetchAtendidas } = useSolicitacoesDisponiveis("atendidas", filtroAtivo === "atendidas");
-  const { solicitacoes: solicitacoesVistas, refetch: refetchVistas } = useSolicitacoesDisponiveis("vistas", filtroAtivo === "vistas");
+  const { solicitacoes: solicitacoesDisponiveis, refetch: refetchDisponiveis } = useSolicitacoesDisponiveis(SOLICITACAO_STATUS.DISPONIVEIS, filtroAtivo === SOLICITACAO_STATUS.DISPONIVEIS);
+  const { solicitacoes: solicitacoesAtendidas, refetch: refetchAtendidas } = useSolicitacoesDisponiveis(SOLICITACAO_STATUS.ATENDIDAS, filtroAtivo === SOLICITACAO_STATUS.ATENDIDAS);
+  const { solicitacoes: solicitacoesVistas, refetch: refetchVistas } = useSolicitacoesDisponiveis(SOLICITACAO_STATUS.VISTAS, filtroAtivo === SOLICITACAO_STATUS.VISTAS);
   
   // Função para atualizar todas as estatísticas
   const atualizarTodasEstatisticas = () => {
-    if (filtroAtivo !== "disponiveis") refetchDisponiveis();
-    if (filtroAtivo !== "atendidas") refetchAtendidas();
-    if (filtroAtivo !== "vistas") refetchVistas();
+    if (filtroAtivo !== SOLICITACAO_STATUS.DISPONIVEIS) refetchDisponiveis();
+    if (filtroAtivo !== SOLICITACAO_STATUS.ATENDIDAS) refetchAtendidas();
+    if (filtroAtivo !== SOLICITACAO_STATUS.VISTAS) refetchVistas();
     refetch(); // Atualizar o filtro ativo
   };
   
@@ -150,7 +151,7 @@ const DashboardAutopeca = () => {
     return {
       marcas: Array.from(marcas).sort(),
       modelos: Array.from(modelos).sort(),
-      anos: Array.from(anos).sort((a, b) => parseInt(b) - parseInt(a)),
+      anos: Array.from(anos).sort((a, b) => parseInt(b, RADIX_DECIMAL) - parseInt(a, RADIX_DECIMAL)),
       categorias: Array.from(categorias).sort(),
     };
   }, [solicitacoes]);
