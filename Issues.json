@@ -7,8 +7,8 @@
     "pageSize": 500,
     "total": 34
   },
-  "effortTotal": 676,
-  "debtTotal": 676,
+  "effortTotal": 677,
+  "debtTotal": 677,
   "issues": [
     {
       "key": "AZqyBh89hQidkNqdlpsC",
@@ -16,11 +16,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
       "project": "v0cs_peca-ja",
-      "line": 842,
+      "line": 923,
       "hash": "a583c01ca502646bfcb369ecc49ac44e",
       "textRange": {
-        "startLine": 842,
-        "endLine": 842,
+        "startLine": 923,
+        "endLine": 923,
         "startOffset": 15,
         "endOffset": 31
       },
@@ -30,10 +30,10 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 851,
-                "endLine": 851,
-                "startOffset": 8,
-                "endOffset": 9
+                "startLine": 929,
+                "endLine": 929,
+                "startOffset": 46,
+                "endOffset": 47
               },
               "msg": "+1"
             }
@@ -44,8 +44,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 855,
-                "endLine": 855,
+                "startLine": 937,
+                "endLine": 937,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -58,8 +58,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 873,
-                "endLine": 873,
+                "startLine": 959,
+                "endLine": 959,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -72,8 +72,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 900,
-                "endLine": 900,
+                "startLine": 971,
+                "endLine": 971,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -86,22 +86,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 912,
-                "endLine": 912,
-                "startOffset": 6,
-                "endOffset": 8
-              },
-              "msg": "+1"
-            }
-          ]
-        },
-        {
-          "locations": [
-            {
-              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
-              "textRange": {
-                "startLine": 912,
-                "endLine": 912,
+                "startLine": 971,
+                "endLine": 971,
                 "startOffset": 25,
                 "endOffset": 27
               },
@@ -114,50 +100,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 961,
-                "endLine": 961,
-                "startOffset": 8,
-                "endOffset": 13
-              },
-              "msg": "+1"
-            }
-          ]
-        },
-        {
-          "locations": [
-            {
-              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
-              "textRange": {
-                "startLine": 969,
-                "endLine": 969,
-                "startOffset": 52,
-                "endOffset": 54
-              },
-              "msg": "+1"
-            }
-          ]
-        },
-        {
-          "locations": [
-            {
-              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
-              "textRange": {
-                "startLine": 972,
-                "endLine": 972,
-                "startOffset": 54,
-                "endOffset": 56
-              },
-              "msg": "+1"
-            }
-          ]
-        },
-        {
-          "locations": [
-            {
-              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
-              "textRange": {
-                "startLine": 977,
-                "endLine": 977,
+                "startLine": 992,
+                "endLine": 992,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -170,26 +114,68 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 988,
-                "endLine": 988,
+                "startLine": 1003,
+                "endLine": 1003,
+                "startOffset": 6,
+                "endOffset": 8
+              },
+              "msg": "+1"
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+              "textRange": {
+                "startLine": 1003,
+                "endLine": 1003,
+                "startOffset": 23,
+                "endOffset": 25
+              },
+              "msg": "+1"
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+              "textRange": {
+                "startLine": 1033,
+                "endLine": 1033,
+                "startOffset": 27,
+                "endOffset": 29
+              },
+              "msg": "+1"
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+              "textRange": {
+                "startLine": 1037,
+                "endLine": 1037,
+                "startOffset": 28,
+                "endOffset": 30
+              },
+              "msg": "+1"
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+              "textRange": {
+                "startLine": 1041,
+                "endLine": 1041,
                 "startOffset": 8,
                 "endOffset": 10
               },
-              "msg": "+1"
-            }
-          ]
-        },
-        {
-          "locations": [
-            {
-              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
-              "textRange": {
-                "startLine": 1025,
-                "endLine": 1025,
-                "startOffset": 6,
-                "endOffset": 8
-              },
-              "msg": "+1"
+              "msg": "+2 (incl. 1 for nesting)"
             }
           ]
         },
@@ -200,6 +186,34 @@
               "textRange": {
                 "startLine": 1051,
                 "endLine": 1051,
+                "startOffset": 8,
+                "endOffset": 10
+              },
+              "msg": "+2 (incl. 1 for nesting)"
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+              "textRange": {
+                "startLine": 1075,
+                "endLine": 1075,
+                "startOffset": 6,
+                "endOffset": 8
+              },
+              "msg": "+1"
+            }
+          ]
+        },
+        {
+          "locations": [
+            {
+              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
+              "textRange": {
+                "startLine": 1100,
+                "endLine": 1100,
                 "startOffset": 6,
                 "endOffset": 11
               },
@@ -212,8 +226,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 1053,
-                "endLine": 1053,
+                "startLine": 1101,
+                "endLine": 1101,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -226,8 +240,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 1056,
-                "endLine": 1056,
+                "startLine": 1104,
+                "endLine": 1104,
                 "startOffset": 10,
                 "endOffset": 15
               },
@@ -240,8 +254,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 1065,
-                "endLine": 1065,
+                "startLine": 1109,
+                "endLine": 1109,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -254,24 +268,10 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 1074,
-                "endLine": 1074,
-                "startOffset": 6,
-                "endOffset": 8
-              },
-              "msg": "+2 (incl. 1 for nesting)"
-            }
-          ]
-        },
-        {
-          "locations": [
-            {
-              "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
-              "textRange": {
-                "startLine": 1094,
-                "endLine": 1094,
-                "startOffset": 59,
-                "endOffset": 60
+                "startLine": 1123,
+                "endLine": 1123,
+                "startOffset": 51,
+                "endOffset": 52
               },
               "msg": "+2 (incl. 1 for nesting)"
             }
@@ -279,14 +279,17 @@
         }
       ],
       "status": "OPEN",
-      "message": "Refactor this function to reduce its Cognitive Complexity from 24 to the 15 allowed.",
-      "effort": "14min",
-      "debt": "14min",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 25 to the 15 allowed.",
+      "effort": "15min",
+      "debt": "15min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-21T00:02:27+0000",
-      "updateDate": "2025-11-23T18:41:11+0000",
+      "updateDate": "2025-11-24T17:28:38+0000",
       "type": "CODE_SMELL",
       "organization": "v0cs",
       "cleanCodeAttribute": "FOCUSED",
@@ -306,11 +309,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/OAuthCallback.jsx",
       "project": "v0cs_peca-ja",
-      "line": 74,
+      "line": 84,
       "hash": "e165c4ddb9bb14b186aee35c05d1cc21",
       "textRange": {
-        "startLine": 74,
-        "endLine": 74,
+        "startLine": 84,
+        "endLine": 84,
         "startOffset": 26,
         "endOffset": 28
       },
@@ -320,8 +323,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/OAuthCallback.jsx",
               "textRange": {
-                "startLine": 7,
-                "endLine": 7,
+                "startLine": 8,
+                "endLine": 8,
                 "startOffset": 25,
                 "endOffset": 27
               },
@@ -334,8 +337,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/OAuthCallback.jsx",
               "textRange": {
-                "startLine": 13,
-                "endLine": 13,
+                "startLine": 14,
+                "endLine": 14,
                 "startOffset": 15,
                 "endOffset": 17
               },
@@ -348,8 +351,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/OAuthCallback.jsx",
               "textRange": {
-                "startLine": 14,
-                "endLine": 14,
+                "startLine": 15,
+                "endLine": 15,
                 "startOffset": 41,
                 "endOffset": 43
               },
@@ -362,8 +365,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/OAuthCallback.jsx",
               "textRange": {
-                "startLine": 73,
-                "endLine": 73,
+                "startLine": 83,
+                "endLine": 83,
                 "startOffset": 35,
                 "endOffset": 37
               },
@@ -378,7 +381,9 @@
       "debt": "20min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["brain-overload"],
+      "tags": [
+        "brain-overload"
+      ],
       "creationDate": "2025-11-21T00:02:27+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -612,7 +617,10 @@
       "debt": "7min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-20T04:40:43+0000",
       "updateDate": "2025-11-20T04:42:36+0000",
       "type": "CODE_SMELL",
@@ -832,7 +840,10 @@
       "debt": "17min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-20T04:40:43+0000",
       "updateDate": "2025-11-20T04:42:36+0000",
       "type": "CODE_SMELL",
@@ -1122,7 +1133,10 @@
       "debt": "8min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-20T04:40:43+0000",
       "updateDate": "2025-11-20T04:42:36+0000",
       "type": "CODE_SMELL",
@@ -1468,7 +1482,10 @@
       "debt": "25min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-20T04:40:43+0000",
       "updateDate": "2025-11-20T04:42:36+0000",
       "type": "CODE_SMELL",
@@ -2038,7 +2055,10 @@
       "debt": "44min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -3098,7 +3118,10 @@
       "debt": "1h39min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -3360,7 +3383,10 @@
       "debt": "11min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -3664,7 +3690,10 @@
       "debt": "14min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -3982,7 +4011,10 @@
       "debt": "16min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -4244,7 +4276,10 @@
       "debt": "14min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -4702,7 +4737,10 @@
       "debt": "34min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -5062,7 +5100,10 @@
       "debt": "21min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -5296,7 +5337,10 @@
       "debt": "17min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -5544,7 +5588,10 @@
       "debt": "6min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -5778,7 +5825,10 @@
       "debt": "13min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -5800,11 +5850,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
       "project": "v0cs_peca-ja",
-      "line": 28,
+      "line": 29,
       "hash": "d1b38216516cd77b1932a3acd6324b79",
       "textRange": {
-        "startLine": 28,
-        "endLine": 28,
+        "startLine": 29,
+        "endLine": 29,
         "startOffset": 29,
         "endOffset": 31
       },
@@ -5814,8 +5864,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 226,
-                "endLine": 226,
+                "startLine": 227,
+                "endLine": 227,
                 "startOffset": 8,
                 "endOffset": 9
               },
@@ -5828,8 +5878,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 229,
-                "endLine": 229,
+                "startLine": 230,
+                "endLine": 230,
                 "startOffset": 31,
                 "endOffset": 32
               },
@@ -5842,8 +5892,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 232,
-                "endLine": 232,
+                "startLine": 233,
+                "endLine": 233,
                 "startOffset": 8,
                 "endOffset": 9
               },
@@ -5856,8 +5906,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 380,
-                "endLine": 380,
+                "startLine": 381,
+                "endLine": 381,
                 "startOffset": 55,
                 "endOffset": 56
               },
@@ -5870,8 +5920,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 390,
-                "endLine": 390,
+                "startLine": 391,
+                "endLine": 391,
                 "startOffset": 50,
                 "endOffset": 51
               },
@@ -5884,8 +5934,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 400,
-                "endLine": 400,
+                "startLine": 401,
+                "endLine": 401,
                 "startOffset": 53,
                 "endOffset": 54
               },
@@ -5898,8 +5948,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 434,
-                "endLine": 434,
+                "startLine": 435,
+                "endLine": 435,
                 "startOffset": 18,
                 "endOffset": 19
               },
@@ -5912,8 +5962,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 436,
-                "endLine": 436,
+                "startLine": 437,
+                "endLine": 437,
                 "startOffset": 18,
                 "endOffset": 19
               },
@@ -5926,8 +5976,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 478,
-                "endLine": 478,
+                "startLine": 479,
+                "endLine": 479,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -5940,8 +5990,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 480,
-                "endLine": 480,
+                "startLine": 481,
+                "endLine": 481,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -5954,8 +6004,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 482,
-                "endLine": 482,
+                "startLine": 483,
+                "endLine": 483,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -5968,8 +6018,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 487,
-                "endLine": 487,
+                "startLine": 488,
+                "endLine": 488,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -5982,8 +6032,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 489,
-                "endLine": 489,
+                "startLine": 490,
+                "endLine": 490,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -5996,8 +6046,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 491,
-                "endLine": 491,
+                "startLine": 492,
+                "endLine": 492,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -6010,8 +6060,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 496,
-                "endLine": 496,
+                "startLine": 497,
+                "endLine": 497,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -6024,8 +6074,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 498,
-                "endLine": 498,
+                "startLine": 499,
+                "endLine": 499,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -6038,8 +6088,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 503,
-                "endLine": 503,
+                "startLine": 504,
+                "endLine": 504,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -6052,8 +6102,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
               "textRange": {
-                "startLine": 505,
-                "endLine": 505,
+                "startLine": 506,
+                "endLine": 506,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -6068,7 +6118,10 @@
       "debt": "17min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -6090,11 +6143,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
       "project": "v0cs_peca-ja",
-      "line": 146,
+      "line": 147,
       "hash": "c4deef5360876210b247eb1b67d944d4",
       "textRange": {
-        "startLine": 146,
-        "endLine": 146,
+        "startLine": 147,
+        "endLine": 147,
         "startOffset": 33,
         "endOffset": 37
       },
@@ -6105,7 +6158,10 @@
       "debt": "10min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["bad-practice", "type-dependent"],
+      "tags": [
+        "bad-practice",
+        "type-dependent"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "BUG",
@@ -6127,11 +6183,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
       "project": "v0cs_peca-ja",
-      "line": 147,
+      "line": 148,
       "hash": "b8677289c31fbe69ef10ffbec182095a",
       "textRange": {
-        "startLine": 147,
-        "endLine": 147,
+        "startLine": 148,
+        "endLine": 148,
         "startOffset": 35,
         "endOffset": 39
       },
@@ -6142,7 +6198,10 @@
       "debt": "10min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["bad-practice", "type-dependent"],
+      "tags": [
+        "bad-practice",
+        "type-dependent"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "BUG",
@@ -6164,11 +6223,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/vendedor/DashboardVendedor.jsx",
       "project": "v0cs_peca-ja",
-      "line": 149,
+      "line": 150,
       "hash": "26f4b84e7495576f9cb56f4b0fcccdd9",
       "textRange": {
-        "startLine": 149,
-        "endLine": 149,
+        "startLine": 150,
+        "endLine": 150,
         "startOffset": 41,
         "endOffset": 45
       },
@@ -6179,7 +6238,10 @@
       "debt": "10min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["bad-practice", "type-dependent"],
+      "tags": [
+        "bad-practice",
+        "type-dependent"
+      ],
       "creationDate": "2025-11-14T03:30:22+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "BUG",
@@ -6763,7 +6825,10 @@
       "debt": "44min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -7585,7 +7650,10 @@
       "debt": "1h22min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -7833,7 +7901,10 @@
       "debt": "7min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -7855,11 +7926,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
       "project": "v0cs_peca-ja",
-      "line": 11,
+      "line": 12,
       "hash": "963dfd6e64ca7d7a345cb0c50e823c39",
       "textRange": {
-        "startLine": 11,
-        "endLine": 11,
+        "startLine": 12,
+        "endLine": 12,
         "startOffset": 29,
         "endOffset": 31
       },
@@ -7869,8 +7940,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 218,
-                "endLine": 218,
+                "startLine": 219,
+                "endLine": 219,
                 "startOffset": 47,
                 "endOffset": 48
               },
@@ -7883,8 +7954,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 219,
-                "endLine": 219,
+                "startLine": 220,
+                "endLine": 220,
                 "startOffset": 43,
                 "endOffset": 44
               },
@@ -7897,8 +7968,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 220,
-                "endLine": 220,
+                "startLine": 221,
+                "endLine": 221,
                 "startOffset": 37,
                 "endOffset": 38
               },
@@ -7911,8 +7982,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 283,
-                "endLine": 283,
+                "startLine": 284,
+                "endLine": 284,
                 "startOffset": 55,
                 "endOffset": 56
               },
@@ -7925,8 +7996,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 293,
-                "endLine": 293,
+                "startLine": 294,
+                "endLine": 294,
                 "startOffset": 53,
                 "endOffset": 54
               },
@@ -7939,8 +8010,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 303,
-                "endLine": 303,
+                "startLine": 304,
+                "endLine": 304,
                 "startOffset": 50,
                 "endOffset": 51
               },
@@ -7953,8 +8024,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 326,
-                "endLine": 326,
+                "startLine": 327,
+                "endLine": 327,
                 "startOffset": 18,
                 "endOffset": 19
               },
@@ -7967,8 +8038,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 328,
-                "endLine": 328,
+                "startLine": 329,
+                "endLine": 329,
                 "startOffset": 18,
                 "endOffset": 19
               },
@@ -7981,8 +8052,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 446,
-                "endLine": 446,
+                "startLine": 447,
+                "endLine": 447,
                 "startOffset": 87,
                 "endOffset": 88
               },
@@ -7995,8 +8066,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 469,
-                "endLine": 469,
+                "startLine": 470,
+                "endLine": 470,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8009,8 +8080,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 471,
-                "endLine": 471,
+                "startLine": 472,
+                "endLine": 472,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8023,8 +8094,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 473,
-                "endLine": 473,
+                "startLine": 474,
+                "endLine": 474,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8037,8 +8108,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 478,
-                "endLine": 478,
+                "startLine": 479,
+                "endLine": 479,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8051,8 +8122,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 480,
-                "endLine": 480,
+                "startLine": 481,
+                "endLine": 481,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8065,8 +8136,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 482,
-                "endLine": 482,
+                "startLine": 483,
+                "endLine": 483,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8079,8 +8150,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 487,
-                "endLine": 487,
+                "startLine": 488,
+                "endLine": 488,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8093,8 +8164,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 489,
-                "endLine": 489,
+                "startLine": 490,
+                "endLine": 490,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8107,8 +8178,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 494,
-                "endLine": 494,
+                "startLine": 495,
+                "endLine": 495,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8121,8 +8192,8 @@
             {
               "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
               "textRange": {
-                "startLine": 496,
-                "endLine": 496,
+                "startLine": 497,
+                "endLine": 497,
                 "startOffset": 20,
                 "endOffset": 21
               },
@@ -8137,7 +8208,10 @@
       "debt": "18min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -8159,11 +8233,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
       "project": "v0cs_peca-ja",
-      "line": 151,
+      "line": 152,
       "hash": "c4deef5360876210b247eb1b67d944d4",
       "textRange": {
-        "startLine": 151,
-        "endLine": 151,
+        "startLine": 152,
+        "endLine": 152,
         "startOffset": 33,
         "endOffset": 37
       },
@@ -8174,7 +8248,10 @@
       "debt": "10min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["bad-practice", "type-dependent"],
+      "tags": [
+        "bad-practice",
+        "type-dependent"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "BUG",
@@ -8196,11 +8273,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
       "project": "v0cs_peca-ja",
-      "line": 152,
+      "line": 153,
       "hash": "b8677289c31fbe69ef10ffbec182095a",
       "textRange": {
-        "startLine": 152,
-        "endLine": 152,
+        "startLine": 153,
+        "endLine": 153,
         "startOffset": 35,
         "endOffset": 39
       },
@@ -8211,7 +8288,10 @@
       "debt": "10min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["bad-practice", "type-dependent"],
+      "tags": [
+        "bad-practice",
+        "type-dependent"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "BUG",
@@ -8233,11 +8313,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:frontend/src/pages/DashboardAutopeca.jsx",
       "project": "v0cs_peca-ja",
-      "line": 154,
+      "line": 155,
       "hash": "26f4b84e7495576f9cb56f4b0fcccdd9",
       "textRange": {
-        "startLine": 154,
-        "endLine": 154,
+        "startLine": 155,
+        "endLine": 155,
         "startOffset": 41,
         "endOffset": 45
       },
@@ -8248,7 +8328,10 @@
       "debt": "10min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["bad-practice", "type-dependent"],
+      "tags": [
+        "bad-practice",
+        "type-dependent"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "BUG",
@@ -8468,7 +8551,10 @@
       "debt": "9min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -8562,7 +8648,9 @@
       "debt": "20min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["brain-overload"],
+      "tags": [
+        "brain-overload"
+      ],
       "creationDate": "2025-11-08T17:14:19+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -8726,7 +8814,10 @@
       "debt": "8min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-10-19T21:35:47+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -8748,11 +8839,11 @@
       "severity": "CRITICAL",
       "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
       "project": "v0cs_peca-ja",
-      "line": 21,
+      "line": 102,
       "hash": "bda44d8d8ca2589aa5442e6bc5d566b4",
       "textRange": {
-        "startLine": 21,
-        "endLine": 21,
+        "startLine": 102,
+        "endLine": 102,
         "startOffset": 15,
         "endOffset": 28
       },
@@ -8762,8 +8853,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 29,
-                "endLine": 29,
+                "startLine": 110,
+                "endLine": 110,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8776,8 +8867,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 53,
-                "endLine": 53,
+                "startLine": 134,
+                "endLine": 134,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8790,8 +8881,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 71,
-                "endLine": 71,
+                "startLine": 152,
+                "endLine": 152,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8804,8 +8895,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 76,
-                "endLine": 76,
+                "startLine": 157,
+                "endLine": 157,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8818,8 +8909,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 81,
-                "endLine": 81,
+                "startLine": 162,
+                "endLine": 162,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8832,8 +8923,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 97,
-                "endLine": 97,
+                "startLine": 178,
+                "endLine": 178,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8846,8 +8937,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 124,
-                "endLine": 124,
+                "startLine": 205,
+                "endLine": 205,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8860,8 +8951,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 232,
-                "endLine": 232,
+                "startLine": 313,
+                "endLine": 313,
                 "startOffset": 8,
                 "endOffset": 12
               },
@@ -8874,8 +8965,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 126,
-                "endLine": 126,
+                "startLine": 207,
+                "endLine": 207,
                 "startOffset": 8,
                 "endOffset": 10
               },
@@ -8888,8 +8979,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 130,
-                "endLine": 130,
+                "startLine": 211,
+                "endLine": 211,
                 "startOffset": 10,
                 "endOffset": 12
               },
@@ -8902,8 +8993,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 186,
-                "endLine": 186,
+                "startLine": 267,
+                "endLine": 267,
                 "startOffset": 10,
                 "endOffset": 15
               },
@@ -8916,8 +9007,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 192,
-                "endLine": 192,
+                "startLine": 273,
+                "endLine": 273,
                 "startOffset": 54,
                 "endOffset": 56
               },
@@ -8930,8 +9021,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 195,
-                "endLine": 195,
+                "startLine": 276,
+                "endLine": 276,
                 "startOffset": 56,
                 "endOffset": 58
               },
@@ -8944,8 +9035,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 200,
-                "endLine": 200,
+                "startLine": 281,
+                "endLine": 281,
                 "startOffset": 8,
                 "endOffset": 10
               },
@@ -8958,8 +9049,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 268,
-                "endLine": 268,
+                "startLine": 349,
+                "endLine": 349,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -8972,8 +9063,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 278,
-                "endLine": 278,
+                "startLine": 359,
+                "endLine": 359,
                 "startOffset": 8,
                 "endOffset": 12
               },
@@ -8986,8 +9077,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 348,
-                "endLine": 348,
+                "startLine": 429,
+                "endLine": 429,
                 "startOffset": 6,
                 "endOffset": 11
               },
@@ -9000,8 +9091,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 355,
-                "endLine": 355,
+                "startLine": 436,
+                "endLine": 436,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -9014,8 +9105,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 368,
-                "endLine": 368,
+                "startLine": 449,
+                "endLine": 449,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -9028,8 +9119,8 @@
             {
               "component": "v0cs_peca-ja:backend/src/controllers/vendedorController.js",
               "textRange": {
-                "startLine": 378,
-                "endLine": 378,
+                "startLine": 459,
+                "endLine": 459,
                 "startOffset": 6,
                 "endOffset": 8
               },
@@ -9044,7 +9135,10 @@
       "debt": "18min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-10-04T03:58:01+0000",
       "updateDate": "2025-11-23T18:41:11+0000",
       "type": "CODE_SMELL",
@@ -9236,7 +9330,10 @@
       "debt": "6min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-09-28T23:37:41+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",
@@ -9386,7 +9483,10 @@
       "debt": "7min",
       "assignee": "v0cs-v1262@github",
       "author": "vitorcelestinosilva@gmail.com",
-      "tags": ["architecture", "brain-overload"],
+      "tags": [
+        "architecture",
+        "brain-overload"
+      ],
       "creationDate": "2025-09-21T01:02:38+0000",
       "updateDate": "2025-11-14T04:57:14+0000",
       "type": "CODE_SMELL",

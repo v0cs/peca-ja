@@ -19,38 +19,64 @@ const USER_TYPES = {
  */
 class VendedorController {
   /**
-   * Verificar se há perfis ativos conflitantes para um usuário
+   * Verificar se há perfis ativos conflitantes (Cliente ou Autopeca)
    * @private
    * @param {string} usuarioId - ID do usuário a verificar
-   * @returns {Promise<{temClienteAtivo: boolean, temAutopecaAtiva: boolean}>}
+   * @param {Object} transaction - Transação do Sequelize
+   * @returns {Promise<{temConflito: boolean, cliente?: Object, autopeca?: Object}>}
    */
-  static async verificarPerfisAtivosConflitantes(usuarioId) {
-    try {
-      const usuario = await Usuario.findByPk(usuarioId, {
-        attributes: ["id", "ativo", "tipo_usuario"],
-      });
+  static async verificarPerfisAtivosConflitantes(usuarioId, transaction) {
+    // Buscar status atualizado do usuário diretamente do banco
+    const usuarioAtual = await Usuario.findByPk(usuarioId, {
+      attributes: ["id", "ativo", "tipo_usuario"],
+    });
 
-      if (!usuario) {
-        return { temClienteAtivo: false, temAutopecaAtiva: false };
-      }
-
-      // Se o usuário está INATIVO, não há conflito (pode reativar)
-      if (!usuario.ativo) {
-        return { temClienteAtivo: false, temAutopecaAtiva: false };
-      }
-
-      // Se o usuário está ATIVO, verificar o tipo_usuario
-      // Conflito apenas se for cliente ou autopeca ativo
-      const tipoUsuario = usuario.tipo_usuario;
-      const temClienteAtivo = tipoUsuario === USER_TYPES.CLIENTE;
-      const temAutopecaAtiva = tipoUsuario === USER_TYPES.AUTOPECA;
-
-      return { temClienteAtivo, temAutopecaAtiva };
-    } catch (error) {
-      console.error("❌ Erro ao verificar perfis conflitantes:", error);
-      // Em caso de erro, assumir que não há conflito para não bloquear reativação
-      return { temClienteAtivo: false, temAutopecaAtiva: false };
+    // Se o usuário está inativo, não há conflito
+    if (!usuarioAtual || usuarioAtual.ativo !== true) {
+      return { temConflito: false };
     }
+
+    // Buscar perfis e verificar explicitamente se o Usuario está ativo
+    const [cliente, autopeca] = await Promise.all([
+      Cliente.findOne({
+        where: { usuario_id: usuarioId },
+        include: [
+          {
+            model: Usuario,
+            as: "usuario",
+            attributes: ["id", "ativo"],
+            required: true,
+          },
+        ],
+      }),
+      Autopeca.findOne({
+        where: { usuario_id: usuarioId },
+        include: [
+          {
+            model: Usuario,
+            as: "usuario",
+            attributes: ["id", "ativo"],
+            required: true,
+          },
+        ],
+      }),
+    ]);
+
+    // Verificar explicitamente se o Usuario associado está ativo
+    const temClienteAtivo =
+      cliente !== null &&
+      cliente.usuario !== null &&
+      cliente.usuario.ativo === true;
+    const temAutopecaAtiva =
+      autopeca !== null &&
+      autopeca.usuario !== null &&
+      autopeca.usuario.ativo === true;
+
+    return {
+      temConflito: temClienteAtivo || temAutopecaAtiva,
+      cliente,
+      autopeca,
+    };
   }
 
   /**
@@ -978,89 +1004,23 @@ class VendedorController {
       }
 
       // Verificar perfis ativos conflitantes
-      // REGRA DE NEGÓCIO ORIGINAL: Verificar se há Cliente ou Autopeca ATIVO
-      // IMPORTANTE: Se o vendedor está inativo, o usuario também está inativo (conforme inativarVendedor)
-      // Se o usuário está inativo, não há conflito (pode reativar o vendedor)
       const usuarioId = vendedor.usuario.id;
-      
-      // Buscar status atualizado do usuário diretamente do banco
-      const usuarioAtual = await Usuario.findByPk(usuarioId, {
-        attributes: ["id", "ativo", "tipo_usuario"],
-      });
+      const conflitoResult = await VendedorController.verificarPerfisAtivosConflitantes(
+        usuarioId,
+        transaction
+      );
 
-      // Log para debug (apenas em desenvolvimento)
-      if (process.env.NODE_ENV === "development") {
-        console.log("🔍 Verificação de conflitos:", {
-          usuarioId,
-          usuarioAtivo: usuarioAtual?.ativo,
-          tipoUsuario: usuarioAtual?.tipo_usuario,
-          vendedorAtivo: vendedor.ativo,
+      if (conflitoResult.temConflito) {
+        await transaction.rollback();
+        return res.status(409).json({
+          success: false,
+          message: "Não é possível reativar o vendedor",
+          errors: {
+            conflito:
+              "Este email já está cadastrado como cliente/autopeça ativo. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
+          },
         });
       }
-
-      // REGRA DE NEGÓCIO: Verificar conflitos apenas se o usuário está ATIVO
-      // Se o usuário está inativo, não há conflito (pode reativar o vendedor)
-      if (usuarioAtual && usuarioAtual.ativo === true) {
-        // Usuário está ativo - verificar se tem perfil Cliente ou Autopeca
-        // Buscar perfis e verificar explicitamente se o Usuario está ativo
-        const [cliente, autopeca] = await Promise.all([
-          Cliente.findOne({
-            where: { usuario_id: usuarioId },
-            include: [
-              {
-                model: Usuario,
-                as: "usuario",
-                attributes: ["id", "ativo"],
-                required: true,
-              },
-            ],
-          }),
-          Autopeca.findOne({
-            where: { usuario_id: usuarioId },
-            include: [
-              {
-                model: Usuario,
-                as: "usuario",
-                attributes: ["id", "ativo"],
-                required: true,
-              },
-            ],
-          }),
-        ]);
-
-        // Verificar explicitamente se o Usuario associado está ativo
-        const temClienteAtivo =
-          cliente !== null &&
-          cliente.usuario !== null &&
-          cliente.usuario.ativo === true;
-        const temAutopecaAtiva =
-          autopeca !== null &&
-          autopeca.usuario !== null &&
-          autopeca.usuario.ativo === true;
-
-        if (process.env.NODE_ENV === "development") {
-          console.log("🔍 Resultado da busca de perfis:", {
-            clienteEncontrado: cliente !== null,
-            clienteAtivo: temClienteAtivo,
-            autopecaEncontrada: autopeca !== null,
-            autopecaAtiva: temAutopecaAtiva,
-          });
-        }
-
-        // Se encontrou Cliente ou Autopeca com Usuario ATIVO, há conflito
-        if (temClienteAtivo || temAutopecaAtiva) {
-          await transaction.rollback();
-          return res.status(409).json({
-            success: false,
-            message: "Não é possível reativar o vendedor",
-            errors: {
-              conflito:
-                "Este email já está cadastrado como cliente/autopeça ativo. Para reativar o vendedor, é necessário primeiro excluir a conta ativa.",
-            },
-          });
-        }
-      }
-      // Se usuarioAtual não existe ou está inativo, não há conflito (pode reativar)
 
       // Reativar vendedor e usuário
       const tipoUsuarioOriginal = vendedor.usuario.tipo_usuario;

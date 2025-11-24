@@ -79,12 +79,10 @@ const OAuthCallback = () => {
           
           const targetRoute = routeMap[tipoUsuario] || "/";
           
-          // Usar requestAnimationFrame para garantir que o DOM foi atualizado
-          requestAnimationFrame(() => {
-            setTimeout(() => {
-              navigate(targetRoute, { replace: true });
-            }, 50); // Delay mínimo para garantir que o Header re-renderizou
-          });
+          // Usar setTimeout para garantir que o React processou a atualização do estado
+          setTimeout(() => {
+            navigate(targetRoute, { replace: true });
+          }, 50);
         } else {
           throw new Error("Erro ao buscar dados do usuário");
         }
