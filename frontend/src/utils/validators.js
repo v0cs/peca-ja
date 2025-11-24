@@ -1,8 +1,15 @@
 // Funções de validação de formulários
+import isEmail from "validator/lib/isEmail.js";
 
 export const validarEmail = (email) => {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
+  if (typeof email !== "string") {
+    return false;
+  }
+
+  return isEmail(email.trim(), {
+    allow_utf8_local_part: false,
+    require_tld: true,
+  });
 };
 
 export const validarCNPJ = (cnpj) => {

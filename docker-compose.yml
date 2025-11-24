@@ -3,9 +3,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: pecaja
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: banco123
+      POSTGRES_DB: ${DB_NAME:-pecaja}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "5432:5432"
@@ -32,14 +32,19 @@ services:
       # Valores padrão se .env não existir
       NODE_ENV: ${NODE_ENV:-development}
       DB_HOST: postgres
-      DB_PORT: 5432
+      DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-pecaja}
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-banco123}
+      DB_PASSWORD: ${DB_PASSWORD}
       # Variáveis do domínio e email (podem vir do .env)
       DOMAIN: ${DOMAIN:-pecaja.cloud}
       EMAIL_FROM: ${EMAIL_FROM:-PeçaJá <noreply@pecaja.cloud>}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      API_VEICULAR_KEY: ${API_VEICULAR_KEY}
+      API_VEICULAR_EMAIL: ${API_VEICULAR_EMAIL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     depends_on:
       postgres:
         condition: service_healthy

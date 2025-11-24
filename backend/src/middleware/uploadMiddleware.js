@@ -1,6 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 
 // Criar diretório uploads se não existir
 const uploadDir = path.join(__dirname, "../../uploads");
@@ -14,11 +15,11 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    // Gerar nome único: timestamp + número aleatório + extensão original
+    // Gerar nome único: timestamp + sufixo criptograficamente aleatório + extensão original
     const timestamp = Date.now();
-    const randomNumber = Math.floor(Math.random() * 10000);
+    const randomSuffix = crypto.randomBytes(6).toString("hex");
     const extension = path.extname(file.originalname);
-    const uniqueName = `${timestamp}_${randomNumber}${extension}`;
+    const uniqueName = `${timestamp}_${randomSuffix}${extension}`;
     cb(null, uniqueName);
   },
 });

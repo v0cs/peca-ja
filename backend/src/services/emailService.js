@@ -500,10 +500,42 @@ Equipe PeçaJá
    * Converter HTML para texto simples (fallback)
    */
   htmlToText(html) {
-    return html
-      .replace(/<[^>]*>/g, "")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    if (typeof html !== "string" || html.length === 0) {
+      return "";
+    }
+
+    let plain = "";
+    let insideTag = false;
+
+    for (const char of html) {
+      if (char === "<") {
+        insideTag = true;
+        continue;
+      }
+
+      if (char === ">") {
+        insideTag = false;
+        continue;
+      }
+
+      if (!insideTag) {
+        plain += char;
+      }
+    }
+
+    const withoutCarriageReturns = plain.split("\r").join("");
+    const lines = withoutCarriageReturns.split("\n").map((line) => line.trim());
+
+    const compactedLines = [];
+    for (const line of lines) {
+      const previousLine = compactedLines[compactedLines.length - 1];
+      if (line === "" && (!previousLine || previousLine === "")) {
+        continue;
+      }
+      compactedLines.push(line);
+    }
+
+    return compactedLines.join("\n").trim();
   }
 }
 

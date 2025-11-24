@@ -6,7 +6,11 @@ const axios = require("axios");
  */
 
 async function testarEndpoints() {
-  const apiKey = "c68ed7cedc6d247491a1cd0561b30d16";
+  const apiKey = process.env.API_VEICULAR_KEY;
+  if (!apiKey) {
+    console.error("❌ API_VEICULAR_KEY não configurada. Configure no arquivo .env");
+    process.exit(1);
+  }
   const basicAuth = Buffer.from(`${apiKey}:`).toString("base64");
 
   const headers = {

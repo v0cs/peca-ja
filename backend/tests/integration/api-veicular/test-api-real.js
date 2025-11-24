@@ -176,8 +176,8 @@ async function testarApiReal() {
   console.log("✅ Logs detalhados para debug");
 
   console.log("\n🔧 Configuração atual:");
-  console.log("- Email: vitorcelestinosilva@gmail.com");
-  console.log("- API Key: c68ed7cedc6d247491a1cd0561b30d16");
+  console.log(`- Email: ${process.env.API_VEICULAR_EMAIL || "Não configurado"}`);
+  console.log(`- API Key: ${process.env.API_VEICULAR_KEY ? "***" + process.env.API_VEICULAR_KEY.slice(-4) : "Não configurado"}`);
   console.log("- Base URL: https://api.consultarplaca.com.br/v1");
   console.log("- Autenticação: Basic Auth");
   console.log("- Cache TTL: 24 horas");

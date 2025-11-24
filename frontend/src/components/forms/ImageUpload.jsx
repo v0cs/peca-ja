@@ -2,10 +2,28 @@ import { useState, useRef } from "react";
 import { Upload, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
+const createInputId = () => {
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+
+  if (cryptoObj?.randomUUID) {
+    return `file-input-${cryptoObj.randomUUID()}`;
+  }
+
+  if (cryptoObj?.getRandomValues) {
+    const buffer = new Uint32Array(2);
+    cryptoObj.getRandomValues(buffer);
+    const suffix = Array.from(buffer, (value) => value.toString(16)).join("");
+    return `file-input-${suffix}`;
+  }
+
+  return `file-input-${Date.now().toString(36)}`;
+};
+
 const ImageUpload = ({ images = [], onChange, maxImages = 3, error }) => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
-  const inputId = `file-input-${Math.random().toString(36).substr(2, 9)}`;
+  const inputIdRef = useRef(createInputId());
+  const inputId = inputIdRef.current;
 
   const handleDrag = (e) => {
     e.preventDefault();

@@ -1,5 +1,10 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { Vendedor, Usuario, Autopeca, Cliente } = require("../models");
+const { isValidEmail } = require("../utils/email");
+
+const generateSecurePassword = (size = 8) =>
+  crypto.randomBytes(size).toString("base64url").slice(0, size);
 
 /**
  * Controller de Vendedores
@@ -63,8 +68,7 @@ class VendedorController {
       const errors = {};
 
       // Validar email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         errors.email = "Formato de email inválido";
       }
 
@@ -206,7 +210,7 @@ class VendedorController {
         
         // Se não há conflito, reativar e converter para vendedor
         // Gerar senha temporária
-        senhaTemporariaParaEmail = Math.random().toString(36).slice(-8);
+        senhaTemporariaParaEmail = generateSecurePassword();
         const saltRounds = 12;
         const senhaHash = await bcrypt.hash(senhaTemporariaParaEmail, saltRounds);
 
@@ -228,7 +232,7 @@ class VendedorController {
       } else {
         // Se o email não existe, criar novo usuário
         // Gerar senha temporária (sempre gerada automaticamente)
-        const senhaTemporariaNova = Math.random().toString(36).slice(-8); // 8 caracteres aleatórios
+        const senhaTemporariaNova = generateSecurePassword(); // 8 caracteres aleatórios
         const saltRounds = 12;
         const senhaHash = await bcrypt.hash(senhaTemporariaNova, saltRounds);
 
