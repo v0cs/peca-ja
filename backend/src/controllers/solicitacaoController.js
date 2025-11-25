@@ -257,16 +257,16 @@ class SolicitacaoController {
       let imagensCriadas = [];
       if (req.uploadedFiles && req.uploadedFiles.length > 0) {
         for (let i = 0; i < req.uploadedFiles.length; i++) {
-          const file = req.files[i];
+          const file = req.uploadedFiles[i];
           const imagem = await ImagemSolicitacao.create(
             {
               solicitacao_id: novaSolicitacao.id,
-              nome_arquivo: file.originalname,
+              nome_arquivo: file.originalName,
               nome_arquivo_fisico: file.filename,
-              caminho_arquivo: file.path,
+              caminho_arquivo: file.url, // URL completa (S3 ou local)
               tamanho_arquivo: file.size,
               tipo_mime: file.mimetype,
-              extensao: path.extname(file.originalname).slice(1),
+              extensao: path.extname(file.originalName).slice(1),
               ordem_exibicao: i + 1,
             },
             { transaction }
@@ -569,7 +569,8 @@ class SolicitacaoController {
             created_at: novaSolicitacao.created_at,
           },
           imagens: imagensCriadas.map((img) => {
-            const imageUrl = `/uploads/${img.nome_arquivo_fisico}`;
+            // Usar caminho_arquivo que já contém a URL correta (S3 ou local)
+            const imageUrl = img.caminho_arquivo;
             console.log(`🖼️ [create] Imagem criada ${img.id}:`, {
               nome_arquivo_fisico: img.nome_arquivo_fisico,
               url: imageUrl,
@@ -841,7 +842,8 @@ class SolicitacaoController {
         ...solicitacao.toJSON(),
         imagens: solicitacao.imagens
           ? solicitacao.imagens.map((img) => {
-              const imageUrl = `/uploads/${img.nome_arquivo_fisico}`;
+              // Usar caminho_arquivo que já contém a URL correta (S3 ou local)
+              const imageUrl = img.caminho_arquivo;
               console.log(`🖼️ [getById] Imagem ${img.id}:`, {
                 nome_arquivo_fisico: img.nome_arquivo_fisico,
                 url: imageUrl,
@@ -1287,16 +1289,16 @@ class SolicitacaoController {
 
         // Adicionar novas imagens
         for (let i = 0; i < req.uploadedFiles.length; i++) {
-          const file = req.files[i];
+          const file = req.uploadedFiles[i];
           await ImagemSolicitacao.create(
             {
               solicitacao_id: solicitacao.id,
-              nome_arquivo: file.originalname,
+              nome_arquivo: file.originalName,
               nome_arquivo_fisico: file.filename,
-              caminho_arquivo: file.path,
+              caminho_arquivo: file.url, // URL completa (S3 ou local)
               tamanho_arquivo: file.size,
               tipo_mime: file.mimetype,
-              extensao: path.extname(file.originalname).slice(1),
+              extensao: path.extname(file.originalName).slice(1),
               ordem_exibicao: imagensRestantes + i + 1,
             },
             { transaction }
@@ -1332,7 +1334,7 @@ class SolicitacaoController {
               id: img.id,
               nome_arquivo: img.nome_arquivo,
               nome_arquivo_fisico: img.nome_arquivo_fisico,
-              url: `/uploads/${img.nome_arquivo_fisico}`,
+              url: img.caminho_arquivo, // URL correta (S3 ou local)
               ordem_exibicao: img.ordem_exibicao,
             }))
           : [],
@@ -1589,15 +1591,12 @@ class SolicitacaoController {
           const imagem = await ImagemSolicitacao.create(
             {
               solicitacao_id: id,
-              nome_arquivo: file.originalname || file.originalName,
-              nome_arquivo_fisico: file.filename || file.fileName,
-              caminho_arquivo:
-                file.path || `${uploadDir}/${file.filename || file.fileName}`,
+              nome_arquivo: file.originalName,
+              nome_arquivo_fisico: file.filename,
+              caminho_arquivo: file.url, // URL completa (S3 ou local)
               tamanho_arquivo: file.size,
               tipo_mime: file.mimetype,
-              extensao: path
-                .extname(file.originalname || file.originalName)
-                .slice(1),
+              extensao: path.extname(file.originalName).slice(1),
               ordem_exibicao: imagensExistentes + i + 1,
             },
             { transaction }
@@ -1623,7 +1622,7 @@ class SolicitacaoController {
           imagens: imagensAdicionadas.map((img) => ({
             id: img.id,
             nome_arquivo: img.nome_arquivo,
-            url: `/uploads/${img.nome_arquivo_fisico}`,
+            url: img.caminho_arquivo, // URL correta (S3 ou local)
           })),
         },
       });

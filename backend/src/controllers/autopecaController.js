@@ -550,7 +550,7 @@ class AutopecaController {
               id: img.id,
               nome_arquivo: img.nome_arquivo,
               nome_arquivo_fisico: img.nome_arquivo_fisico,
-              url: `/uploads/${img.nome_arquivo_fisico}`,
+              url: img.caminho_arquivo, // URL correta (S3 ou local)
               ordem_exibicao: img.ordem_exibicao,
             }))
           : [],
@@ -705,7 +705,7 @@ class AutopecaController {
                   id: img.id,
                   nome_arquivo: img.nome_arquivo,
                   nome_arquivo_fisico: img.nome_arquivo_fisico,
-                  url: `/uploads/${img.nome_arquivo_fisico}`,
+                  url: img.caminho_arquivo, // URL correta (S3 ou local)
                   ordem_exibicao: img.ordem_exibicao,
                 }))
               : [],
@@ -845,7 +845,7 @@ class AutopecaController {
                   id: img.id,
                   nome_arquivo: img.nome_arquivo,
                   nome_arquivo_fisico: img.nome_arquivo_fisico,
-                  url: `/uploads/${img.nome_arquivo_fisico}`,
+                  url: img.caminho_arquivo, // URL correta (S3 ou local)
                   ordem_exibicao: img.ordem_exibicao,
                 }))
               : [],

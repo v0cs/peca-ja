@@ -88,6 +88,25 @@ const validateRequiredEnvVars = () => {
     );
   }
 
+  // Validar variáveis AWS S3 para produção
+  if (!process.env.AWS_ACCESS_KEY_ID) {
+    errors.push(
+      "❌ AWS_ACCESS_KEY_ID: Variável de ambiente obrigatória para upload de arquivos em produção!"
+    );
+  }
+
+  if (!process.env.AWS_SECRET_ACCESS_KEY) {
+    errors.push(
+      "❌ AWS_SECRET_ACCESS_KEY: Variável de ambiente obrigatória para upload de arquivos em produção!"
+    );
+  }
+
+  if (!process.env.AWS_S3_BUCKET_NAME) {
+    errors.push(
+      "❌ AWS_S3_BUCKET_NAME: Variável de ambiente obrigatória para upload de arquivos em produção!"
+    );
+  }
+
   if (errors.length > 0) {
     console.error(
       "\n🚨 ERRO: Variáveis de ambiente obrigatórias não configuradas para produção:\n"
@@ -126,6 +145,12 @@ module.exports = {
   // File Upload Configuration
   MAX_FILE_SIZE: process.env.MAX_FILE_SIZE || 10485760, // 10MB
   UPLOAD_PATH: process.env.UPLOAD_PATH || "./uploads",
+
+  // AWS S3 Configuration
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+  AWS_REGION: process.env.AWS_REGION,
+  AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS || 900000, // 15 minutes

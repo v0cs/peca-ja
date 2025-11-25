@@ -1,28 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const crypto = require("crypto");
-
-// Criar diretório uploads se não existir
-const uploadDir = path.join(__dirname, "../../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configuração de armazenamento
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Gerar nome único: timestamp + sufixo criptograficamente aleatório + extensão original
-    const timestamp = Date.now();
-    const randomSuffix = crypto.randomBytes(6).toString("hex");
-    const extension = path.extname(file.originalname);
-    const uniqueName = `${timestamp}_${randomSuffix}${extension}`;
-    cb(null, uniqueName);
-  },
-});
+const uploadService = require("../services/uploadService");
 
 // Filtro para validar tipos de arquivo
 const fileFilter = (req, file, cb) => {
@@ -71,6 +50,10 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
+// Usar memoryStorage para armazenar arquivos em memória temporariamente
+// Isso permite fazer upload para S3 ou salvar localmente após processamento
+const storage = multer.memoryStorage();
+
 // Configuração do multer
 const upload = multer({
   storage: storage,
@@ -84,9 +67,9 @@ const upload = multer({
 // Middleware para upload de múltiplas imagens
 const uploadImages = upload.array("images", 3);
 
-// Middleware wrapper com tratamento de erros
-const uploadMiddleware = (req, res, next) => {
-  uploadImages(req, res, (err) => {
+// Middleware wrapper com tratamento de erros e integração com serviço de upload
+const uploadMiddleware = async (req, res, next) => {
+  uploadImages(req, res, async (err) => {
     if (err) {
       // Tratar diferentes tipos de erro
       if (err instanceof multer.MulterError) {
@@ -113,7 +96,7 @@ const uploadMiddleware = (req, res, next) => {
       }
 
       // Erro de validação de tipo de arquivo
-      if (err.message.includes("Tipo de arquivo não permitido")) {
+      if (err.message && err.message.includes("Tipo de arquivo não permitido")) {
         return res.status(400).json({
           success: false,
           message: err.message,
@@ -134,24 +117,44 @@ const uploadMiddleware = (req, res, next) => {
       return next();
     }
 
-    // Adicionar informações dos arquivos ao request
-    req.uploadedFiles = req.files.map((file) => ({
-      filename: file.filename,
-      originalName: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
-      path: file.path,
-    }));
+    try {
+      // Processar cada arquivo através do serviço de upload
+      const uploadPromises = req.files.map(async (file) => {
+        const uploadResult = await uploadService.uploadFile(
+          file.buffer,
+          file.originalname,
+          file.mimetype
+        );
 
-    next();
+        return {
+          filename: uploadResult.filename,
+          originalName: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          url: uploadResult.url,
+          storage: uploadResult.storage,
+          path: uploadResult.path || null, // Pode ser null se estiver no S3
+        };
+      });
+
+      req.uploadedFiles = await Promise.all(uploadPromises);
+      next();
+    } catch (uploadError) {
+      console.error("❌ Erro ao fazer upload dos arquivos:", uploadError);
+      return res.status(500).json({
+        success: false,
+        message: "Erro ao processar upload dos arquivos.",
+        error: process.env.NODE_ENV === "development" ? uploadError.message : undefined,
+      });
+    }
   });
 };
 
 // Middleware para upload de uma única imagem
 const uploadSingleImage = upload.single("image");
 
-const uploadSingleMiddleware = (req, res, next) => {
-  uploadSingleImage(req, res, (err) => {
+const uploadSingleMiddleware = async (req, res, next) => {
+  uploadSingleImage(req, res, async (err) => {
     if (err) {
       // Tratar diferentes tipos de erro
       if (err instanceof multer.MulterError) {
@@ -170,7 +173,7 @@ const uploadSingleMiddleware = (req, res, next) => {
       }
 
       // Erro de validação de tipo de arquivo
-      if (err.message.includes("Tipo de arquivo não permitido")) {
+      if (err.message && err.message.includes("Tipo de arquivo não permitido")) {
         return res.status(400).json({
           success: false,
           message: err.message,
@@ -191,16 +194,33 @@ const uploadSingleMiddleware = (req, res, next) => {
       return next();
     }
 
-    // Adicionar informações do arquivo ao request
-    req.uploadedFile = {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      path: req.file.path,
-    };
+    try {
+      // Processar arquivo através do serviço de upload
+      const uploadResult = await uploadService.uploadFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
 
-    next();
+      req.uploadedFile = {
+        filename: uploadResult.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        url: uploadResult.url,
+        storage: uploadResult.storage,
+        path: uploadResult.path || null, // Pode ser null se estiver no S3
+      };
+
+      next();
+    } catch (uploadError) {
+      console.error("❌ Erro ao fazer upload do arquivo:", uploadError);
+      return res.status(500).json({
+        success: false,
+        message: "Erro ao processar upload do arquivo.",
+        error: process.env.NODE_ENV === "development" ? uploadError.message : undefined,
+      });
+    }
   });
 };
 

@@ -1575,13 +1575,13 @@ describe("SolicitacaoController", () => {
       // Arrange
       req.params = { id: "1" };
       req.body = {};
-      req.files = [
-        { originalname: "img1.jpg", filename: "img1.jpg", path: "/path/img1.jpg", size: 1000, mimetype: "image/jpeg" },
-        { originalname: "img2.jpg", filename: "img2.jpg", path: "/path/img2.jpg", size: 1000, mimetype: "image/jpeg" },
-        { originalname: "img3.jpg", filename: "img3.jpg", path: "/path/img3.jpg", size: 1000, mimetype: "image/jpeg" },
-        { originalname: "img4.jpg", filename: "img4.jpg", path: "/path/img4.jpg", size: 1000, mimetype: "image/jpeg" },
-      ];
-      req.uploadedFiles = req.files; // 4 imagens, mas limite é 3
+      // Estrutura correta que vem do middleware processado
+      req.uploadedFiles = [
+        { originalName: "img1.jpg", filename: "img1.jpg", url: "/uploads/img1.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
+        { originalName: "img2.jpg", filename: "img2.jpg", url: "/uploads/img2.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
+        { originalName: "img3.jpg", filename: "img3.jpg", url: "/uploads/img3.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
+        { originalName: "img4.jpg", filename: "img4.jpg", url: "/uploads/img4.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
+      ]; // 4 imagens, mas limite é 3
 
       const mockCliente = { id: 1, usuario_id: 1 };
       const mockSolicitacao = {
@@ -2358,11 +2358,11 @@ describe("SolicitacaoController", () => {
     it("deve adicionar múltiplas imagens com ordem correta", async () => {
       // Arrange
       req.params = { id: "1" };
-      req.files = [
-        { originalname: "img1.jpg", filename: "img1.jpg", path: "/path/img1.jpg", size: 1000, mimetype: "image/jpeg" },
-        { originalname: "img2.jpg", filename: "img2.jpg", path: "/path/img2.jpg", size: 1000, mimetype: "image/jpeg" },
+      // Estrutura correta que vem do middleware processado
+      req.uploadedFiles = [
+        { originalName: "img1.jpg", filename: "img1.jpg", url: "/uploads/img1.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
+        { originalName: "img2.jpg", filename: "img2.jpg", url: "/uploads/img2.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
       ];
-      req.uploadedFiles = req.files;
 
       const mockCliente = { id: 1, usuario_id: 1 };
       const mockSolicitacao = {
@@ -2415,10 +2415,10 @@ describe("SolicitacaoController", () => {
     it("deve adicionar imagens com ordem correta considerando imagens existentes", async () => {
       // Arrange
       req.params = { id: "1" };
-      req.files = [
-        { originalname: "img3.jpg", filename: "img3.jpg", path: "/path/img3.jpg", size: 1000, mimetype: "image/jpeg" },
+      // Estrutura correta que vem do middleware processado
+      req.uploadedFiles = [
+        { originalName: "img3.jpg", filename: "img3.jpg", url: "/uploads/img3.jpg", size: 1000, mimetype: "image/jpeg", storage: "local" },
       ];
-      req.uploadedFiles = req.files;
 
       const mockCliente = { id: 1, usuario_id: 1 };
       const mockSolicitacao = {
@@ -2451,10 +2451,17 @@ describe("SolicitacaoController", () => {
     it("deve processar arquivos com originalName e fileName alternativos", async () => {
       // Arrange
       req.params = { id: "1" };
-      req.files = [
-        { originalName: "img1.jpg", fileName: "img1.jpg", path: "/path/img1.jpg", size: 1000, mimetype: "image/jpeg" },
+      // Estrutura correta que vem do middleware processado pelo uploadService
+      req.uploadedFiles = [
+        { 
+          originalName: "img1.jpg", 
+          filename: "img1.jpg", 
+          url: "/uploads/img1.jpg",
+          size: 1000, 
+          mimetype: "image/jpeg",
+          storage: "local"
+        },
       ];
-      req.uploadedFiles = req.files;
 
       const mockCliente = { id: 1, usuario_id: 1 };
       const mockSolicitacao = {
@@ -2478,6 +2485,7 @@ describe("SolicitacaoController", () => {
         expect.objectContaining({
           nome_arquivo: "img1.jpg",
           nome_arquivo_fisico: "img1.jpg",
+          caminho_arquivo: "/uploads/img1.jpg",
         }),
         expect.objectContaining({ transaction: expect.any(Object) })
       );

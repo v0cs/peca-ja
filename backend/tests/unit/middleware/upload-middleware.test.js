@@ -18,13 +18,15 @@ jest.mock("path", () => ({
 // Mock do multer
 const mockMulterArray = jest.fn((fieldName, maxCount) => {
   return (req, res, cb) => {
-    cb(null);
+    // Simular processamento assíncrono
+    setImmediate(() => cb(null));
   };
 });
 
 const mockMulterSingle = jest.fn((fieldName) => {
   return (req, res, cb) => {
-    cb(null);
+    // Simular processamento assíncrono
+    setImmediate(() => cb(null));
   };
 });
 
@@ -43,8 +45,15 @@ mockMulter.MulterError = class MulterError extends Error {
 };
 
 mockMulter.diskStorage = jest.fn(() => ({}));
+mockMulter.memoryStorage = jest.fn(() => ({}));
 
 jest.mock("multer", () => mockMulter);
+
+// Mock do uploadService
+const mockUploadFile = jest.fn();
+jest.mock("../../../src/services/uploadService", () => ({
+  uploadFile: mockUploadFile,
+}));
 
 // Importar APÓS os mocks
 const { uploadMiddleware, uploadSingleMiddleware } = require("../../../src/middleware/uploadMiddleware");
@@ -55,6 +64,7 @@ describe("uploadMiddleware", () => {
   beforeEach(() => {
     mockMulterArray.mockClear();
     mockMulterSingle.mockClear();
+    mockUploadFile.mockClear();
 
     req = {
       files: [],
@@ -68,42 +78,52 @@ describe("uploadMiddleware", () => {
   });
 
   describe("uploadMiddleware (múltiplos arquivos)", () => {
-    it("deve processar upload com sucesso quando arquivos são válidos", () => {
-      req.files = [
-        {
-          filename: "123_456.jpg",
-          originalname: "test.jpg",
-          mimetype: "image/jpeg",
-          size: 1024,
-          path: "/uploads/123_456.jpg",
-        },
-      ];
+    it("deve processar upload com sucesso quando arquivos são válidos", async () => {
+      const mockFile = {
+        buffer: Buffer.from("test"),
+        originalname: "test.jpg",
+        mimetype: "image/jpeg",
+      };
 
-      mockMulterArray.mockImplementation((fieldName, maxCount) => {
-        return (req, res, cb) => {
-          cb(null);
-        };
+      req.files = [mockFile];
+
+      mockUploadFile.mockResolvedValue({
+        filename: "123_456.jpg",
+        url: "/uploads/123_456.jpg",
+        storage: "local",
+        path: "/uploads/123_456.jpg",
       });
 
-      uploadMiddleware(req, res, next);
+      // O middleware precisa ser executado e esperado
+      await new Promise((resolve) => {
+        uploadMiddleware(req, res, () => {
+          next();
+          resolve();
+        });
+      });
 
       expect(next).toHaveBeenCalled();
       expect(req.uploadedFiles).toBeDefined();
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        mockFile.buffer,
+        mockFile.originalname,
+        mockFile.mimetype
+      );
     });
 
-    it("deve definir uploadedFiles vazio quando não há arquivos", () => {
+    it("deve definir uploadedFiles vazio quando não há arquivos", async () => {
       req.files = [];
 
-      mockMulterArray.mockImplementation((fieldName, maxCount) => {
-        return (req, res, cb) => {
-          cb(null);
-        };
+      await new Promise((resolve) => {
+        uploadMiddleware(req, res, () => {
+          next();
+          resolve();
+        });
       });
-
-      uploadMiddleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
       expect(req.uploadedFiles).toEqual([]);
+      expect(mockUploadFile).not.toHaveBeenCalled();
     });
   });
 
@@ -116,31 +136,42 @@ describe("uploadMiddleware", () => {
       expect(typeof uploadSingleMiddleware).toBe("function");
     });
 
-    it("deve processar múltiplos arquivos corretamente", () => {
-      req.files = [
-        {
+    it("deve processar múltiplos arquivos corretamente", async () => {
+      const mockFile1 = {
+        buffer: Buffer.from("test1"),
+        originalname: "foto1.jpg",
+        mimetype: "image/jpeg",
+        size: 2048,
+      };
+      const mockFile2 = {
+        buffer: Buffer.from("test2"),
+        originalname: "foto2.png",
+        mimetype: "image/png",
+        size: 4096,
+      };
+
+      req.files = [mockFile1, mockFile2];
+
+      mockUploadFile
+        .mockResolvedValueOnce({
           filename: "123_456.jpg",
-          originalname: "foto1.jpg",
-          mimetype: "image/jpeg",
-          size: 2048,
+          url: "/uploads/123_456.jpg",
+          storage: "local",
           path: "/uploads/123_456.jpg",
-        },
-        {
+        })
+        .mockResolvedValueOnce({
           filename: "789_101.png",
-          originalname: "foto2.png",
-          mimetype: "image/png",
-          size: 4096,
+          url: "/uploads/789_101.png",
+          storage: "local",
           path: "/uploads/789_101.png",
-        },
-      ];
+        });
 
-      mockMulterArray.mockImplementation((fieldName, maxCount) => {
-        return (req, res, cb) => {
-          cb(null);
-        };
+      await new Promise((resolve) => {
+        uploadMiddleware(req, res, () => {
+          next();
+          resolve();
+        });
       });
-
-      uploadMiddleware(req, res, next);
 
       expect(req.uploadedFiles).toHaveLength(2);
       expect(req.uploadedFiles[0]).toEqual({
@@ -148,7 +179,18 @@ describe("uploadMiddleware", () => {
         originalName: "foto1.jpg",
         mimetype: "image/jpeg",
         size: 2048,
+        url: "/uploads/123_456.jpg",
+        storage: "local",
         path: "/uploads/123_456.jpg",
+      });
+      expect(req.uploadedFiles[1]).toEqual({
+        filename: "789_101.png",
+        originalName: "foto2.png",
+        mimetype: "image/png",
+        size: 4096,
+        url: "/uploads/789_101.png",
+        storage: "local",
+        path: "/uploads/789_101.png",
       });
     });
   });
