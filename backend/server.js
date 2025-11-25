@@ -71,6 +71,9 @@ require("./src/config/passport");
 // Importar middlewares
 const { generalRateLimiter } = require("./src/middleware");
 
+// Importar middleware de métricas Prometheus
+const { metricsMiddleware } = require("./src/utils/metrics");
+
 // Importar todas as rotas organizadas
 const routes = require("./src/routes");
 
@@ -105,6 +108,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Middleware de métricas Prometheus (deve vir ANTES de outros middlewares para capturar todas as requisições)
+app.use(metricsMiddleware);
 
 // Aplicar rate limiting global ANTES de processar o body
 // Isso evita processamento desnecessário em caso de rate limit excedido

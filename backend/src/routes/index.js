@@ -15,9 +15,27 @@ const vendedorRoutes = require("./vendedorRoutes");
 const vendedorOperacoesRoutes = require("./vendedorOperacoesRoutes");
 const notificationRoutes = require("./notificationRoutes");
 
+// Import métricas Prometheus
+const { getMetrics, register } = require("../utils/metrics");
+
 // Health check da API
 router.get("/health", (req, res) => {
   res.json({ status: "OK", message: "API do PeçaJá está funcionando!" });
+});
+
+// Endpoint de métricas Prometheus
+router.get("/metrics", async (req, res) => {
+  try {
+    const metrics = await getMetrics();
+    res.set("Content-Type", register.contentType);
+    res.end(metrics);
+  } catch (error) {
+    console.error("❌ Erro ao obter métricas:", error);
+    res
+      .status(500)
+      .set("Content-Type", "text/plain")
+      .end(`Erro ao obter métricas: ${error.message}`);
+  }
 });
 
 // Mount routes

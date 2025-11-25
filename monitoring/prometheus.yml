@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "pecaja-monitor"
+
+scrape_configs:
+  # Métricas do backend PeçaJá
+  - job_name: "pecaja-backend"
+    static_configs:
+      - targets: ["backend:3001"]
+    metrics_path: "/api/metrics"
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Métricas do próprio Prometheus
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+

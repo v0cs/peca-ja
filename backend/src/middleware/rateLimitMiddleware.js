@@ -77,6 +77,7 @@ const generalRateLimiter = rateLimit({
     // - Health checks
     // - OAuth redirects (GET /auth/google e /auth/google/callback)
     // - GET /auth/me (rota autenticada essencial, não representa risco de abuso)
+    // - GET /api/metrics (endpoint de métricas Prometheus)
     const isHealthCheck = req.path === "/health" || req.path === "/api/health";
     const isOAuthRedirect = 
       req.path === "/api/auth/google" || 
@@ -90,7 +91,12 @@ const generalRateLimiter = rateLimit({
       req.path === "/api/auth/me" || 
       req.path === "/auth/me";
     
-    return isHealthCheck || isOAuthRedirect || isAuthMe;
+    // Excluir endpoint de métricas do rate limiting
+    const isMetricsEndpoint = 
+      req.path === "/api/metrics" || 
+      req.path === "/metrics";
+    
+    return isHealthCheck || isOAuthRedirect || isAuthMe || isMetricsEndpoint;
   },
   keyGenerator: (req) => {
     // Usar IP do cliente ou user ID se autenticado
