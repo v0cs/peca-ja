@@ -16,3 +16,4 @@ export { default as NovaSolicitacao } from "./NovaSolicitacao";
 export { default as DetalheSolicitacao } from "./DetalheSolicitacao";
 export { default as EditarSolicitacao } from "./EditarSolicitacao";
 export { default as GerenciarVendedores } from "./GerenciarVendedores";
+export { default as PoliticaPrivacidade } from "./PoliticaPrivacidade";

@@ -1919,12 +1919,6 @@ describe("SolicitacaoController", () => {
       Solicitacao.findOne.mockResolvedValue(mockSolicitacao);
       SolicitacoesAtendimento.findAll.mockResolvedValue(mockAtendimentos);
 
-      // Mock do NotificationService
-      const NotificationService = require("../../../src/services/notificationService");
-      jest
-        .spyOn(NotificationService, "notificarClienteSolicitacaoCancelada")
-        .mockResolvedValue({});
-
       // Act
       await SolicitacaoController.cancel(req, res);
 
@@ -1969,15 +1963,6 @@ describe("SolicitacaoController", () => {
       Solicitacao.findOne.mockResolvedValue(mockSolicitacao);
       SolicitacoesAtendimento.findAll.mockResolvedValue(mockAtendimentos);
 
-      // Mock do NotificationService
-      const NotificationService = require("../../../src/services/notificationService");
-      jest
-        .spyOn(NotificationService, "notificarClienteSolicitacaoCancelada")
-        .mockResolvedValue({});
-      jest
-        .spyOn(NotificationService, "notificarAutopecasSolicitacaoCancelada")
-        .mockResolvedValue([]);
-
       // Act
       await SolicitacaoController.cancel(req, res);
 
@@ -1990,9 +1975,6 @@ describe("SolicitacaoController", () => {
           atendimentos_afetados: 2,
         }),
       });
-      expect(
-        NotificationService.notificarAutopecasSolicitacaoCancelada
-      ).toHaveBeenCalled();
     });
 
     it("deve retornar erro quando usuário não é cliente", async () => {
@@ -2099,11 +2081,6 @@ describe("SolicitacaoController", () => {
       Cliente.findOne.mockResolvedValue(mockCliente);
       Solicitacao.findOne.mockResolvedValue(mockSolicitacao);
       SolicitacoesAtendimento.findAll.mockResolvedValue([]);
-
-      const NotificationService = require("../../../src/services/notificationService");
-      jest
-        .spyOn(NotificationService, "notificarClienteSolicitacaoCancelada")
-        .mockResolvedValue({});
 
       // Act
       await SolicitacaoController.cancel(req, res);

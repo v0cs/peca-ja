@@ -644,7 +644,15 @@ const Registro = () => {
                         htmlFor="termos_aceitos"
                         className="font-medium"
                       >
-                        Aceito os termos de uso e política de privacidade
+                        Aceito os{" "}
+                        <Link
+                          to="/politica-privacidade"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80 underline"
+                        >
+                          termos de uso e política de privacidade
+                        </Link>
                       </label>
                       {errors.termos_aceitos && (
                         <p className="text-destructive mt-1">{errors.termos_aceitos}</p>

@@ -10,7 +10,6 @@ const {
 const { Op } = require("sequelize");
 const { uploadMiddleware } = require("../middleware/uploadMiddleware");
 const { emailService } = require("../services");
-const NotificationService = require("../services/notificationService");
 const path = require("path");
 
 /**
@@ -317,10 +316,13 @@ class SolicitacaoController {
               model: Usuario,
               as: "usuario",
               where: {
-                ativo: true, // Apenas usuários ativos
+                [Op.and]: [
+                  { ativo: true }, // Apenas usuários ativos
+                  { tipo_usuario: "autopeca" }, // Apenas usuários do tipo autopeca
+                ],
               },
               required: true,
-              attributes: ["id", "email", "ativo"],
+              attributes: ["id", "email", "ativo", "tipo_usuario"],
             },
           ],
         });
@@ -338,6 +340,14 @@ class SolicitacaoController {
           const autopeca = autopecasDaCidade[i];
           
           if (autopeca.usuario && autopeca.usuario.email) {
+            // Verificação defensiva: garantir que é realmente uma autopeça
+            if (autopeca.usuario.tipo_usuario !== "autopeca") {
+              console.warn(
+                `⚠️ [NOTIFICAÇÃO] Pulando usuário ${autopeca.usuario.id} (${autopeca.usuario.email}) - tipo_usuario é "${autopeca.usuario.tipo_usuario}", esperado "autopeca"`
+              );
+              continue;
+            }
+            
             try {
               console.log(
                 `📧 [NOTIFICAÇÃO] Enviando email para autopeça: ${autopeca.razao_social || autopeca.nome_fantasia} (${autopeca.usuario.email})`
@@ -409,15 +419,19 @@ class SolicitacaoController {
                 ],
               },
               required: true,
+              attributes: ["id", "razao_social", "nome_fantasia", "endereco_cidade", "endereco_uf"],
             },
             {
               model: Usuario,
               as: "usuario",
               where: {
-                ativo: true, // Apenas usuários ativos
+                [Op.and]: [
+                  { ativo: true }, // Apenas usuários ativos
+                  { tipo_usuario: "vendedor" }, // Apenas usuários do tipo vendedor
+                ],
               },
               required: true,
-              attributes: ["id", "email", "ativo"],
+              attributes: ["id", "email", "ativo", "tipo_usuario"],
             },
           ],
         });
@@ -425,44 +439,46 @@ class SolicitacaoController {
         console.log(
           `📧 [NOTIFICAÇÃO] Encontrados ${vendedoresDaCidade.length} vendedores ativos em ${cidadeNormalizada}/${ufNormalizada}`
         );
-
-        // Criar um Set com os IDs das autopeças que já foram notificadas
-        // para evitar notificar vendedores de autopeças que já receberam email
-        const autopecasNotificadasIds = new Set(
-          autopecasDaCidade.map(ap => ap.id)
-        );
         
+        // Log detalhado para debug
+        if (vendedoresDaCidade.length > 0) {
+          console.log(
+            `📧 [NOTIFICAÇÃO] Detalhes dos vendedores encontrados:`
+          );
+          vendedoresDaCidade.forEach(v => {
+            console.log(
+              `   - Vendedor: ${v.nome_completo} (ID: ${v.id}), Email: ${v.usuario?.email || 'N/A'}, Tipo: ${v.usuario?.tipo_usuario || 'N/A'}, Autopeça: ${v.autopeca?.id || 'N/A'}`
+            );
+          });
+        }
+
         // Criar um Set com os emails que já foram notificados
-        // para evitar duplicação de emails (caso vendedor e autopeça tenham o mesmo email)
+        // para evitar duplicação apenas se o MESMO email já foi notificado
+        // (caso vendedor e autopeça tenham o mesmo email)
         const emailsNotificados = new Set(
           autopecasDaCidade
             .filter(ap => ap.usuario && ap.usuario.email)
             .map(ap => ap.usuario.email.toLowerCase())
         );
 
-        // Filtrar vendedores: excluir aqueles cuja autopeça já foi notificada
-        // OU cujo email já foi notificado (evitar duplicação)
+        // REGRA DE NEGÓCIO: Vendedores DEVEM receber notificações independentemente
+        // de se a autopeça também recebeu, pois são os vendedores que trabalham
+        // diretamente atendendo as solicitações.
+        // Apenas evitamos duplicação se o MESMO email já foi notificado.
         const vendedoresParaNotificar = vendedoresDaCidade.filter(vendedor => {
-          // Se o vendedor pertence a uma autopeça que já foi notificada, não notificar o vendedor separadamente
-          // (a autopeça já recebeu o email e pode encaminhar internamente)
-          if (vendedor.autopeca && autopecasNotificadasIds.has(vendedor.autopeca.id)) {
-            console.log(
-              `⏭️ [NOTIFICAÇÃO] Pulando vendedor ${vendedor.id} (${vendedor.nome_completo}) - autopeça ${vendedor.autopeca.id} já foi notificada`
-            );
-            return false;
-          }
-          
-          // Se o email do vendedor já foi notificado, não notificar novamente
+          // Se o email do vendedor já foi notificado (ex: autopeça e vendedor têm o mesmo email),
+          // não notificar novamente para evitar spam
           if (vendedor.usuario && vendedor.usuario.email) {
             const emailVendedor = vendedor.usuario.email.toLowerCase();
             if (emailsNotificados.has(emailVendedor)) {
               console.log(
-                `⏭️ [NOTIFICAÇÃO] Pulando vendedor ${vendedor.id} (${vendedor.nome_completo}) - email ${emailVendedor} já foi notificado`
+                `⏭️ [NOTIFICAÇÃO] Pulando vendedor ${vendedor.id} (${vendedor.nome_completo}) - email ${emailVendedor} já foi notificado (possivelmente pela autopeça)`
               );
               return false;
             }
           }
           
+          // Todos os outros vendedores devem ser notificados
           return true;
         });
 
@@ -487,6 +503,14 @@ class SolicitacaoController {
           const vendedor = vendedoresParaNotificar[i];
           
           if (vendedor.usuario && vendedor.usuario.email) {
+            // Verificação defensiva: garantir que é realmente um vendedor
+            if (vendedor.usuario.tipo_usuario !== "vendedor") {
+              console.warn(
+                `⚠️ [NOTIFICAÇÃO] Pulando usuário ${vendedor.usuario.id} (${vendedor.usuario.email}) - tipo_usuario é "${vendedor.usuario.tipo_usuario}", esperado "vendedor"`
+              );
+              continue;
+            }
+            
             try {
               console.log(
                 `📧 [NOTIFICAÇÃO] Enviando email para vendedor: ${vendedor.nome_completo} (${vendedor.usuario.email})`
@@ -533,7 +557,16 @@ class SolicitacaoController {
         }
 
         console.log(
-          `📧 [NOTIFICAÇÃO] Resumo: ${emailsEnviados} emails enviados com sucesso, ${emailsFalhados} falharam (${autopecasDaCidade.length} autopeças + ${vendedoresDaCidade.length} vendedores)`
+          `📧 [NOTIFICAÇÃO] Resumo final:`
+        );
+        console.log(
+          `   - Autopeças encontradas: ${autopecasDaCidade.length}, Notificadas: ${autopecasDaCidade.filter(ap => ap.usuario && ap.usuario.email).length}`
+        );
+        console.log(
+          `   - Vendedores encontrados: ${vendedoresDaCidade.length}, Para notificar: ${vendedoresParaNotificar.length}, Notificados: ${vendedoresParaNotificar.filter(v => v.usuario && v.usuario.email && v.usuario.tipo_usuario === "vendedor").length}`
+        );
+        console.log(
+          `   - Total de emails: ${emailsEnviados} enviados com sucesso, ${emailsFalhados} falharam`
         );
       } catch (emailError) {
         console.error("❌ [NOTIFICAÇÃO] Erro no sistema de envio de emails:", emailError);
@@ -735,16 +768,32 @@ class SolicitacaoController {
           },
         });
 
+        // Normalizar cidade e UF para comparação case-insensitive
+        const cidadeNormalizada = autopeca.endereco_cidade.trim();
+        const ufNormalizada = autopeca.endereco_uf.trim().toUpperCase();
+        
+        // Construir condições base
+        const condicoesBase = [{ id }];
+        const condicoesCidade = [
+          { cidade_atendimento: { [Op.iLike]: cidadeNormalizada } },
+          { uf_atendimento: { [Op.iLike]: ufNormalizada } },
+        ];
+        
         if (atendimento) {
           // Se a autopeça tem registro (atendida ou vista), pode ver independente do status_cliente
-          // Apenas garantir que é da mesma cidade (para segurança)
-          whereClause.cidade_atendimento = autopeca.endereco_cidade;
-          whereClause.uf_atendimento = autopeca.endereco_uf;
+          // Apenas garantir que é da mesma cidade (para segurança) - case-insensitive
+          whereClause = {
+            [Op.and]: [...condicoesBase, ...condicoesCidade],
+          };
         } else {
-          // Se não tem registro, só pode ver se estiver ativa e na mesma cidade
-          whereClause.status_cliente = "ativa";
-          whereClause.cidade_atendimento = autopeca.endereco_cidade;
-          whereClause.uf_atendimento = autopeca.endereco_uf;
+          // Se não tem registro, só pode ver se estiver ativa e na mesma cidade - case-insensitive
+          whereClause = {
+            [Op.and]: [
+              ...condicoesBase,
+              { status_cliente: "ativa" },
+              ...condicoesCidade,
+            ],
+          };
         }
       } else {
         if (tipo === "vendedor") {
@@ -785,14 +834,32 @@ class SolicitacaoController {
             },
           });
 
+          // Normalizar cidade e UF para comparação case-insensitive
+          const cidadeNormalizadaVendedor = vendedor.autopeca.endereco_cidade.trim();
+          const ufNormalizadaVendedor = vendedor.autopeca.endereco_uf.trim().toUpperCase();
+          
+          // Construir condições base
+          const condicoesBaseVendedor = [{ id }];
+          const condicoesCidadeVendedor = [
+            { cidade_atendimento: { [Op.iLike]: cidadeNormalizadaVendedor } },
+            { uf_atendimento: { [Op.iLike]: ufNormalizadaVendedor } },
+          ];
+          
           if (atendimento) {
-            whereClause.cidade_atendimento = vendedor.autopeca.endereco_cidade;
-            whereClause.uf_atendimento = vendedor.autopeca.endereco_uf;
+            // Se o vendedor tem registro, pode ver independente do status_cliente
+            // Apenas garantir que é da mesma cidade (para segurança) - case-insensitive
+            whereClause = {
+              [Op.and]: [...condicoesBaseVendedor, ...condicoesCidadeVendedor],
+            };
           } else {
-            whereClause.status_cliente = "ativa";
-            whereClause.cidade_atendimento =
-              vendedor.autopeca.endereco_cidade;
-            whereClause.uf_atendimento = vendedor.autopeca.endereco_uf;
+            // Se não tem registro, só pode ver se estiver ativa e na mesma cidade - case-insensitive
+            whereClause = {
+              [Op.and]: [
+                ...condicoesBaseVendedor,
+                { status_cliente: "ativa" },
+                ...condicoesCidadeVendedor,
+              ],
+            };
           }
         } else {
           return res.status(403).json({
@@ -1457,31 +1524,7 @@ class SolicitacaoController {
       // 7. Commit da transação
       await transaction.commit();
 
-      // 8. Criar notificações IN-APP (assíncrono)
-      try {
-        const NotificationService = require("../services/notificationService");
-
-        // Notificar cliente sobre o cancelamento
-        await NotificationService.notificarClienteSolicitacaoCancelada(
-          solicitacao,
-          cliente
-        );
-
-        // Notificar autopeças que atenderam sobre o cancelamento
-        if (atendimentos.length > 0) {
-          await NotificationService.notificarAutopecasSolicitacaoCancelada(
-            solicitacao,
-            atendimentos
-          );
-          console.log(
-            `🔔 ${atendimentos.length} autopeça(s)/vendedor(es) notificados sobre cancelamento`
-          );
-        }
-      } catch (notificationError) {
-        console.error("Erro ao enviar notificações:", notificationError);
-      }
-
-      // 9. Retornar sucesso
+      // 8. Retornar sucesso
       return res.status(200).json({
         success: true,
         message: "Solicitação cancelada com sucesso",

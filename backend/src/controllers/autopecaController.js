@@ -7,6 +7,7 @@ const {
   ImagemSolicitacao,
   Vendedor,
 } = require("../models");
+const { Op } = require("sequelize");
 
 /**
  * Controller de Autopeças
@@ -465,12 +466,20 @@ class AutopecaController {
         });
       }
 
-      // 2. Buscar solicitações ativas da mesma cidade
+      // 2. Buscar solicitações ativas da mesma cidade (case-insensitive)
+      // Normalizar cidade e UF para comparação
+      const cidadeNormalizada = autopeca.endereco_cidade.trim();
+      const ufNormalizada = autopeca.endereco_uf.trim().toUpperCase();
+      
       const solicitacoes = await Solicitacao.findAll({
         where: {
           status_cliente: "ativa",
-          cidade_atendimento: autopeca.endereco_cidade,
-          uf_atendimento: autopeca.endereco_uf,
+          cidade_atendimento: {
+            [Op.iLike]: cidadeNormalizada, // Case-insensitive
+          },
+          uf_atendimento: {
+            [Op.iLike]: ufNormalizada, // Case-insensitive
+          },
         },
         include: [
           // NÃO incluir dados do cliente - autopeças não devem ter acesso
@@ -992,16 +1001,7 @@ class AutopecaController {
         );
       }
 
-      // 4. Criar notificação IN-APP para o cliente
-      const NotificationService = require("../services/notificationService");
-      await NotificationService.notificarClienteSolicitacaoAtendida(
-        solicitacao,
-        solicitacao.cliente,
-        autopeca,
-        null // sem vendedor
-      );
-
-      // 5. Gerar link do WhatsApp com dados do cliente
+      // 4. Gerar link do WhatsApp com dados do cliente
       const nomeAutopeca = autopeca.nome_fantasia || autopeca.razao_social;
       const nomeCliente = solicitacao.cliente.nome_completo;
       const celularCliente = solicitacao.cliente.celular.replace(/\D/g, ""); // Remove formatação

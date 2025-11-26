@@ -109,8 +109,34 @@ class EmailService {
    * Email de boas-vindas para novos usuários
    */
   async sendWelcomeEmail(usuario, perfilData, tipoUsuario) {
-    const nome =
-      perfilData.nome_completo || perfilData.razao_social || usuario.email;
+    // VALIDAÇÃO: Garantir que o tipoUsuario está correto
+    // Prioridade: tipo_usuario do banco > parâmetro tipoUsuario > fallback
+    const tipoCorreto = usuario?.tipo_usuario || tipoUsuario || "usuário";
+    
+    // Log para debug
+    console.log(`📧 [EMAIL BOAS-VINDAS] Enviando para: ${usuario?.email}`);
+    console.log(`📧 [EMAIL BOAS-VINDAS] Tipo do banco: ${usuario?.tipo_usuario}, Tipo passado: ${tipoUsuario}, Tipo final: ${tipoCorreto}`);
+    
+    // Validação de segurança: garantir que tipoCorreto é válido
+    if (!["cliente", "autopeca"].includes(tipoCorreto)) {
+      console.error(`❌ [EMAIL BOAS-VINDAS] Tipo inválido detectado: ${tipoCorreto}. Usando tipo_usuario do banco: ${usuario?.tipo_usuario}`);
+    }
+    
+    // Determinar o nome baseado no tipo de usuário CORRETO
+    let nome;
+    if (tipoCorreto === "cliente") {
+      // Para cliente, usar nome_completo (NUNCA razao_social)
+      nome = perfilData?.nome_completo || usuario?.email || "Usuário";
+    } else if (tipoCorreto === "autopeca") {
+      // Para autopeça, usar razao_social ou nome_fantasia (NUNCA nome_completo)
+      nome = perfilData?.razao_social || perfilData?.nome_fantasia || usuario?.email || "Autopeça";
+    } else {
+      // Fallback
+      nome = perfilData?.nome_completo || perfilData?.razao_social || usuario?.email || "Usuário";
+    }
+    
+    // Formatar nome do tipo para exibição
+    const tipoFormatado = tipoCorreto === "cliente" ? "Cliente" : tipoCorreto === "autopeca" ? "Autopeça" : tipoCorreto;
 
     const subject = `Bem-vindo ao PeçaJá, ${nome.split(" ")[0]}! 🚗`;
     const html = `
@@ -121,15 +147,17 @@ class EmailService {
         </div>
 
         <h2 style="color: #2563eb;">Bem-vindo(a), ${nome}! 🎉</h2>
-        <p>Sua conta como <strong style="color: #059669;">${tipoUsuario}</strong> foi criada com sucesso no PeçaJá!</p>
+        <p>Sua conta como <strong style="color: #059669;">${tipoFormatado}</strong> foi criada com sucesso no PeçaJá!</p>
         
         <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <h3 style="margin-top: 0; color: #1e40af;">Próximos passos:</h3>
           <ul style="color: #4b5563;">
             ${
-              tipoUsuario === "cliente"
+              tipoCorreto === "cliente"
                 ? "<li>🚗 <strong>Crie solicitações</strong> de peças para seu veículo</li><li>💰 <strong>Receba orçamentos</strong> de autopeças locais</li><li>💬 <strong>Negocie diretamente</strong> via WhatsApp</li>"
-                : "<li>🔔 <strong>Visualize solicitações</strong> da sua cidade</li><li>💬 <strong>Atenda clientes</strong> via WhatsApp</li><li>👥 <strong>Gerencie vendedores</strong> da sua equipe</li>"
+                : tipoCorreto === "autopeca"
+                ? "<li>🔔 <strong>Visualize solicitações</strong> da sua cidade</li><li>💬 <strong>Atenda clientes</strong> via WhatsApp</li><li>👥 <strong>Gerencie vendedores</strong> da sua equipe</li>"
+                : "<li>🚗 <strong>Acesse sua conta</strong> e comece a usar o PeçaJá</li>"
             }
           </ul>
         </div>

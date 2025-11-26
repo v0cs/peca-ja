@@ -20,6 +20,7 @@ import {
   GerenciarVendedores,
   RecuperarSenha,
   ResetPassword,
+  PoliticaPrivacidade,
 } from "./pages";
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
           <Route path="/recuperar-senha" element={<RecuperarSenha />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/cadastrar" element={<Registro />} />
+          <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
           {/* Rotas antigas mantidas para compatibilidade */}
           <Route path="/cadastrar/cliente" element={<RegistroCliente />} />
           <Route path="/cadastrar/autopeca-old" element={<RegistroAutopeca />} />

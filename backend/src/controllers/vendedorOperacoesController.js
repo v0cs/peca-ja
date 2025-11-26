@@ -382,10 +382,18 @@ class VendedorOperacoesController {
         new Set([...solicitacoesAtendidasIds, ...solicitacoesVistasIds])
       );
 
+      // Normalizar cidade e UF para comparação case-insensitive
+      const cidadeNormalizada = vendedor.autopeca.endereco_cidade.trim();
+      const ufNormalizada = vendedor.autopeca.endereco_uf.trim().toUpperCase();
+
       const whereSolicitacoes = {
         status_cliente: "ativa",
-        cidade_atendimento: vendedor.autopeca.endereco_cidade,
-        uf_atendimento: vendedor.autopeca.endereco_uf,
+        cidade_atendimento: {
+          [Op.iLike]: cidadeNormalizada, // Case-insensitive
+        },
+        uf_atendimento: {
+          [Op.iLike]: ufNormalizada, // Case-insensitive
+        },
       };
 
       if (idsParaExcluir.length > 0) {
@@ -1335,31 +1343,6 @@ class VendedorOperacoesController {
         },
         transaction,
       });
-
-      // 5.1. Criar notificações IN-APP
-      const NotificationService = require("../services/notificationService");
-
-      // Notificar cliente
-      await NotificationService.notificarClienteSolicitacaoAtendida(
-        solicitacao,
-        solicitacao.cliente,
-        vendedor.autopeca,
-        vendedor
-      );
-
-      // Notificar admin da autopeça
-      await NotificationService.notificarAutopecaVendedorAtendeu(
-        solicitacao,
-        vendedor,
-        vendedor.autopeca
-      );
-
-      // Notificar outros vendedores da mesma autopeça
-      await NotificationService.notificarOutrosVendedoresPerderam(
-        solicitacao,
-        vendedor.autopeca_id,
-        vendedor.id
-      );
 
       // 6. Gerar link do WhatsApp com dados do cliente
       const nomeAutopeca =

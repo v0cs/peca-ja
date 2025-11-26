@@ -275,7 +275,15 @@ const RegistroCliente = () => {
                     htmlFor="termos_aceitos"
                     className="font-medium text-gray-700"
                   >
-                    Aceito os termos de uso e política de privacidade
+                    Aceito os{" "}
+                    <Link
+                      to="/politica-privacidade"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-500 underline"
+                    >
+                      termos de uso e política de privacidade
+                    </Link>
                   </label>
                   {errors.termos_aceitos && (
                     <p className="text-red-600 mt-1">{errors.termos_aceitos}</p>

@@ -1,0 +1,53 @@
+# ========================================
+# Stage 1: Build Dependencies
+# ========================================
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copiar apenas package files para cache de dependências
+COPY package*.json ./
+
+# Instalar apenas dependências de produção
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# ========================================
+# Stage 2: Production Runtime
+# ========================================
+FROM node:18-alpine AS production
+
+WORKDIR /app
+
+# Instalar dumb-init para gerenciar processos corretamente
+RUN apk add --no-cache dumb-init
+
+# Criar usuário não-root para segurança
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copiar dependências do stage de build
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copiar código da aplicação
+COPY --chown=nodejs:nodejs . .
+
+# Criar diretórios necessários com permissões corretas
+RUN mkdir -p uploads logs && \
+    chown -R nodejs:nodejs uploads logs
+
+# Mudar para usuário não-root
+USER nodejs
+
+# Expor porta da aplicação
+EXPOSE 3001
+
+# Healthcheck para verificar se o backend está respondendo
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Usar dumb-init para gerenciar sinais corretamente
+ENTRYPOINT ["dumb-init", "--"]
+
+# Comando para iniciar a aplicação em produção
+CMD ["node", "server.js"]
