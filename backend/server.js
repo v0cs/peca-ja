@@ -15,7 +15,9 @@ if (fs.existsSync(rootEnvPath)) {
 } else if (fs.existsSync(backendEnvPath)) {
   console.log(`📄 Carregando .env de: ${backendEnvPath}`);
 } else {
-  console.warn(`⚠️  Arquivo .env não encontrado em: ${rootEnvPath} ou ${backendEnvPath}`);
+  console.warn(
+    `⚠️  Arquivo .env não encontrado em: ${rootEnvPath} ou ${backendEnvPath}`
+  );
 }
 
 // CORREÇÃO: Converter arquivo UTF-16 para UTF-8 se necessário
@@ -23,7 +25,7 @@ if (fs.existsSync(envPath)) {
   try {
     // Tentar ler como UTF-8 primeiro
     let content = fs.readFileSync(envPath, "utf8");
-    
+
     // Se o conteúdo parece estar em UTF-16 (tem \x00 entre caracteres), converter
     if (content.includes("\x00")) {
       console.log("⚠️  Arquivo .env está em UTF-16. Convertendo para UTF-8...");
@@ -44,15 +46,21 @@ const result = require("dotenv").config({ path: envPath });
 
 // Debug: mostrar quantas variáveis foram carregadas
 if (result.parsed) {
-  const googleVars = Object.keys(result.parsed).filter(key => key.includes("GOOGLE"));
-  console.log(`✅ ${Object.keys(result.parsed).length} variáveis carregadas do .env`);
+  const googleVars = Object.keys(result.parsed).filter((key) =>
+    key.includes("GOOGLE")
+  );
+  console.log(
+    `✅ ${Object.keys(result.parsed).length} variáveis carregadas do .env`
+  );
   if (googleVars.length > 0) {
     console.log(`   Variáveis Google encontradas: ${googleVars.join(", ")}`);
   }
 } else if (result.error) {
   console.error(`❌ Erro ao carregar .env: ${result.error.message}`);
 } else {
-  console.warn(`⚠️  Nenhuma variável foi carregada do .env. Verifique o formato do arquivo (deve ser UTF-8).`);
+  console.warn(
+    `⚠️  Nenhuma variável foi carregada do .env. Verifique o formato do arquivo (deve ser UTF-8).`
+  );
 }
 
 const express = require("express");
@@ -156,12 +164,22 @@ app.listen(PORT, async () => {
 
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`\n🛡️  Rate Limiting Global Ativo:`);
-  console.log(`   Geral: ${config.RATE_LIMIT_MAX_REQUESTS} requisições / ${config.RATE_LIMIT_WINDOW_MS / 1000 / 60} minutos`);
-  console.log(`   Autenticação: ${config.RATE_LIMIT_AUTH_MAX} tentativas / 15 minutos`);
+  console.log(
+    `   Geral: ${config.RATE_LIMIT_MAX_REQUESTS} requisições / ${
+      config.RATE_LIMIT_WINDOW_MS / 1000 / 60
+    } minutos`
+  );
+  console.log(
+    `   Autenticação: ${config.RATE_LIMIT_AUTH_MAX} tentativas / 15 minutos`
+  );
   console.log(`   API: ${config.RATE_LIMIT_API_MAX} requisições / 15 minutos`);
   console.log(`   Upload: ${config.RATE_LIMIT_UPLOAD_MAX} uploads / hora`);
-  console.log(`   Solicitações: ${config.RATE_LIMIT_SOLICITATION_MAX} criações / hora`);
-  console.log(`   Cadastro Vendedores: ${config.RATE_LIMIT_VENDEDOR_MAX} cadastros / dia`);
+  console.log(
+    `   Solicitações: ${config.RATE_LIMIT_SOLICITATION_MAX} criações / hora`
+  );
+  console.log(
+    `   Cadastro Vendedores: ${config.RATE_LIMIT_VENDEDOR_MAX} cadastros / dia`
+  );
   console.log(`\n📋 Rotas disponíveis:`);
   console.log(`   GET  /api/health`);
   console.log(`   POST /api/auth/register`);
