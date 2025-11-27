@@ -17,17 +17,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔑 Setup SSH
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 🚀 Deploy to Lightsail
+      - name: Deploy to Lightsail
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -35,42 +35,42 @@ jobs:
           ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST << 'EOF'
             set -e
             
-            echo "📂 Navegando para o diretório do projeto..."
+            echo "Navegando para o diretório do projeto..."
             cd ~/peca-ja
             
-            echo "🔄 Fazendo pull das últimas mudanças..."
+            echo "Fazendo pull das últimas mudanças..."
             git pull origin main
             
-            echo "🛑 Parando containers..."
+            echo "Parando containers..."
             docker compose -f docker-compose.prod.yml down
             
-            echo "🔨 Fazendo rebuild das imagens..."
+            echo "Fazendo rebuild das imagens..."
             docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache
             
-            echo "🚀 Iniciando containers..."
+            echo "Iniciando containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
             
-            echo "⏳ Aguardando containers iniciarem..."
+            echo "Aguardando containers iniciarem..."
             sleep 10
             
-            echo "✅ Verificando status dos containers..."
+            echo "Verificando status dos containers..."
             docker ps
             
-            echo "🧹 Limpando imagens antigas..."
+            echo "Limpando imagens antigas..."
             docker image prune -af --filter "until=24h"
             
             echo "✅ Deploy concluído com sucesso!"
           EOF
 
-      - name: 🎉 Deploy Success
+      - name: ✅ Deploy Success
         if: success()
         run: |
-          echo "✅ Deploy realizado com sucesso!"
-          echo "🌐 Frontend: http://pecaja.cloud"
-          echo "🔧 Backend: http://pecaja.cloud:3001"
-          echo "📊 Grafana: http://pecaja.cloud:3002"
+          echo "Deploy realizado com sucesso!"
+          echo "Frontend: http://pecaja.cloud"
+          echo "Backend: http://pecaja.cloud:3001"
+          echo "Grafana: http://pecaja.cloud:3002"
 
-      - name: ❌ Deploy Failed
+      - name: Deploy Failed
         if: failure()
         run: |
-          echo "❌ Deploy falhou! Verifique os logs acima."
+          echo "Deploy falhou! Verifique os logs acima."

@@ -5,6 +5,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Aceitar variáveis de ambiente no build time
+ARG VITE_API_URL
+ARG VITE_FRONTEND_URL
+
+# Definir como variáveis de ambiente para o Vite usar durante o build
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_FRONTEND_URL=${VITE_FRONTEND_URL}
+
 # Copiar package files
 COPY package*.json ./
 
@@ -16,6 +24,7 @@ COPY . .
 
 # Build da aplicação para produção
 # Vite vai gerar os arquivos otimizados na pasta dist/
+# As variáveis VITE_* serão substituídas no build time
 RUN npm run build
 
 # ========================================
