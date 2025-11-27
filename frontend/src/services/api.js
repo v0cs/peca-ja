@@ -6,15 +6,14 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Enviar cookies automaticamente em todas as requisições
 });
 
-// Interceptor para adicionar token JWT em todas as requisições
+// Interceptor para processar requisições
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Token agora é enviado via cookie httpOnly (mais seguro)
+    // Não precisamos mais ler do localStorage
     
     // Se for FormData, remover Content-Type para axios configurar automaticamente com boundary
     if (config.data instanceof FormData) {
@@ -55,11 +54,9 @@ api.interceptors.response.use(
       };
     }
 
-    // Se receber 401 (não autorizado), remover token e redirecionar para login
+    // Se receber 401 (não autorizado), redirecionar para login
+    // Cookie httpOnly será limpo automaticamente pelo backend
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
       // Só redirecionar se não estiver já na página de login
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";

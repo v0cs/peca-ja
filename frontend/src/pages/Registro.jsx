@@ -226,14 +226,10 @@ const Registro = () => {
       const response = await api.post(endpoint, payload);
 
       if (response.data.success) {
-        // Se for OAuth, o backend já retornou o token
-        if (isOAuth && response.data.token) {
-          // Salvar token e dados do usuário
-          localStorage.setItem("token", response.data.token);
-          if (response.data.user) {
-            localStorage.setItem("user", JSON.stringify(response.data.user));
-            updateUser(response.data.user, response.data.token);
-          }
+        // Se for OAuth, o backend já configurou o cookie httpOnly com o token
+        if (isOAuth && response.data.user) {
+          // Token está em cookie httpOnly (não acessível via JavaScript)
+          updateUser(response.data.user);
           
           // Redirecionar baseado no tipo de usuário
           const userType = response.data.user?.tipo_usuario || tipoUsuario;

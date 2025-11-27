@@ -13,7 +13,6 @@ const OAuthCallback = () => {
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
-      const tokenFromURL = searchParams.get("token");
       const success = searchParams.get("success");
       const error = searchParams.get("error");
 
@@ -28,22 +27,9 @@ const OAuthCallback = () => {
         return;
       }
 
-      // Se não tem token na URL
-      if (!tokenFromURL) {
-        setStatus(OAUTH_STATUS.ERRO);
-        setTimeout(() => {
-          navigate("/login", {
-            state: { error: "Token não recebido. Tente novamente." },
-          });
-        }, 3000);
-        return;
-      }
-
       try {
-        // Salvar token no localStorage
-        localStorage.setItem("token", tokenFromURL);
-
-        // Buscar dados do usuário usando o token
+        // Token agora está em cookie httpOnly configurado pelo backend
+        // Buscar dados do usuário usando o cookie
         const response = await api.get("/auth/me");
 
         if (response.data.success) {
@@ -60,9 +46,8 @@ const OAuthCallback = () => {
             perfil: perfil,
           };
 
-          // Atualizar estado ANTES de salvar no localStorage para garantir sincronização
-          updateUser(fullUserData, tokenFromURL);
-          localStorage.setItem("user", JSON.stringify(fullUserData));
+          // Atualizar estado (token está em cookie httpOnly)
+          updateUser(fullUserData);
 
           setStatus(OAUTH_STATUS.SUCESSO);
 
@@ -89,8 +74,6 @@ const OAuthCallback = () => {
       } catch (error) {
         console.error("Erro no callback OAuth:", error);
         setStatus(OAUTH_STATUS.ERRO);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
 
         setTimeout(() => {
           navigate("/login", {

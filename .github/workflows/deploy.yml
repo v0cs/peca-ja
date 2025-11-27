@@ -38,35 +38,17 @@ jobs:
             echo "Navegando para o diretório do projeto..."
             cd ~/peca-ja
             
-            echo "Fazendo backup do arquivo .env.production..."
-            if [ -f .env.production ]; then
-              cp .env.production /tmp/.env.production.backup
-              echo "✅ Backup do .env.production criado em /tmp"
-            fi
+            echo "Verificando status do repositório..."
+            git status
             
-            echo "Descartando mudanças locais em arquivos rastreados (preservando .env.production)..."
-            git checkout -- .
+            echo "Descartando mudanças locais e fazendo reset para HEAD..."
             git reset --hard HEAD
             
+            echo "Limpando arquivos não rastreados (se necessário)..."
+            git clean -fd
+            
             echo "Fazendo pull das últimas mudanças..."
-            git pull origin main || {
-              echo "⚠️ Conflito detectado. Fazendo merge forçado..."
-              git fetch origin
-              git reset --hard origin/main
-            }
-            
-            echo "Restaurando arquivo .env.production do backup..."
-            if [ -f /tmp/.env.production.backup ] && [ ! -f .env.production ]; then
-              cp /tmp/.env.production.backup .env.production
-              echo "✅ Arquivo .env.production restaurado do backup"
-            fi
-            rm -f /tmp/.env.production.backup
-            
-            if [ ! -f .env.production ]; then
-              echo "❌ ERRO: Arquivo .env.production não encontrado!"
-              exit 1
-            fi
-            echo "✅ Arquivo .env.production verificado"
+            git pull origin main
             
             echo "Parando containers..."
             docker compose -f docker-compose.prod.yml down

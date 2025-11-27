@@ -66,6 +66,7 @@ if (result.parsed) {
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 
 // Importar configuração centralizada
 const config = require("./src/config/env");
@@ -128,6 +129,7 @@ app.use(metricsMiddleware);
 app.use(generalRateLimiter);
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Configurar todas as rotas com prefixo /api
 app.use("/api", routes);

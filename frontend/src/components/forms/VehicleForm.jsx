@@ -53,7 +53,7 @@ const VehicleForm = ({ formData, onChange, errors }) => {
     try {
       console.log(`🔍 [VehicleForm] Consultando placa: ${placaNormalizada}`);
       console.log(`🔍 [VehicleForm] URL: /vehicle/consulta/${placaNormalizada}`);
-      console.log(`🔍 [VehicleForm] Token presente:`, !!localStorage.getItem("token"));
+      // Token agora está em cookie httpOnly (não acessível via JavaScript)
       
       const response = await api.get(`/vehicle/consulta/${placaNormalizada}`);
       

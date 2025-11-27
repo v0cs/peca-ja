@@ -10,6 +10,7 @@ const {
   Vendedor,
 } = require("../models");
 const { isValidEmail } = require("../utils/email");
+const { setAuthCookie, clearAuthCookie } = require("../utils/cookieHelper");
 
 /**
  * Função auxiliar para validar CNPJ real
@@ -488,9 +489,9 @@ class AuthController {
         },
       };
 
-      // Adicionar token e dados completos do usuário se for OAuth
+      // Configurar cookie httpOnly com o token se for OAuth (mais seguro)
       if (token) {
-        responseData.token = token;
+        setAuthCookie(res, token);
         responseData.user = {
           ...responseData.data.usuario,
           cliente: responseData.data.cliente,
@@ -1114,9 +1115,9 @@ class AuthController {
         },
       };
 
-      // Adicionar token e dados completos do usuário se for OAuth
+      // Configurar cookie httpOnly com o token se for OAuth (mais seguro)
       if (token) {
-        responseData.token = token;
+        setAuthCookie(res, token);
         responseData.user = {
           ...responseData.data.usuario,
           autopeca: responseData.data.autopeca,
@@ -1325,9 +1326,11 @@ class AuthController {
         { expiresIn: "24h" }
       );
 
-      // 7. Retornar token e informações básicas do usuário/cliente
+      // 7. Configurar cookie httpOnly com o token (mais seguro)
+      setAuthCookie(res, token);
+
+      // 8. Retornar informações básicas do usuário/cliente (sem token no body)
       const responseData = {
-        token,
         usuario: {
           id: usuario.id,
           email: usuario.email,
@@ -1448,6 +1451,9 @@ class AuthController {
       const { userId, tipo } = req.user;
 
       console.log(`✅ Logout realizado: Usuário ${userId} (${tipo})`);
+
+      // Limpar cookie de autenticação
+      clearAuthCookie(res);
 
       // Opcional: Registrar em log de auditoria
       // await LogAuditoria.create({
@@ -1688,13 +1694,12 @@ class AuthController {
         }
       }
 
-      // Redirecionar para frontend com token (usando fragment para segurança)
+      // Configurar cookie httpOnly com o token (mais seguro que enviar na URL)
+      setAuthCookie(res, token);
+
+      // Redirecionar para frontend sem token na URL
       const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
-      return res.redirect(
-        `${frontendURL}/auth/oauth-callback?token=${encodeURIComponent(
-          token
-        )}&success=true`
-      );
+      return res.redirect(`${frontendURL}/auth/oauth-callback?success=true`);
     } catch (error) {
       console.error("Erro no callback do Google OAuth:", error);
 
