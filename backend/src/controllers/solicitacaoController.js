@@ -884,6 +884,7 @@ class SolicitacaoController {
             "id",
             "nome_arquivo",
             "nome_arquivo_fisico",
+            "caminho_arquivo",
             "ordem_exibicao",
           ],
         },
