@@ -1539,7 +1539,7 @@ class AuthController {
         console.log("🆕 Usuário não encontrado - redirecionando para cadastro OAuth");
         
         // Redirecionar para frontend com dados do Google e flag de novo usuário
-        const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+        const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
         const redirectURL = `${frontendURL}/cadastrar?email=${encodeURIComponent(
           email
         )}&name=${encodeURIComponent(name || "")}&googleId=${encodeURIComponent(
@@ -1562,7 +1562,7 @@ class AuthController {
       if (!usuario.ativo) {
         console.log("⚠️ Usuário inativo (conta excluída) - redirecionando para recadastro");
         
-        const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+        const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
         const redirectURL = `${frontendURL}/cadastrar?email=${encodeURIComponent(
           email
         )}&name=${encodeURIComponent(name || "")}&googleId=${encodeURIComponent(
@@ -1664,7 +1664,7 @@ class AuthController {
             !vendedorAtivo.autopeca.usuario ||
             !vendedorAtivo.autopeca.usuario.ativo
           ) {
-            const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+            const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
             return res.redirect(
               `${frontendURL}/auth/oauth-callback?success=false&error=${encodeURIComponent(
                 "A autopeça vinculada à sua conta foi desativada. Entre em contato com o suporte."
@@ -1679,7 +1679,7 @@ class AuthController {
             autopeca_id: vendedorAtivo.autopeca_id,
           };
         } else {
-          const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+          const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
           return res.redirect(
             `${frontendURL}/auth/oauth-callback?success=false&error=${encodeURIComponent(
               "Sua conta de vendedor está inativa. Entre em contato com o administrador da autopeça."
@@ -1689,7 +1689,7 @@ class AuthController {
       }
 
       // Redirecionar para frontend com token (usando fragment para segurança)
-      const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
       return res.redirect(
         `${frontendURL}/auth/oauth-callback?token=${encodeURIComponent(
           token
@@ -1699,7 +1699,7 @@ class AuthController {
       console.error("Erro no callback do Google OAuth:", error);
 
       // Redirecionar para frontend com erro
-      const frontendURL = config.frontendURL || process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendURL = config.frontendURL || process.env.FRONTEND_URL;
       return res.redirect(
         `${frontendURL}/auth/oauth-callback?success=false&error=${encodeURIComponent(
           "Erro ao processar login com Google. Tente novamente."

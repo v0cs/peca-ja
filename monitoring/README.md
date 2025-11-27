@@ -70,3 +70,5 @@ docker-compose logs prometheus
 2. Verifique o intervalo de tempo do dashboard
 3. Gere tráfego no backend para criar métricas
 
+
+

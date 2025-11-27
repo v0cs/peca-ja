@@ -93,9 +93,12 @@ app.use(
 const corsOptions = {
   origin: config.isProduction
     ? [
-        `https://${config.domain}`,
-        `https://www.${config.domain}`,
         config.frontendURL,
+        config.baseURL,
+        `http://${config.domain}:3001`,
+        `http://www.${config.domain}:3001`,
+        process.env.FRONTEND_URL,
+        process.env.BASE_URL,
       ].filter(Boolean)
     : [
         "http://localhost:5173",

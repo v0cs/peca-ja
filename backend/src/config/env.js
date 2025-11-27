@@ -5,12 +5,16 @@ const isProduction = process.env.NODE_ENV === "production";
 const getBaseConfig = () => {
   if (isProduction) {
     const domain = process.env.DOMAIN || "pecaja.cloud";
+    const port = process.env.PORT || 3001;
+    const protocol = process.env.PROTOCOL || "http"; // http ou https
+    const domainWithPort = process.env.DOMAIN_WITH_PORT || `${domain}:${port}`;
+    
     return {
       domain,
-      baseURL: process.env.BASE_URL || `https://${domain}`,
-      frontendURL: process.env.FRONTEND_URL || `https://${domain}`,
+      baseURL: process.env.BASE_URL || `${protocol}://${domainWithPort}`,
+      frontendURL: process.env.FRONTEND_URL || `${protocol}://${domainWithPort}`,
       // API pode estar no mesmo domínio (/api) ou em subdomínio (api.pecaja.cloud)
-      apiURL: process.env.API_URL || `https://api.${domain}`,
+      apiURL: process.env.API_URL || `${protocol}://${domainWithPort}/api`,
       // EMAIL_FROM: Deve usar o domínio verificado no Resend
       // Formato: "PeçaJá <noreply@seudominio.com>" ou "PeçaJá <contato@seudominio.com>"
       // Se não especificado, usa contato@[domain] com nome "PeçaJá"
@@ -185,3 +189,13 @@ module.exports = {
       ? `${baseConfig.apiURL}/auth/google/callback`
       : "http://localhost:3001/api/auth/google/callback"),
 };
+
+// Log de configuração de URLs em produção para debug
+if (isProduction) {
+  console.log("🌐 Configuração de URLs (Produção):");
+  console.log(`   DOMAIN: ${baseConfig.domain}`);
+  console.log(`   BASE_URL: ${baseConfig.baseURL}`);
+  console.log(`   FRONTEND_URL: ${baseConfig.frontendURL}`);
+  console.log(`   API_URL: ${baseConfig.apiURL}`);
+  console.log(`   GOOGLE_CALLBACK_URL: ${module.exports.GOOGLE_CALLBACK_URL}`);
+}

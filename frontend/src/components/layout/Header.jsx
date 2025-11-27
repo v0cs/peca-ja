@@ -56,7 +56,11 @@ const Header = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <Car className="h-8 w-8 text-primary" />
+            <img
+              src="/icone-pecaja.jpg"
+              alt="Logo PeçaJá"
+              className="h-8 w-8 object-contain"
+            />
             <span className="text-2xl font-bold text-primary">PeçaJá</span>
           </Link>
 
@@ -68,7 +72,11 @@ const Header = () => {
                   {displayName}
                 </span>
                 <Link to={getDashboardPath()}>
-                  <Button variant="outline" size="sm" className={menuButtonClass}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={menuButtonClass}
+                  >
                     Dashboard
                   </Button>
                 </Link>
@@ -84,7 +92,7 @@ const Header = () => {
                     </Button>
                   </Link>
                 )}
-                
+
                 {/* Links específicos por tipo de usuário */}
                 {user?.tipo_usuario === "cliente" && (
                   <Link to="/solicitacoes/nova">
@@ -94,7 +102,7 @@ const Header = () => {
                     </Button>
                   </Link>
                 )}
-                
+
                 {user?.tipo_usuario === "autopeca" && (
                   <Link to="/vendedores">
                     <Button
@@ -107,7 +115,7 @@ const Header = () => {
                     </Button>
                   </Link>
                 )}
-                
+
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair
@@ -121,9 +129,7 @@ const Header = () => {
                   </Button>
                 </Link>
                 <Link to="/cadastrar">
-                  <Button size="sm">
-                    Cadastrar
-                  </Button>
+                  <Button size="sm">Cadastrar</Button>
                 </Link>
               </>
             )}

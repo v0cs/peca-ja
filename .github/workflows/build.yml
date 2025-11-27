@@ -47,7 +47,7 @@ jobs:
           # Remover cache do node_modules se existir
           if (Test-Path "node_modules/.cache") { Remove-Item -Recurse -Force "node_modules/.cache" }
           # Executar testes com workers limitados e sem cache
-          npm test -- --coverage --coverageReporters=lcov --watchAll=false --no-cache --maxWorkers=2 --forceExit
+          npm test -- --coverage --watchAll=false --no-cache --maxWorkers=2 --forceExit
         env:
           CI: true
           NODE_ENV: test

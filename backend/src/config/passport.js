@@ -2,11 +2,11 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 // Carregar variáveis diretamente do process.env
+const config = require("./env");
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const googleCallbackURL =
-  process.env.GOOGLE_CALLBACK_URL ||
-  "http://localhost:3001/api/auth/google/callback";
+  process.env.GOOGLE_CALLBACK_URL || config.GOOGLE_CALLBACK_URL;
 
 // VALIDAÇÃO PARA EVITAR CRASH
 if (!googleClientId || !googleClientSecret) {
