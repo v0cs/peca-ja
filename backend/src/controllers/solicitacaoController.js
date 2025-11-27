@@ -1390,6 +1390,13 @@ class SolicitacaoController {
             model: ImagemSolicitacao,
             as: "imagens",
             required: false,
+            attributes: [
+              "id",
+              "nome_arquivo",
+              "nome_arquivo_fisico",
+              "caminho_arquivo",
+              "ordem_exibicao",
+            ],
           },
         ],
       });
