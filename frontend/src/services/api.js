@@ -40,15 +40,16 @@ api.interceptors.response.use(
         message: "Não foi possível conectar ao servidor",
         url: error.config?.url,
         baseURL: error.config?.baseURL,
-        hint: "Verifique se o backend está rodando em http://localhost:3001",
+        hint: `Verifique se o backend está rodando em ${error.config?.baseURL || import.meta.env.VITE_API_URL || "a URL configurada"}`,
       });
 
       // Retornar erro mais descritivo
+      const apiUrl = error.config?.baseURL || import.meta.env.VITE_API_URL || "o servidor";
       error.response = {
         data: {
           success: false,
           message:
-            "Não foi possível conectar ao servidor. Verifique se o backend está rodando em http://localhost:3001",
+            `Não foi possível conectar ao servidor. Verifique se o backend está rodando em ${apiUrl}`,
         },
         status: 0,
       };

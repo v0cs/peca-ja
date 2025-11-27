@@ -8,11 +8,12 @@ const getBaseConfig = () => {
     const port = process.env.PORT || 3001;
     const protocol = process.env.PROTOCOL || "http"; // http ou https
     const domainWithPort = process.env.DOMAIN_WITH_PORT || `${domain}:${port}`;
-    
+
     return {
       domain,
       baseURL: process.env.BASE_URL || `${protocol}://${domainWithPort}`,
-      frontendURL: process.env.FRONTEND_URL || `${protocol}://${domainWithPort}`,
+      // Frontend está na porta 80 (padrão HTTP), sem porta explícita
+      frontendURL: process.env.FRONTEND_URL || `${protocol}://${domain}`,
       // API pode estar no mesmo domínio (/api) ou em subdomínio (api.pecaja.cloud)
       apiURL: process.env.API_URL || `${protocol}://${domainWithPort}/api`,
       // EMAIL_FROM: Deve usar o domínio verificado no Resend
