@@ -39,11 +39,13 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Instalar netcat para healthcheck do postgres
 USER root
 RUN apk add --no-cache netcat-openbsd
-USER nodejs
 
-# Criar diretórios necessários com permissões corretas
+# Criar diretórios necessários com permissões corretas (como root)
 RUN mkdir -p uploads logs && \
     chown -R nodejs:nodejs uploads logs
+
+# Mudar para usuário não-root
+USER nodejs
 
 # Expor porta da aplicação
 EXPOSE 3001
