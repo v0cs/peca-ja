@@ -2,7 +2,7 @@ name: Deploy to AWS Lightsail
 
 on:
   workflow_run:
-    workflows: ["Build and SonarQube Analysis"]
+    workflows: ["SonarCloud Analysis"]
     types:
       - completed
     branches:
