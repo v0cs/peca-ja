@@ -15,7 +15,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Deploy PeçaJá
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,8 +38,35 @@ jobs:
             echo "Navegando para o diretório do projeto..."
             cd ~/peca-ja
             
+            echo "Fazendo backup do arquivo .env.production..."
+            if [ -f .env.production ]; then
+              cp .env.production /tmp/.env.production.backup
+              echo "✅ Backup do .env.production criado em /tmp"
+            fi
+            
+            echo "Descartando mudanças locais em arquivos rastreados (preservando .env.production)..."
+            git checkout -- .
+            git reset --hard HEAD
+            
             echo "Fazendo pull das últimas mudanças..."
-            git pull origin main
+            git pull origin main || {
+              echo "⚠️ Conflito detectado. Fazendo merge forçado..."
+              git fetch origin
+              git reset --hard origin/main
+            }
+            
+            echo "Restaurando arquivo .env.production do backup..."
+            if [ -f /tmp/.env.production.backup ] && [ ! -f .env.production ]; then
+              cp /tmp/.env.production.backup .env.production
+              echo "✅ Arquivo .env.production restaurado do backup"
+            fi
+            rm -f /tmp/.env.production.backup
+            
+            if [ ! -f .env.production ]; then
+              echo "❌ ERRO: Arquivo .env.production não encontrado!"
+              exit 1
+            fi
+            echo "✅ Arquivo .env.production verificado"
             
             echo "Parando containers..."
             docker compose -f docker-compose.prod.yml down
@@ -50,7 +77,7 @@ jobs:
             echo "Iniciando containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
             
-            echo "⏳ Aguardando containers iniciarem..."
+            echo "Aguardando containers iniciarem..."
             sleep 10
             
             echo "Verificando status dos containers..."
@@ -59,7 +86,7 @@ jobs:
             echo "Limpando imagens antigas..."
             docker image prune -af --filter "until=24h"
             
-            echo "Deploy concluído com sucesso!"
+            echo "✅ Deploy concluído com sucesso!"
           EOF
 
       - name: ✅ Deploy Success
@@ -70,7 +97,7 @@ jobs:
           echo "Backend: http://pecaja.cloud:3001"
           echo "Grafana: http://pecaja.cloud:3002"
 
-      - name: ❌ Deploy Failed
+      - name: Deploy Failed
         if: failure()
         run: |
           echo "Deploy falhou! Verifique os logs acima."
