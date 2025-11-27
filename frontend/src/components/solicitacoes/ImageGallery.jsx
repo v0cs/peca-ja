@@ -61,20 +61,17 @@ const ImageGalleryComponent = ({ images = [] }) => {
     if (image && typeof image === "object") {
       // Se já tiver URL formatada
       if (image.url) {
-        if (image.url.startsWith("http")) {
-          return image.url;
+        // Verificar se é URL completa (http OU https)
+        if (
+          image.url.startsWith("http://") ||
+          image.url.startsWith("https://")
+        ) {
+          return image.url; // ✅ Retorna URL completa (S3 ou local)
         }
         // Path relativo do backend: /uploads/filename.jpg
         const finalUrl = `${API_BASE_URL}${
           image.url.startsWith("/") ? image.url : `/${image.url}`
         }`;
-        if (isDev) {
-          console.log("🖼️ [ImageGallery] Construindo URL:", {
-            originalUrl: image.url,
-            baseURL: API_BASE_URL,
-            finalUrl,
-          });
-        }
         return finalUrl;
       }
       
