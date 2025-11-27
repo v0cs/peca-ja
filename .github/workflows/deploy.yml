@@ -15,7 +15,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Deploy PeçaJá
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,15 +38,6 @@ jobs:
             echo "Navegando para o diretório do projeto..."
             cd ~/peca-ja
             
-            echo "Verificando status do repositório..."
-            git status
-            
-            echo "Descartando mudanças locais e fazendo reset para HEAD..."
-            git reset --hard HEAD
-            
-            echo "Limpando arquivos não rastreados (se necessário)..."
-            git clean -fd
-            
             echo "Fazendo pull das últimas mudanças..."
             git pull origin main
             
@@ -59,7 +50,7 @@ jobs:
             echo "Iniciando containers..."
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d
             
-            echo "Aguardando containers iniciarem..."
+            echo "⏳ Aguardando containers iniciarem..."
             sleep 10
             
             echo "Verificando status dos containers..."
@@ -68,7 +59,7 @@ jobs:
             echo "Limpando imagens antigas..."
             docker image prune -af --filter "until=24h"
             
-            echo "✅ Deploy concluído com sucesso!"
+            echo "Deploy concluído com sucesso!"
           EOF
 
       - name: ✅ Deploy Success
@@ -79,7 +70,7 @@ jobs:
           echo "Backend: http://pecaja.cloud:3001"
           echo "Grafana: http://pecaja.cloud:3002"
 
-      - name: Deploy Failed
+      - name: ❌ Deploy Failed
         if: failure()
         run: |
           echo "Deploy falhou! Verifique os logs acima."
