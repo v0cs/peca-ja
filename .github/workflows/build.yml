@@ -45,6 +45,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: backend
+          args: >
+            -Dsonar.branch.name=main
 
   sonar-frontend:
     name: SonarCloud Frontend
@@ -78,3 +80,5 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: frontend
+          args: >
+            -Dsonar.branch.name=main
