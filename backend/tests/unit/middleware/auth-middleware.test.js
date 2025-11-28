@@ -28,6 +28,7 @@ describe("authMiddleware", () => {
     
     req = {
       headers: {},
+      cookies: {},
     };
     res = {
       status: jest.fn().mockReturnThis(),
@@ -45,7 +46,7 @@ describe("authMiddleware", () => {
         success: false,
         message: "Token de acesso não fornecido",
         errors: {
-          authorization: "Header Authorization é obrigatório",
+          authorization: "Token de autenticação é obrigatório",
         },
       });
       expect(next).not.toHaveBeenCalled();
@@ -56,12 +57,13 @@ describe("authMiddleware", () => {
 
       authMiddleware(req, res, next);
 
+      // Como agora aceita cookies, formato incorreto no header resulta em "token não fornecido"
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: "Formato de token inválido",
+        message: "Token de acesso não fornecido",
         errors: {
-          authorization: "Formato esperado: Bearer <token>",
+          authorization: "Token de autenticação é obrigatório",
         },
       });
       expect(next).not.toHaveBeenCalled();

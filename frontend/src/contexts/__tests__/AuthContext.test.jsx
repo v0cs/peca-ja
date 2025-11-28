@@ -50,18 +50,23 @@ describe("AuthContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.clear();
+    // Mock padrão para /auth/me: não autenticado (401)
+    api.get.mockRejectedValue({
+      response: {
+        status: 401,
+      },
+    });
   });
 
   const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
 
   describe("login", () => {
-    it("deve fazer login com sucesso e salvar token no localStorage", async () => {
+    it("deve fazer login com sucesso", async () => {
       // Arrange
       const mockResponse = {
         data: {
           success: true,
           data: {
-            token: "test-token-123",
             usuario: {
               id: 1,
               email: "test@teste.com",
@@ -81,23 +86,20 @@ describe("AuthContext", () => {
 
       // Act
       await act(async () => {
-        const loginResult = await result.current.login("test@teste.com", "123456");
+        const loginResult = await result.current.login(
+          "test@teste.com",
+          "123456"
+        );
         expect(loginResult.success).toBe(true);
       });
 
       // Assert
       await waitFor(() => {
-        expect(result.current.token).toBe("test-token-123");
+        // Token não está mais no localStorage, está em cookie httpOnly
+        expect(result.current.token).toBeNull();
         expect(result.current.user).toBeTruthy();
         expect(result.current.user.email).toBe("test@teste.com");
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          "token",
-          "test-token-123"
-        );
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          "user",
-          expect.stringContaining("test@teste.com")
-        );
+        expect(result.current.user.cliente.nome_completo).toBe("João Silva");
       });
     });
 
@@ -136,7 +138,6 @@ describe("AuthContext", () => {
         data: {
           success: true,
           data: {
-            token: "test-token-autopeca",
             usuario: {
               id: 2,
               email: "autopeca@teste.com",
@@ -163,31 +164,48 @@ describe("AuthContext", () => {
       await waitFor(() => {
         expect(result.current.user.tipo_usuario).toBe("autopeca");
         expect(result.current.user.autopeca).toBeTruthy();
+        expect(result.current.token).toBeNull(); // Token está em cookie, não no estado
       });
     });
   });
 
   describe("logout", () => {
-    it("deve fazer logout e limpar localStorage", async () => {
+    it("deve fazer logout e limpar estado", async () => {
       // Arrange
-      localStorageMock.setItem("token", "test-token");
-      localStorageMock.setItem("user", JSON.stringify({ id: 1 }));
+      const mockLoginResponse = {
+        data: {
+          success: true,
+          data: {
+            usuario: {
+              id: 1,
+              email: "test@teste.com",
+              tipo_usuario: "cliente",
+            },
+          },
+        },
+      };
 
-      const mockResponse = {
+      const mockLogoutResponse = {
         data: {
           success: true,
         },
       };
-      api.post.mockResolvedValue(mockResponse);
+
+      api.post.mockResolvedValueOnce(mockLoginResponse);
+      api.post.mockResolvedValueOnce(mockLogoutResponse);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      // Configurar estado inicial
+      // Configurar estado inicial (login)
       await act(async () => {
-        result.current.login("test@teste.com", "123456");
+        await result.current.login("test@teste.com", "123456");
       });
 
-      // Act
+      await waitFor(() => {
+        expect(result.current.user).toBeTruthy();
+      });
+
+      // Act - Logout
       await act(async () => {
         await result.current.logout();
       });
@@ -196,8 +214,7 @@ describe("AuthContext", () => {
       await waitFor(() => {
         expect(result.current.token).toBeNull();
         expect(result.current.user).toBeNull();
-        expect(localStorageMock.removeItem).toHaveBeenCalledWith("token");
-        expect(localStorageMock.removeItem).toHaveBeenCalledWith("user");
+        expect(api.post).toHaveBeenCalledWith("/auth/logout");
       });
     });
 
@@ -216,16 +233,39 @@ describe("AuthContext", () => {
       await waitFor(() => {
         expect(result.current.token).toBeNull();
         expect(result.current.user).toBeNull();
-        expect(localStorageMock.removeItem).toHaveBeenCalledWith("token");
-        expect(localStorageMock.removeItem).toHaveBeenCalledWith("user");
+        expect(api.post).toHaveBeenCalledWith("/auth/logout");
       });
     });
   });
 
   describe("updateUser", () => {
     it("deve atualizar dados do usuário", async () => {
-      // Arrange
+      // Arrange - Primeiro fazer login para ter um usuário no estado
+      const mockLoginResponse = {
+        data: {
+          success: true,
+          data: {
+            usuario: {
+              id: 1,
+              email: "test@teste.com",
+              tipo_usuario: "cliente",
+            },
+          },
+        },
+      };
+
+      api.post.mockResolvedValueOnce(mockLoginResponse);
+
       const { result } = renderHook(() => useAuth(), { wrapper });
+
+      // Login primeiro
+      await act(async () => {
+        await result.current.login("test@teste.com", "123456");
+      });
+
+      await waitFor(() => {
+        expect(result.current.user).toBeTruthy();
+      });
 
       const newUserData = {
         id: 1,
@@ -235,21 +275,14 @@ describe("AuthContext", () => {
 
       // Act
       await act(async () => {
-        result.current.updateUser(newUserData, "new-token");
+        result.current.updateUser(newUserData);
       });
 
       // Assert
       await waitFor(() => {
         expect(result.current.user).toEqual(newUserData);
-        expect(result.current.token).toBe("new-token");
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          "token",
-          "new-token"
-        );
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          "user",
-          JSON.stringify(newUserData)
-        );
+        // Token não é mais passado como parâmetro, está em cookie httpOnly
+        expect(result.current.token).toBeNull();
       });
     });
   });
@@ -261,44 +294,65 @@ describe("AuthContext", () => {
 
       // O loading pode já estar false se o useEffect executou muito rápido
       // Verificamos que ele muda para false eventualmente
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      }, { timeout: 1000 });
-      
+      await waitFor(
+        () => {
+          expect(result.current.loading).toBe(false);
+        },
+        { timeout: 1000 }
+      );
+
       // Verificar que loading foi false (pode ter sido true inicialmente, mas agora é false)
       expect(result.current.loading).toBe(false);
     });
   });
 
-  describe("localStorage persistence", () => {
-    it("deve carregar dados do localStorage ao inicializar", async () => {
+  describe("autenticação inicial", () => {
+    it("deve verificar autenticação via /auth/me ao inicializar", async () => {
       // Arrange
-      const storedToken = "stored-token";
-      const storedUser = { id: 1, email: "stored@teste.com" };
+      const mockUser = {
+        id: 1,
+        email: "stored@teste.com",
+        tipo_usuario: "cliente",
+      };
 
-      localStorageMock.getItem.mockImplementation((key) => {
-        if (key === "token") return storedToken;
-        if (key === "user") return JSON.stringify(storedUser);
-        return null;
+      api.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            usuario: mockUser,
+            cliente: null,
+            autopeca: null,
+            vendedor: null,
+          },
+        },
       });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Assert
       await waitFor(() => {
-        expect(result.current.token).toBe(storedToken);
-        expect(result.current.user).toEqual(storedUser);
+        expect(api.get).toHaveBeenCalledWith("/auth/me");
+        expect(result.current.loading).toBe(false);
+        expect(result.current.user).toBeTruthy();
+        expect(result.current.user.email).toBe("stored@teste.com");
+        // Token não está no estado, está em cookie httpOnly
+        expect(result.current.token).toBeNull();
       });
     });
 
-    it("deve não carregar dados se localStorage estiver vazio", async () => {
+    it("deve não autenticar se /auth/me retornar erro", async () => {
       // Arrange
-      localStorageMock.getItem.mockReturnValue(null);
+      api.get.mockRejectedValueOnce({
+        response: {
+          status: 401,
+        },
+      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Assert
       await waitFor(() => {
+        expect(api.get).toHaveBeenCalledWith("/auth/me");
         expect(result.current.token).toBeNull();
         expect(result.current.user).toBeNull();
         expect(result.current.loading).toBe(false);
@@ -306,8 +360,3 @@ describe("AuthContext", () => {
     });
   });
 });
-
-
-
-
-

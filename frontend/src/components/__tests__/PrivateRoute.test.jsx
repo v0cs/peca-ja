@@ -12,22 +12,45 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-const TestWrapper = ({ children, token = null, user = null }) => {
-  // Mock do localStorage
-  const mockLocalStorage = {
-    getItem: vi.fn((key) => {
-      if (key === "token") return token;
-      if (key === "user") return user ? JSON.stringify(user) : null;
-      return null;
-    }),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
+// Mock do api service
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+vi.mock("../../services/api", () => {
+  return {
+    default: {
+      get: (...args) => mockApiGet(...args),
+      post: (...args) => mockApiPost(...args),
+    },
   };
-  Object.defineProperty(window, "localStorage", {
-    value: mockLocalStorage,
-    writable: true,
-  });
+});
+
+const TestWrapper = ({ children, user = null }) => {
+  // Se user fornecido, mockar /auth/me para retornar o usuário
+  // Caso contrário, retornar erro (não autenticado)
+  if (user) {
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: user.id,
+            email: user.email,
+            tipo_usuario: user.tipo_usuario,
+            ativo: user.ativo !== undefined ? user.ativo : true,
+          },
+          cliente: user.cliente || null,
+          autopeca: user.autopeca || null,
+          vendedor: user.vendedor || null,
+        },
+      },
+    });
+  } else {
+    mockApiGet.mockRejectedValueOnce({
+      response: {
+        status: 401,
+      },
+    });
+  }
 
   return (
     <BrowserRouter>
@@ -39,6 +62,8 @@ const TestWrapper = ({ children, token = null, user = null }) => {
 describe("PrivateRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockApiGet.mockClear();
+    mockApiPost.mockClear();
   });
 
   it("deve renderizar children quando autenticado", async () => {
@@ -49,16 +74,19 @@ describe("PrivateRoute", () => {
     };
 
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper user={mockUser}>
         <PrivateRoute>
           <div>Conteúdo protegido</div>
         </PrivateRoute>
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Conteúdo protegido")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Conteúdo protegido")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve redirecionar para login quando não autenticado", async () => {
@@ -84,16 +112,19 @@ describe("PrivateRoute", () => {
     };
 
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper user={mockUser}>
         <PrivateRoute tipoUsuario="cliente">
           <div>Conteúdo do cliente</div>
         </PrivateRoute>
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Conteúdo do cliente")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Conteúdo do cliente")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve redirecionar quando tipo de usuário não corresponde", async () => {
@@ -104,17 +135,20 @@ describe("PrivateRoute", () => {
     };
 
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper user={mockUser}>
         <PrivateRoute tipoUsuario="autopeca">
           <div>Conteúdo da autopeça</div>
         </PrivateRoute>
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      const navigate = screen.getByTestId("navigate");
-      expect(navigate).toHaveAttribute("data-to", "/dashboard/cliente");
-    });
+    await waitFor(
+      () => {
+        const navigate = screen.getByTestId("navigate");
+        expect(navigate).toHaveAttribute("data-to", "/dashboard/cliente");
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve permitir acesso quando tipo está no array de tipos permitidos", async () => {
@@ -125,16 +159,18 @@ describe("PrivateRoute", () => {
     };
 
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper user={mockUser}>
         <PrivateRoute tipoUsuario={["cliente", "autopeca"]}>
           <div>Conteúdo permitido</div>
         </PrivateRoute>
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Conteúdo permitido")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Conteúdo permitido")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 });
-

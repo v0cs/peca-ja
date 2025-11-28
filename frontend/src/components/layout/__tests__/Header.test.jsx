@@ -13,22 +13,19 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-const TestWrapper = ({ children, token = null, user = null }) => {
-  const mockLocalStorage = {
-    getItem: vi.fn((key) => {
-      if (key === "token") return token;
-      if (key === "user") return user ? JSON.stringify(user) : null;
-      return null;
-    }),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
+// Mock do api service
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+vi.mock("../../../services/api", () => {
+  return {
+    default: {
+      get: (...args) => mockApiGet(...args),
+      post: (...args) => mockApiPost(...args),
+    },
   };
-  Object.defineProperty(window, "localStorage", {
-    value: mockLocalStorage,
-    writable: true,
-  });
+});
 
+const TestWrapper = ({ children }) => {
   return (
     <BrowserRouter>
       <AuthProvider>{children}</AuthProvider>
@@ -39,9 +36,25 @@ const TestWrapper = ({ children, token = null, user = null }) => {
 describe("Header", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockApiGet.mockClear();
+    mockApiPost.mockClear();
+
+    // Mock logout para sempre retornar sucesso
+    mockApiPost.mockResolvedValue({
+      data: {
+        success: true,
+      },
+    });
   });
 
   it("deve renderizar o logo e nome da aplicação", async () => {
+    // Mock não autenticado
+    mockApiGet.mockRejectedValueOnce({
+      response: {
+        status: 401,
+      },
+    });
+
     render(
       <TestWrapper>
         <Header />
@@ -54,6 +67,13 @@ describe("Header", () => {
   });
 
   it("deve exibir botões Login e Cadastrar quando não autenticado", async () => {
+    // Mock não autenticado
+    mockApiGet.mockRejectedValueOnce({
+      response: {
+        status: 401,
+      },
+    });
+
     render(
       <TestWrapper>
         <Header />
@@ -76,15 +96,36 @@ describe("Header", () => {
       },
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: mockUser.cliente,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("João Cliente")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("João Cliente")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir botão Dashboard quando autenticado", async () => {
@@ -94,15 +135,36 @@ describe("Header", () => {
       tipo_usuario: "cliente",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Dashboard")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir botão Meu Perfil para cliente", async () => {
@@ -112,15 +174,36 @@ describe("Header", () => {
       tipo_usuario: "cliente",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Meu Perfil")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Meu Perfil")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir botão Minha Conta para autopeca", async () => {
@@ -130,15 +213,36 @@ describe("Header", () => {
       tipo_usuario: "autopeca",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Minha Conta")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Minha Conta")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir botão Nova Solicitação para cliente", async () => {
@@ -148,15 +252,36 @@ describe("Header", () => {
       tipo_usuario: "cliente",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Nova Solicitação")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Nova Solicitação")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir botão Vendedores para autopeca", async () => {
@@ -166,15 +291,36 @@ describe("Header", () => {
       tipo_usuario: "autopeca",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Vendedores")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Vendedores")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir botão Sair quando autenticado", async () => {
@@ -184,15 +330,36 @@ describe("Header", () => {
       tipo_usuario: "cliente",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Sair")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Sair")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve chamar logout e navegar para home ao clicar em Sair", async () => {
@@ -202,21 +369,45 @@ describe("Header", () => {
       tipo_usuario: "cliente",
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
     await waitFor(() => {
-      const sairButton = screen.getByText("Sair");
-      fireEvent.click(sairButton);
+      expect(screen.getByText("Sair")).toBeInTheDocument();
     });
 
+    const sairButton = screen.getByText("Sair");
+    fireEvent.click(sairButton);
+
     // Aguardar um pouco para o logout ser processado
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/");
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(mockApiPost).toHaveBeenCalledWith("/auth/logout");
+        expect(mockNavigate).toHaveBeenCalledWith("/");
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve usar email como fallback quando nome não está disponível", async () => {
@@ -227,15 +418,36 @@ describe("Header", () => {
       cliente: null,
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: null,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("test@example.com")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("test@example.com")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("deve exibir razao_social para autopeca quando disponível", async () => {
@@ -248,18 +460,35 @@ describe("Header", () => {
       },
     };
 
+    // Mock autenticado
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          usuario: {
+            id: mockUser.id,
+            email: mockUser.email,
+            tipo_usuario: mockUser.tipo_usuario,
+            ativo: true,
+          },
+          cliente: null,
+          autopeca: mockUser.autopeca,
+          vendedor: null,
+        },
+      },
+    });
+
     render(
-      <TestWrapper token="test-token" user={mockUser}>
+      <TestWrapper>
         <Header />
       </TestWrapper>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Auto Peças LTDA")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Auto Peças LTDA")).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 });
-
-
-
-

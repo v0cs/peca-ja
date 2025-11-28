@@ -24,6 +24,8 @@ jest.mock("../../../src/config/env", () => ({
   frontendURL: "http://localhost:5173",
   JWT_SECRET: "test-secret",
   JWT_EXPIRES_IN: "24h",
+  isProduction: false,
+  PROTOCOL: "http",
 }));
 
 // Mock do bcrypt
@@ -36,6 +38,14 @@ jest.mock("bcryptjs", () => ({
 jest.mock("jsonwebtoken", () => ({
   sign: mockJwtSign,
   verify: mockJwtVerify,
+}));
+
+// Mock do cookieHelper - deve ser antes do import
+const mockSetAuthCookie = jest.fn(() => {});
+const mockClearAuthCookie = jest.fn(() => {});
+jest.mock("../../../src/utils/cookieHelper", () => ({
+  setAuthCookie: (...args) => mockSetAuthCookie(...args),
+  clearAuthCookie: (...args) => mockClearAuthCookie(...args),
 }));
 
 // Importar APÓS os mocks
@@ -60,6 +70,8 @@ describe("AuthController", () => {
     mockBcryptCompare.mockClear();
     mockJwtSign.mockClear();
     mockJwtVerify.mockClear();
+    mockSetAuthCookie.mockClear();
+    mockClearAuthCookie.mockClear();
     
     // Reconfigurar transaction
     mockTransaction = setupTransactionMock(mockUsuario);
@@ -74,6 +86,8 @@ describe("AuthController", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
       redirect: jest.fn(),
+      cookie: jest.fn(), // Para setAuthCookie
+      clearCookie: jest.fn(), // Para clearAuthCookie
     };
   });
 
@@ -398,6 +412,8 @@ describe("AuthController", () => {
         tipo_usuario: "cliente",
         ativo: true,
         senha_hash: "hashedPassword",
+        termos_aceitos: true,
+        data_aceite_terms: new Date(),
         cliente: {
           id: 1,
           nome_completo: "João Silva",
@@ -415,22 +431,28 @@ describe("AuthController", () => {
       await AuthController.login(req, res);
 
       // Assert
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(res, "jwt-token");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         message: "Login realizado com sucesso",
-        data: expect.objectContaining({
-          token: "jwt-token",
+        data: {
           usuario: expect.objectContaining({
             id: 1,
             email: "teste@teste.com",
             tipo_usuario: "cliente",
+            ativo: true,
+            termos_aceitos: expect.anything(),
+            data_aceite_terms: expect.anything(),
           }),
           cliente: expect.objectContaining({
             id: 1,
             nome_completo: "João Silva",
+            celular: "(11)99999-9999",
+            cidade: "São Paulo",
+            uf: "SP",
           }),
-        }),
+        },
       });
     });
 
@@ -599,7 +621,9 @@ describe("AuthController", () => {
         tipo_usuario: "cliente",
         ativo: true,
         google_id: null,
-        update: jest.fn(),
+        termos_aceitos: true,
+        data_aceite_terms: new Date(),
+        update: jest.fn().mockResolvedValue(true),
         cliente: {
           id: 1,
           nome_completo: "Teste User",
@@ -618,11 +642,13 @@ describe("AuthController", () => {
         google_id: "google-123",
       });
       expect(jwt.sign).toHaveBeenCalled();
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(res, expect.any(String));
       expect(res.redirect).toHaveBeenCalledWith(
-        expect.stringContaining("/auth/oauth-callback?token=")
+        expect.stringContaining("/auth/oauth-callback?success=true")
       );
-      expect(res.redirect).toHaveBeenCalledWith(
-        expect.stringContaining("success=true")
+      // Token não deve estar mais na URL, está em cookie httpOnly
+      expect(res.redirect).not.toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?token=")
       );
     });
 
@@ -651,7 +677,12 @@ describe("AuthController", () => {
 
       // Assert
       expect(jwt.sign).toHaveBeenCalled();
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(res, expect.any(String));
       expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?success=true")
+      );
+      // Token não deve estar mais na URL, está em cookie httpOnly
+      expect(res.redirect).not.toHaveBeenCalledWith(
         expect.stringContaining("/auth/oauth-callback?token=")
       );
     });
@@ -664,6 +695,8 @@ describe("AuthController", () => {
         tipo_usuario: "vendedor",
         ativo: true,
         google_id: "google-123",
+        termos_aceitos: true,
+        data_aceite_terms: new Date(),
       };
       const mockVendedor = {
         id: 1,
@@ -688,7 +721,12 @@ describe("AuthController", () => {
       // Assert
       expect(Vendedor.findOne).toHaveBeenCalled();
       expect(jwt.sign).toHaveBeenCalled();
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(res, expect.any(String));
       expect(res.redirect).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/oauth-callback?success=true")
+      );
+      // Token não deve estar mais na URL, está em cookie httpOnly
+      expect(res.redirect).not.toHaveBeenCalledWith(
         expect.stringContaining("/auth/oauth-callback?token=")
       );
     });
@@ -829,6 +867,7 @@ describe("AuthController", () => {
       await AuthController.logout(req, res);
 
       // Assert
+      expect(mockClearAuthCookie).toHaveBeenCalledWith(res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,

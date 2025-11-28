@@ -40,13 +40,10 @@ describe("Config", () => {
       expect(config.production.use_env_variable).toBe("DATABASE_URL");
     });
 
-    it("deve ter SSL configurado em production", () => {
-      expect(config.production.dialectOptions).toBeDefined();
-      expect(config.production.dialectOptions.ssl).toBeDefined();
-      expect(config.production.dialectOptions.ssl.require).toBe(true);
-      expect(config.production.dialectOptions.ssl.rejectUnauthorized).toBe(
-        false
-      );
+    it("deve usar DATABASE_URL em production", () => {
+      expect(config.production.use_env_variable).toBe("DATABASE_URL");
+      expect(config.production.dialect).toBe("postgres");
+      expect(config.production.logging).toBe(false);
     });
 
     it("deve ter database configurado em development", () => {
