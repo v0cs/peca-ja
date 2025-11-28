@@ -1,4 +1,4 @@
-name: SonarCloud Analysis
+name: Build and SonarQube Analysis
 
 on:
   push:
@@ -9,76 +9,72 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  sonar-backend:
-    name: SonarCloud Backend
-    runs-on: ubuntu-latest
-    
+  sonarqube:
+    name: SonarQube Scan
+    runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      
-      - name: Install dependencies
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # Instalar dependências do Backend
+      - name: Install Backend Dependencies
         working-directory: ./backend
         run: npm ci
-      
-      - name: Run tests with coverage
+
+      # Instalar dependências do Frontend
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      # Executar testes do Backend com coverage
+      - name: Run Backend Tests
         working-directory: ./backend
         run: |
-          npx jest --clearCache || echo "Cache cleared"
+          # Limpar cache completamente
+          npx jest --clearCache || echo "Cache cleared or not needed"
+          # Remover cache do node_modules se existir
+          if (Test-Path "node_modules/.cache") { Remove-Item -Recurse -Force "node_modules/.cache" }
+          # Executar testes com workers limitados e sem cache
           npm test -- --coverage --watchAll=false --no-cache --maxWorkers=2 --forceExit
         env:
           CI: true
           NODE_ENV: test
           NODE_OPTIONS: "--no-warnings --max-old-space-size=4096"
         continue-on-error: true
-      
-      - name: SonarCloud Scan Backend
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: backend
-          args: >
-            -Dsonar.branch.name=main
 
-  sonar-frontend:
-    name: SonarCloud Frontend
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
-      
-      - name: Run tests with coverage
+      # Executar testes do Frontend com coverage
+      - name: Run Frontend Tests
         working-directory: ./frontend
         run: npm test -- --coverage --run
         env:
           CI: true
         continue-on-error: true
-      
-      - name: SonarCloud Scan Frontend
-        uses: SonarSource/sonarcloud-github-action@master
+
+      # Executar análise do SonarQube
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
         with:
-          projectBaseDir: frontend
-          args: >
-            -Dsonar.branch.name=main
+          args: |
+            -Dsonar.projectKey=v0cs_peca-ja
+            -Dsonar.organization=v0cs
+            -Dsonar.branch.name=${{ github.ref_name }}
+            -Dsonar.branch.enabled=true
+            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
+            -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/test/**,**/__tests__/**
+            -Dsonar.sources=backend/src,frontend/src
+            -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
