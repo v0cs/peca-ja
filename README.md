@@ -3,7 +3,7 @@
 </h1>
 
 <h4 align="center">
-  🚗 Marketplace de Solicitação de Peças Automotivas 🔧
+  Peça Já - Marketplace de Solicitação de Peças Automotivas
 </h4>
 
 <p align="center">
@@ -14,30 +14,12 @@
   <img alt="GitHub Pull Requests" src="https://img.shields.io/github/issues-pr/v0cs/peca-ja?style=flat-square">
   <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/v0cs/peca-ja?style=flat-square">
   <img alt="GitHub Repo Size" src="https://img.shields.io/github/repo-size/v0cs/peca-ja?style=flat-square">
-  <img alt="GitHub License" src="https://img.shields.io/github/license/v0cs/peca-ja?style=flat-square">
 </p>
 
 <p align="center">
   <strong>🚀 Status:</strong> Em Produção | 
   <strong>📦 Versão:</strong> 1.0.0 | 
   <strong>🌐 Deploy:</strong> <a href="https://pecaja.cloud">pecaja.cloud</a> 🔒
-</p>
-
-<p align="center">
-  <a href="#-sobre-o-projeto">Sobre</a> •
-  <a href="#-funcionalidades">Funcionalidades</a> •
-  <a href="#-demonstração">Demonstração</a> •
-  <a href="#-tecnologias">Tecnologias</a> •
-  <a href="#-arquitetura">Arquitetura</a> •
-  <a href="#-deploy-e-infraestrutura">Deploy</a> •
-  <a href="#-como-executar">Como Executar</a> •
-  <a href="#-testes">Testes</a> •
-  <a href="#-segurança">Segurança</a> •
-  <a href="#-roadmap">Roadmap</a> •
-  <a href="#-contribuindo">Contribuindo</a> •
-  <a href="#-faq">FAQ</a> •
-  <a href="#-licença">Licença</a> •
-  <a href="#-autor">Autor</a>
 </p>
 
 ---
@@ -118,19 +100,22 @@ O PeçaJá digitaliza e otimiza esse fluxo, permitindo que:
 <summary>📸 Screenshots</summary>
 
 #### Landing Page
-![Landing Page](./docs/screenshots/landing.png) 
+![Landing Page](./backend/docs/landing.png) 
 
 #### Dashboard Cliente
-![Dashboard Cliente](./docs/screenshots/dashboard-cliente.png)
-
-#### Dashboard Autopeça
-![Dashboard Autopeça](./docs/screenshots/dashboard-autopeca.png)
+![Dashboard Cliente](./backend/docs/dashboard-cliente.png)
 
 #### Criar Solicitação
-![Nova Solicitação](./docs/screenshots/nova-solicitacao.png)
+![Nova Solicitação](./backend/docs/nova-solicitacao.png)
+
+#### Dashboard Autopeça
+![Dashboard Autopeça](./backend/docs/dashboard-autopeca.png)
+
+#### Gerenciar Vendedores
+![Gerenciar Vendedores](./backend/docs/cadastro-vendedor.png)
 
 #### Monitoramento (Grafana)
-![Grafana Dashboard](./docs/screenshots/grafana.png)
+![Grafana Dashboard](./backend/docs/grafana.png)
 
 </details>
 
@@ -190,13 +175,13 @@ O PeçaJá digitaliza e otimiza esse fluxo, permitindo que:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Arquitetura PeçaJá                        │
+│                    Arquitetura PeçaJá                       │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────┐      ┌───────────────┐     ┌──────────┐  │
+│                                                             │
+│  ┌──────────────┐      ┌───────────────┐     ┌──────────┐   │
 │  │   Frontend   │────▶ │  Backend API  │────▶│PostgreSQL│  │
-│  │  React + Vite│ HTTPS│Node + Express │ ORM │  Banco   │  │
-│  └──────────────┘      └───────────────┘     └──────────┘  │
+│  │  React + Vite│ HTTPS│Node + Express │ ORM │  Banco   │   │
+│  └──────────────┘      └───────────────┘     └──────────┘   │
 │         │                      │                            │
 │         │                      ├─────▶ AWS S3 (Imagens)    │
 │         │                      ├─────▶ API Veicular        │
@@ -205,10 +190,10 @@ O PeçaJá digitaliza e otimiza esse fluxo, permitindo que:
 │         │                      └─────▶ WhatsApp            │
 │         │                                                   │
 │         └─────────────▶ Nginx (Reverse Proxy + SSL)        │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │          Monitoramento: Prometheus + Grafana         │  │
-│  └──────────────────────────────────────────────────────┘  │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │          Monitoramento: Prometheus + Grafana         │   │
+│  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -268,7 +253,6 @@ pecaja/
 - `notificacoes` - Sistema de notificações
 - `historico_solicitacoes` - Auditoria de alterações
 - `tokens_recuperacao_senha` - Recuperação de senha
-- `log_auditoria` - Logs do sistema
 
 ---
 
@@ -541,39 +525,6 @@ backend/tests/
 
 ---
 
-## 🗺️ Roadmap
-
-### ✅ Versão 1.0 (Atual - MVP)
-- [x] Sistema de autenticação completo (JWT + OAuth)
-- [x] CRUD de solicitações com upload de imagens
-- [x] Consulta automática de dados veiculares
-- [x] Sistema de notificações por email
-- [x] Gestão de vendedores para autopeças
-- [x] Deploy em produção com CI/CD
-- [x] SSL/HTTPS configurado (Let's Encrypt)
-- [x] Monitoramento (Prometheus + Grafana)
-- [x] Testes automatizados (75% de cobertura)
-
-### 🚧 Versão 1.1 (Próximas Sprints)
-- [ ] Sistema de chat em tempo real (WebSocket)
-- [ ] Avaliações e reviews de autopeças
-- [ ] Histórico de preços e comparativo
-- [ ] Dashboard administrativo (super admin)
-- [ ] Notificações push no navegador
-- [ ] Exportação de relatórios (PDF/Excel)
-- [ ] Sistema de favoritos
-
-### 💡 Versão 2.0 (Futuro)
-- [ ] App mobile (React Native)
-- [ ] Sistema de pagamento integrado (Stripe/Mercado Pago)
-- [ ] Inteligência Artificial para recomendações
-- [ ] Sistema de fidelidade e cashback
-- [ ] Marketplace de peças usadas
-- [ ] Integração com oficinas mecânicas
-- [ ] API pública para parceiros
-
----
-
 ## 🤝 Contribuindo
 
 Contribuições são sempre bem-vindas! Siga os passos abaixo:
@@ -610,20 +561,3 @@ Encontrou um bug? Abra uma [issue](https://github.com/v0cs/peca-ja/issues) descr
 - Ambiente (navegador, SO, versão)
 
 ---
-
-## ❓ FAQ (Perguntas Frequentes)
-
-<details>
-<summary><strong>Como faço para testar a aplicação?</strong></summary>
-
-Acesse [pecaja.cloud](https://pecaja.cloud) e crie uma conta ou use as credenciais de teste fornecidas na seção de Demonstração.
-</details>
-
-<details>
-<summary><strong>O projeto está completo?</strong></summary>
-
-O projeto é um MVP (Produto Mínimo Viável) funcional e está em produção. Melhorias contínuas estão sendo implementadas conforme o roadmap.
-</details>
-
-<details>
-<summary><strong>Posso contribuir com o projeto?</strong></summary>
