@@ -430,13 +430,6 @@ npm run dev            # Inicia aplicação
 | Frontend | 72% | 52 testes de componentes | ✅ |
 | **Total** | **75%** | **107 arquivos de teste** | ✅ |
 
-### 🔍 Qualidade de Código
-
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=v0cs_peca-ja&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=v0cs_peca-ja)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=v0cs_peca-ja&metric=coverage)](https://sonarcloud.io/summary/new_code?id=v0cs_peca-ja)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=v0cs_peca-ja&metric=bugs)](https://sonarcloud.io/summary/new_code?id=v0cs_peca-ja)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=v0cs_peca-ja&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=v0cs_peca-ja)
-
 ### Executar Testes do Backend
 
 ```bash
